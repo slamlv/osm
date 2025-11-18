@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 mt-4">
+    <div class="alert alert-success fs-5 py-1" role="alert">
+      <p class="ctext bg-transparent mb-0 fw-bold">{{ title }}</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle table-hover table-bordered">
+            <thead class="table-secondary">
+            <tr>
+                <th>Horaires</th>
+                {% for day in days %}
+                <th>{{ day }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody class="time_table_body">
+            {% for line in time_table %}
+            <tr class="{% if not line.0.is_cours %} table-secondary {% endif %}">
+                {% if not line.0.is_cours %}
+                <th class="text-center" colspan="6">Pause : {{ line.0.start_end}}</th>
+                {% else %}
+                <th class="table-secondary border">{{ line.0.start_end }}</th>
+                    {% for elt in line %}
+                        {% if elt and not forloop.first %}
+                        <td rowspan="{{ elt.rowspan }}">
+                            {% if elt.matiere %}
+                            <div class="{{ elt.colors }} rounded {% if elt.rowspan == 1 %} py-1 {% elif elt.rowspan == 2 %} py-3 {% else %} py-5 {% endif %} text-center fw-bold">
+                                {{ elt.matiere }}
+                                <div class="small {{ elt.colors }}">{{ elt.classes }}</div>
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if recap %}
+    <div class="alert alert-info py-1 mt-3" role="alert">
+        <span class="fw-bold">Récapitulatif ({{ total_heures }}h au total)</span>
+        {% for elt in recap %}
+        <div class="alert alert-primary py-1" role="alert">
+            <span class="fw-bold">{{ elt.matiere }} : {{ elt.nb_heures }}h</span>
+            <div class="d-flex flex-wrap gap-2">
+                {% for mrecap in elt.matiere_recap %}
+                <span class="badge fs-6 {{ mrecap.colors }}">{{ mrecap.classes }} : {{ mrecap.nb_heures }}h</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if id %}
+    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'staff-timetable' id=id %}">
+    {% else %}
+    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'user-timetable' %}">
+    {% endif %}
+        {% csrf_token %}
+        <div class="d-flex justify-content-center align-items-center gap-2 gap-sm-3 mt-3">
+            <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
+                title="Télécharger en pdf" data-bs-trigger="hover">
+                <span class="btn-text bg-transparent" id="btn-text">
+                    <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
+                </span>
+                <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
+            </button>
+            <div>
+                <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
+                <label for="timetable_checkbox_id" class="text-white">Emploi du temps vierge</label>
+            </div>
+        </div>
+        <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+<div class="alert alert-info mt-3 cblock py-2" role="alert">
+    <p class="mb-0 bg-transparent ctext">{{ info }}</p>
+</div>
+<div class="table-responsive">
+<table class="table table-striped table-hover text-nowrap align-middle border">
+    <thead class="table-light">
+    <tr>
+        <th>#</th>
+        <th>Matière</th>
+        <th>Rapporteur</th>
+        <th>Éval{{ eval.0 }}</th>
+        <th>Éval{{ eval.1 }}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for elt in result %}
+    <tr class="table-dark border-primary">
+        <td>{{ forloop.counter }}</td>
+        <td>{{ elt.matiere }}</td>
+        <td><span class="d-none d-lg-inline bg-transparent">{{ elt.rapporteur }}</span>
+            <span class="d-lg-none bg-transparent">{{ elt.rapporteur.short_name }}</span></td>
+        <td class="fs-5">{% if elt.status %} &#9989 {% else %} &#10060 {% endif %}</td>
+        <td class="fs-5">{% if elt.status1 %} &#9989 {% else %} &#10060 {% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

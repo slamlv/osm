@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 w-lg-50">
+    <!-- Hero Section -->
+  <header class="text-center">
+    <div class="container bg-light py-2 rounded">
+      <h2 class="fw-bold">Bienvenue sur <span class="text-primary">OmegaSchoolManager</span></h2>
+      <p class="lead">Un outil de gestion au service de l'éducation</p>
+      <img src="{{ MEDIA_URL }}image/logo.png" alt="Oméga" width="120" class="py-0">
+    </div>
+  </header>
+
+  <!-- Modules Section -->
+  {% if user.is_admin %}
+  <section class="container my-5">
+    <div class="row text-center">
+      <div class="col-md-4 mb-4">
+        <a href="{% url 'students' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-people fs-1 text-primary"></i>
+              <h5 class="mt-3">Élèves</h5>
+              <p class="small">Gérez les inscriptions et dossiers des élèves.</p>
+            </div>
+        </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'staff' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-person-badge fs-1 text-success"></i>
+              <h5 class="mt-3">Personnel</h5>
+              <p class="small">Suivi des enseignants et de leurs classes.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'classrooms' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="fa fa-chalkboard-teacher fs-1 text-info my-2"></i>
+              <h5 class="mt-3">Classes</h5>
+              <p class="small">Suivi des enseignants et de leurs classes.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'stats-check' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-bar-chart fs-1 text-warning"></i>
+              <h5 class="mt-3">Statistiques</h5>
+              <p class="small">Statistiques globales et détaillées.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'classroom_time_table' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-calendar-week fs-1 text-danger"></i>
+              <h5 class="mt-3">Emploi du temps</h5>
+              <p class="small">Programmation des cours.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'school_details' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-house-door fs-1 text-warning"></i>
+              <h5 class="mt-3">Établisement</h5>
+              <p class="small">Informations sur mon établissement.</p>
+            </div>
+          </a>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <section class="container my-5">
+    <div class="row text-center">
+      <div class="col-md-4 mb-4">
+        <a href="{% url 'marks' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-file-text fs-1 text-primary"></i>
+              <h5 class="mt-3">Notes</h5>
+              <p class="small">Remplissage par classe et par évaluation.</p>
+            </div>
+        </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'level-marks' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-file-text fs-1 text-success"></i>
+              <h5 class="mt-3">Notes</h5>
+              <p class="small">Remplissage par niveau et par évaluation.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'trimester-marks' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-file-text fs-1 text-info my-2"></i>
+              <h5 class="mt-3">Notes</h5>
+              <p class="small">Remplissage par classe et par trimestre.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'tlevel-marks' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-file-text fs-1 text-warning"></i>
+              <h5 class="mt-3">Notes</h5>
+              <p class="small">Remplissage par niveau et par trimestre.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'user-timetable' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-calendar-week fs-1 text-danger"></i>
+              <h5 class="mt-3">Mon emploi du temps</h5>
+              <p class="small">Consulter mes programmations.</p>
+            </div>
+          </a>
+      </div>
+      <div class="col-md-4 mb-4">
+          <a href="{% url 'user-details' %}" class="text-decoration-none">
+            <div class="card shadow-sm px-4 py-2 h-100 text-bg-dark">
+              <i class="bi bi-person-vcard fs-1 text-white"></i>
+              <h5 class="mt-3">Mes informations</h5>
+              <p class="small">Consulter et éditer mes informations.</p>
+            </div>
+          </a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Actualités -->
+  <section class="bg-light py-5">
+    <div class="container">
+      <h3 class="mb-4"><i class="bi bi-megaphone me-2"></i>Activités</h3>
+      {% if exists %}
+      <ul class="list-unstyled">
+        {% for activity in activities %}
+        <li class="mb-2">📢 <strong> {{ activity }} </strong></li>
+        {% endfor %}
+        <a class="btn btn-primary" href="{% url 'activities' %}">Liste des activités</a>
+      </ul>
+      {% else %}
+        <p>Aucune activité n'a été programmée</p>
+        {% if user.is_admin %}
+        <a class="btn btn-success align-left" href="{% url 'activity-add' %}">Ajouter une activité</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

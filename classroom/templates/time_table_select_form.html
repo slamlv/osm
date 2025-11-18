@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 mt-4">
+    {% if classrooms %}
+        {% if plages %}
+        <form method="post" enctype="multipart/form-data" id="choice" hx-get="{% url 'time_table' %}" hx-target="#time_table">
+            {% csrf_token %}
+            <div class="container w-md-75 w-lg-50 mb-3">
+                <label for="classe" class="text-white control-label">Classe</label>
+                {{ form.clsrm }}
+            </div>
+            <div class="d-flex justify-content-center">
+                <button class="btn btn-primary" type="submit" hx-include="#choice" data-with-spinner>
+                        <i class="bi bi-save me-2 bg-transparent"></i>Soumettre
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-info mt-3 w-md-75 cblock py-2" role="alert">
+            <p class="mb-1 ctext">Les tranches horaires n'ont pas encore été configurées<br>
+            <a class="w-auto btn btn-warning" href="{% url 'plages_horaires' %}">
+                <i class="bi bi-gear me-2 bg-transparent"></i>Configurer</a></p>
+        </div>
+        {% endif %}
+    {% else %}
+    <div class="alert alert-info mt-3 w-md-75 cblock py-2" role="alert">
+        <p class="mb-1 ctext">Aucune salle de classe pour le moment<br>
+        <a class="w-auto btn btn-warning" href="{% url 'classroom-add' %}">
+            <i class="bi bi-people me-2 bg-transparent"></i>Ajouter une Salle de classe</a></p>
+    </div>
+    {% endif %}
+    <div id="time_table" class="mt-3"></div>
+    <div class="modal" id="programmation_modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title text-white">Programmation</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+          </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener("click", function(event) {
+      let cell = event.target.closest(".slot");
+      if (!cell) return;
+
+      let jour = cell.dataset.jour;
+      let tranche = cell.dataset.tranche;
+      let nb_tranches = cell.dataset.nbTranches;
+      let classroomId = cell.dataset.classroomId;
+      let programmationId = cell.dataset.programmationId || "";
+
+      let url = "/set_programmation?jour=" + encodeURIComponent(jour) +
+                "&tranche=" + encodeURIComponent(tranche) +
+                "&classroom_id=" + encodeURIComponent(classroomId) +
+                "&nb_tranches=" + encodeURIComponent(nb_tranches);
+
+      if (programmationId) {
+          url += "&programmation_id=" + programmationId;
+      }
+
+      // Charger le formulaire dans la modale avec HTMX
+      htmx.ajax('GET', url, { target: "#modal-body" });
+
+      // Ouvrir la modale Bootstrap
+      let modal = new bootstrap.Modal(document.getElementById('programmation_modal'));
+      modal.show();
+    });
+    </script>
+
+    <script>
+    document.body.addEventListener("programmation-saved", function () {
+        // Fermer la modale Bootstrap
+        let myModalEl = document.getElementById('programmation_modal');
+        let modal = bootstrap.Modal.getInstance(myModalEl);
+
+        if (modal) {
+            modal.hide();
+        }
+
+        // Supprimer tout backdrop restant
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+
+        // Retirer la classe modal-open du body si nécessaire
+        document.body.classList.remove('modal-open');
+
+        // Rafraîchir le tableau
+        htmx.trigger('#time_table', 'refresh');
+    });
+    </script>
+</div>
+{% endblock %}

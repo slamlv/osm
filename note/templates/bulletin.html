@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load multifor %}
+    {% load static %}
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>{{ title }}</title>
+    <link href="{% static 'note/style.css' %}" rel="stylesheet" style="text/css">
+</head>
+<body>
+    {% for_longest student in datas.notes %}
+    <!--
+    <div>
+        <div id="block1" class="col-xs-5 col-sm-5 col-md-5 col-lg-5 w-40">X</div>
+        <div id="block2" class="col-xs-2 col-sm-2 col-md-2 col-lg-2 w-20">Y</div>
+        <div id="block3" class="col-xs-5 col-sm-5 col-md-5 col-lg-5 w-40">Z</div>
+    </div>
+    -->
+    <table class="table0">
+        <tr>
+            <th id="col01">REPUBLIQUE DU CAMEROUN<br><span class="special">Paix-Travail-Patrie<br>**********</span><br>
+                MINISTÈRE DES ENSEIGNEMENTS SECONDAIRES<br><span class="special">**********</span><br>
+                DELEGATION REGIONALE {{ school.region }}<br><span class="special">**********</span><br>
+                DELEGATION DEPARTEMENTALE {{ school.departement }}<br><span class="special">**********</span><br>
+                <span class="gras">{{ school.nom }}</span></th>
+            <th id="col02">{% if school.logo %}<img id="logo" src="{{ school.logo.url }}">{% endif %}
+                <br>Immatriculation :<br>{{ school.immatriculation}}</th>
+            <th id="col03">REPUBLIC OF CAMEROON<br><span class="special">Peace-Work-Fatherland<br>**********</span><br>
+                MINISTRY OF SECONDARY EDUCATION<br><span class="special">**********</span><br>
+                {{ school.rgn }} REGIONAL DELEGATION<br><span class="special">**********</span><br>
+                {{ school.dptm }} DIVISIONAL DELEGATION<br><span class="special">**********</span><br>
+                <span class="gras">{{ school.name }}</span></th>
+        </tr>
+    </table>
+    <div class="center" id="block"><span class="gras" id="trimestre">BULLETIN SCOLAIRE {{ trimestre }}</span>
+        <br>Année scolaire : {{ annee }}</div>
+    <table id="infos">
+        <colgroup>
+            <col id="col11">
+            <col id="col22">
+            <col id="col33">
+            <col id="col44">
+            <col id="col55">
+        </colgroup>
+        <tr>
+            <td rowspan="4">{% if student.student.photo %}<img id="photo" src="{{ student.student.photo.url }}">
+            {% endif %}</td>
+            <td class="border" colspan="3">Nom(s) et Prénom(s) de l'élève : <span class="gras">{{ student.student.nom }}
+                {{ student.student.prenom }}</span></td>
+            <td class="border">Classe : <span class="gras">{{ datas.classe }}</span></td>
+        </tr>
+        <tr>
+            <td class="border" colspan="2">Date et lieu de naissance : {{ student.student.date_naissance }}
+                à {{ student.student.lieu_naissance }}</td>
+            <td class="border">Genre : {{ student.student.sexe.0 }}</td>
+            <td class="border">Effectif : {{ datas.effectif }}</td>
+        </tr>
+        <tr>
+            <td class="border">Identifiant Unique : <span class="gras">{{ student.student.unique_id }}</span></td>
+            <td class="border" colspan="2">Redoublant : <label for="oui">Oui</label> {% if student.statut %}
+                <input type="checkbox" id="oui"> {% else %} <input type="checkbox" id="oui" checked> {% endif %}
+                <label for="non">Non</label> {% if student.statut %} <input type="checkbox" id="non" checked> {% else %}
+                <input type="checkbox" id="non"> {% endif %}</td>
+            <td class="border aligntop" rowspan="2">Professeur principal : {{ datas.titulaire }}</td>
+        </tr>
+        <tr>
+            <td class="border" colspan="3">Nom(s) et contacts des Parents/Tuteurs : <br>
+                {% if student.pere %} Père : {{ student.student.pere }},
+                contact : {{ student.pere.contact }} <br><br> {% endif %}
+                {% if student.mere %} Mère : {{ student.student.mere }},
+                contact : {{ student.mere.contact }} <br> {% endif %}
+                {% if not student.pere %} <br><br> {% endif %}
+                {% if not student.mere %} <br> {% endif %}</td>
+        </tr>
+    </table>
+    <br>
+    <table class="table">
+        <thead id="head1">
+        <tr>
+            <th>MATIÈRES ET NOM DE L'ENSEIGNANT</th>
+            <th>COMPETENCES EVALUEES</th>
+            <th>N/20</th>
+            <th>M/20</th>
+            <th>Coef</th>
+            <th>M x coef</th>
+            <th>Côte</th>
+            <th>[Min - Max]</th>
+            <th>Appréciations et Visa de l'enseignant</th>
+        </tr>
+        </thead>
+        {% for note in student.notes; matiere in datas.matieres %}
+        <tr>
+            <td rowspan="2"><b>{{ note.matiere }}</b> <br> {{ matiere.enseignant }}</td>
+            {% if matiere.compt2 %}
+            <td>{{ matiere.compt1 }}</td>
+            {% else %}
+            <td rowspan="2">{{ matiere.compt1 }}</td>
+            {% endif %}
+            <td class="center">{{ note.note1 }}</td>
+            <td class="center" rowspan="2">{{ note.moy }}</td>
+            <td class="center" rowspan="2">{{ matiere.coeff }}</td>
+            <td class="center" rowspan="2">{{ note.moy_coeff }}</td>
+            <td class="center" rowspan="2">{{ note.cote }}</td>
+            <td class="center" rowspan="2">{{ matiere.min_max }}</td>
+            <td rowspan="2">{{ note.appr }}</td>
+        </tr>
+        <tr>
+            {% if matiere.compt2 %}
+            <td>{{ matiere.compt2 }}</td>
+            {% endif %}
+            <td class="center">{{ note.note2 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <th colspan="4">TOTAL</th>
+            <th>{{ datas.total_coeff }}</th>
+            <th>{{ student.total }}</th>
+            <th colspan="3">MOYENNE : {{ student.moyenne }}</th>
+        </tr>
+    </table>
+    <br>
+    <table class="table">
+        <colgroup>
+            <col id="col1">
+            <col id="col2">
+            <col id="col3">
+            <col id="col4">
+            <col id="col5">
+            <col id="col6">
+            <col id="col7">
+            <col id="col8">
+            <col id="col9">
+            <col id="col10">
+        </colgroup>
+        <tr>
+            <th colspan="4">Discipline</th>
+            <th colspan="4">Travail de l'élève</th>
+            <th colspan="2">Profil de la classe</th>
+        </tr>
+        <tr>
+            <td>Abs. non J. (h)</td>
+            <td class="center">{{ student.abs }}</td>
+            <td>Avertissement de conduite</td>
+            <td class="center">{% if student.avert %} &#10004 {% endif %}</td>
+            <td>TOTAL GENERAL</td>
+            <td class="center">{{ student.total }}</td>
+            <th colspan="2">APPRECIATIONS</th>
+            <td>Moyenne Générale</td>
+            <td class="center"><b>{{ datas.moyenne_gen }}</b></td>
+        </tr>
+        <tr>
+            <td rowspan="2">Abs just. (h)</td>
+            <td class="center" rowspan="2">{{ student.absj }}</td>
+            <td rowspan="2">Blâme de conduite</td>
+            <td class="center" rowspan="2">{% if student.blame %} &#10004 {% endif %}</td>
+            <td>COEF</td>
+            <td class="center">{{ datas.total_coeff }}</td>
+            <td>CTBA</td>
+            <td>{% if student.appr == "CBTA" %} &#10004 {% endif %}</td>
+            <td rowspan="2"><b>[Min - Max]</b></td>
+            <td class="center" rowspan="2"><b>{{ datas.min_max }}</b></td>
+        </tr>
+        <tr>
+            <td rowspan="2">MOYENNE TRIM</td>
+            <td class="center" rowspan="2">{{ student.moyenne }}</td>
+            <td>CBA</td>
+            <td>{% if student.appr == "CBA" %} &#10004 {% endif %}</td>
+        </tr>
+        <tr>
+            <td rowspan="2">Retards (nombre de fois)</td>
+            <td class="center" rowspan="2">{{ student.retards }}</td>
+            <td rowspan="2">Exclusions (jours)</td>
+            <td class="center" rowspan="2">{{ student.excl }}</td>
+            <td>CA</td>
+            <td class="center">{% if student.appr == "CA" %} &#10004 {% endif %}</td>
+            <td rowspan="2">Nombre de moyennes >= 10</td>
+            <td class="center" rowspan="2"><b>{{ datas.nb_moyennes }}</b></td>
+        </tr>
+        <tr>
+            <td>RANG</td>
+            <td class="center"><b>{{ student.rang }}<sup id="sup">e</sup> / {{ datas.effectif }}</b></td>
+            <td>CMA</td>
+            <td class="center">{% if student.appr == "CMA" %} &#10004 {% endif %}</td>
+        </tr>
+        <tr>
+            <td>Consignes (heures)</td>
+            <td class="center">{{ student.consignes }}</td>
+            <td>Exclusion définitive</td>
+            <td class="center">{% if student.excl_def %} &#10004 {% endif %}</td>
+            <td>COTE</td>
+            <td class="center"><b>{{ student.cote }}</b></td>
+            <td>CNA</td>
+            <td class="center">{% if student.appr == "CNA" %} &#10004 {% endif %}</td>
+            <td>Taux de réussite</td>
+            <td class="center"><b>{{ datas.taux }}</b></td>
+        </tr>
+        <tr>
+            <td colspan="4" class="aligntop">Appréciation du travail de l'élève (points forts et points à améliorer)
+                : <b>{{ student.appreciation }}</b></td>
+            <td colspan="2" class="aligntop center">Visa du Parent / Tuteur<br><br><br></td>
+            <td colspan="2" class="aligntop center">Nom et visa du professeur principal<br><br><br></td>
+            <td colspan="2" class="aligntop center">Le Chef d'établissement<br><br><br></td>
+        </tr>
+    </table>
+    {% if forloop.counter != datas.notes|length %}
+    <div class="pagebreak"></div>
+    {% endif %}
+    {% endfor %}
+</body>
+</html>

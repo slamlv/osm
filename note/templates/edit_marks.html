@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 mt-4">
+{% if msg %}
+    <div class="alert alert-info mt-3 py-2 fade show alert-dismissible" role="alert">
+        <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
+        <p class="bg-transparent mb-0 ctext">{{ msg }}</p>
+    </div>
+{% else %}
+    {% if not marks_sheet %}
+        {% if not trim %}
+        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'marks-edit' %}"
+              hx-target="#marks_form">
+        {% else %}
+        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'trimester-marks-edit' %}"
+              hx-target="#marks_form">
+        {% endif %}
+    {% elif csi %}
+    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'students_id_cards' %}">
+    {% else %}
+    <form method="post" enctype="multipart/form-data" id="select">
+    {% endif %}
+        {% csrf_token %}
+        <div class="row row-cols-1 mt-2 w-lg-75 cblock" id="classroom_form">
+        {% if marks_sheet %}
+        <div class="mb-3 w-sm-75 cblock">
+            <label for="classe" class="text-white control-label">Classe</label>
+            {{ select_form.classroom }}
+        </div>
+        {% else %}
+            <div class="mb-3 col-sm-4">
+                <label for="matiere" class="text-white control-label">Matière</label>
+                {{ select_form.matiere }}
+            </div>
+            <div class="mb-3 col-sm-4" id="classrooms">
+                <label for="classe" class="text-white control-label">Classe</label>
+                {{ select_form.classroom }}
+            </div>
+            <div class="mb-3 col-sm-4">
+                <label for="eval" class="text-white control-label">{% if trim %} Trimestre {% else %} Évaluation {% endif %}</label>
+                {{ select_form.eval }}
+            </div>
+        {% endif %}
+        </div>
+        {% if csi %}
+        <div class="d-flex justify-content-center align-items-center gap-2 gap-sm-3">
+            <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
+                title="Télécharger en pdf" data-bs-trigger="hover">
+                <span class="btn-text bg-transparent" id="btn-text">
+                    <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
+                </span>
+                <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
+            </button>
+            <div>
+                <input type="checkbox" class="form-check-input" name="csi_checkbox" id="csi_checkbox_id">
+                <label for="csi_checkbox_id" class="text-white">Cartes scolaires vierges</label>
+            </div>
+        </div>
+        <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+        {% else %}
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-primary" type="submit" hx-include="#select"
+                    {% if not marks_sheet %} data-with-spinner {% endif %}>
+                <i class="bi bi-save me-2 bg-transparent"></i>
+                {% if not marks_sheet %} Soumettre {% else %} Télécharger {% endif %}</button>
+        </div>
+        {% endif %}
+    </form>
+    <form method="post" enctype="multipart/form-data" id="marks_form"></form>
+{% endif %}
+</div>
+{% endblock %}

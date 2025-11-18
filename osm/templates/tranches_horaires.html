@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 w-lg-50">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row mt-3">
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="day_start" class="text-white control-label">Début des cours</label>
+                {{ form.day_start }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="duration" class="text-white control-label">Durée tranche horaire</label>
+                {{ form.duration }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="first_break_after" class="text-white control-label">Première pause après</label>
+                {{ form.first_break }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="first_break_duration" class="text-white control-label">Durée première pause</label>
+                {{ form.first_break_duration }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="second_break_after" class="text-white control-label">Seconde pause après</label>
+                {{ form.second_break }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="second_break_duration" class="text-white control-label">Durée seconde pause</label>
+                {{ form.second_break_duration }}
+            </div>
+            <div class="mb-3 col-lg-4 col-sm-6">
+                <label for="nb" class="text-white control-label">Nombre de tranches</label>
+                {{ form.nb }}
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
+            <button class="btn btn-success" type="submit" data-with-spinner>
+                <i class="bi bi-save me-2 bg-transparent"></i>Sauvegarder</button>
+            <button class="btn btn-danger" type="reset">
+                <i class="bi bi-arrow-counterclockwise me-2 bg-transparent"></i>Annuler les changements</button>
+            <a class="btn btn-secondary" href="{% url 'index' %}">
+                <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+        </div>
+    </form>
+    <div class="alert alert-info mt-3 py-2" role="alert">
+        <h6 class="alert-heading fw-bold bg-transparent">État des tranches horaires :</h6>
+        {% if state|length == 1 %}
+            <p class="mb-0">{{ state.0 }}</p>
+        {% else %}
+            <ul class="mb-0 bg-transparent">
+            {% for elt in state %}
+                <li class="bg-transparent">
+                    <i class="bi {% if elt.0 %} bi-clock {% else %} bi-cup-hot-fill {% endif %} text-secondary bg-transparent me-2"></i>{{ elt.1 }}</li>
+            {% endfor %}
+        {% endif %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

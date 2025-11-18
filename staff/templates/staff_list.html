@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex flex-column flex-sm-row justify-content-center align-items-center gap-2 w-auto alert alert-info w-md-75 mx-3 mx-md-auto py-1">
+    {{ info }}
+    {% if search %}
+    <a class="btn btn-secondary btn-sm" href="{% url 'staff' %}">
+        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
+    {% endif %}
+</div>
+{% if datas %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="d-flex flex-column flex-sm-row w-md-75 cblock mb-3 justify-content-center gap-2 px-3">
+        {{ search_form.search }}
+        <button class="w-auto btn btn-info" type="submit">
+            <i class="bi bi-search me-2 bg-transparent"></i>Rechercher</button>
+        <a class="w-auto btn btn-warning" href="{% url 'add_staff_member' %}">
+            <i class="bi bi-person-plus me-2 bg-transparent"></i>Ajouter un membre</a>
+    </div>
+</form>
+<div class="container w-md-75">
+    <div class="table-responsive">
+    <table class="table table-striped table-hover text-nowrap align-middle border">
+        <thead class="table-light">
+        <tr>
+            <th>#</th>
+            <th>Nom(s) et Prénom(s)</th>
+            <th>Poste</th>
+            <th>Contact</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for member in datas %}
+        <tr class="table-dark border-primary">
+            <td class="{% if member.user == user %} text-info {% endif %}">{{ forloop.counter }}</td>
+            <td class="{% if member.user == user %} text-info {% endif %}">
+                <span class="d-none d-lg-table-cell bg-transparent">{{ member }}</span>
+                <span class="d-lg-none bg-transparent">{{ member.short_name }}</span>
+            </td>
+            <td class="{% if member.user == user %} text-info {% endif %}">{{ member.post }}</td>
+            <td class="{% if member.user == user %} text-info {% endif %}">{{ member.contact }}</td>
+            <td><div class="d-flex gap-2 gap-lg-3 bg-transparent">
+                <a class="btn btn-outline-light btn-sm" title="Afficher" data-bs-toggle="tooltip"
+                   href="{% url 'staff-details' id=member.id %}"><i class="bi bi-eye bg-transparent"></i></a>
+                <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'staff-edit' id=member.id %}"
+                   data-bs-toggle="tooltip"><i class="bi bi-pencil-square bg-transparent"></i></a>
+                <a class="btn btn-outline-info btn-sm" title="Emploi du temps" href="{% url 'staff-timetable' id=member.id %}"
+                   data-bs-toggle="tooltip"><i class="bi bi-clock bg-transparent"></i></a>
+                {% if member.user != user %}
+                <a class="btn btn-outline-danger btn-sm" title="Supprimer" href="{% url 'staff-delete' id=member.id %}"
+                   data-bs-toggle="tooltip"><i class="bi bi-trash bg-transparent"></i></a>
+                {% endif %}
+            </div></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% elif not search %}
+    <div class="d-flex justify-content-center">
+        <a class="w-auto btn btn-warning" href="{% url 'add_staff_member' %}">
+            <i class="bi bi-person-plus me-2 bg-transparent"></i>Ajouter un membre</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+<footer>
+    <div class="container mt-3">
+      <div class="row">
+        <!-- Section 1 -->
+        <div class="col-md-4 mb-3">
+          <h5 class="fw-bold text-warning">OmegaSchoolManager</h5>
+          <p class="small text-light">Un outil de gestion au service de l'éducation.</p>
+        </div>
+        <!-- Section 2 -->
+        <div class="col-md-4 mb-3">
+          <h5 class="fw-bold text-warning">Liens rapides</h5>
+          <ul class="list-unstyled small">
+            <li><a href="{% url 'index' %}" class="text-decoration-none text-light"><i class="bi bi-house-door me-2"></i>Accueil</a></li>
+            <li><a href="{% url 'user-details' %}" class="text-decoration-none text-light"><i class="bi bi-speedometer2 me-2"></i>Mes informations</a></li>
+            <li><a href="{% url 'marks' %}" class="text-decoration-none text-light"><i class="bi bi-journal-text me-2"></i>Notes</a></li>
+            <li><a href="#" class="text-decoration-none text-light"><i class="bi bi-gear"></i> Paramètres</a></li>
+          </ul>
+        </div>
+        <!-- Section 3 -->
+        <div class="col-md-4 mb-3">
+          <h5 class="fw-bold text-warning">Contact</h5>
+          <p class="small mb-1 text-white"><i class="fa fa-envelope me-2"></i>contact@schoolmanager.com</p>
+          <p class="small mb-1 text-white"><i class="fa fa-phone text-success me-2"></i>+237 679 022 278</p>
+          <p class="small mb-3 text-white"><i class="fa fa-map-marker-alt text-danger me-2"></i>Nkongsamba, Cameroun</p>
+          <div>
+            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-facebook"></i></a>
+            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-github"></i></a>
+            <a href="#" class="text-light fs-5"><i class="fab fa-whatsapp"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="border-top border-secondary pt-2 my-2 text-center small text-white">
+        © {% now "Y" %} <strong>OmegaSchoolManager</strong>. Tous droits réservés.
+      </div>
+    </div>
+</footer>
+{% endblock %}

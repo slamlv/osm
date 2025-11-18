@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+{% load static %}
+{% get_media_prefix as MEDIA_URL %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-with, initial-scale=1">
+    <link rel="icon" type="image/png" href="{{ MEDIA_URL }}image/logo.png">
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'choices.min.css' %}">
+    <link rel="stylesheet" href="{% static 'style.css' %}" style="text/css">
+    <script src="{% static 'bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'choices.min.js' %}"></script>
+    <title>{{ title }}</title>
+</head>
+<body>
+    <div class="container-fluid">
+    <div>
+        <h1 class="text-warning ctext fw-bold"><img src="{{ MEDIA_URL }}image/logo.png" id="logo">Oméga School Manager</h1>
+    </div>
+    <header>
+        <h2 class="text-white ctext fw-bold">@{{ title }}</h2>
+    </header>
+    <div class="w-md-75 w-lg-50 cblock">
+    {% if messages %}
+    <div class="container mt-2">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags}} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    </div>
+    {% block content %}{% endblock %}
+    <footer>
+        <div class="container mt-5 w-md-75 w-lg-50">
+          <div class="border-top border-secondary pt-2 my-2 text-center small text-white">
+            © {% now "Y" %} <strong>OmegaSchoolManager</strong>. Tous droits réservés.
+          </div>
+        </div>
+    </footer>
+    </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const element = document.querySelector('.choices-multiple');
+    if (element) {
+        new Choices(element, {
+            removeItemButton: true,
+            shouldSort: false,
+            placeholderValue: 'Choisissez une ou plusieurs options',
+            searchEnabled: true,
+        });
+    }
+  });
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Pour tous les formulaires
+  document.querySelectorAll("form").forEach(form => {
+    form.addEventListener("submit", function (e) {
+      const btn = form.querySelector("[data-spinner]");
+      if (btn) {
+        const text = btn.querySelector(".btn-text");
+        const spinner = btn.querySelector(".spinner-border");
+        if (text) text.classList.add("d-none");
+        if (spinner) spinner.classList.remove("d-none");
+        btn.disabled = true;
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

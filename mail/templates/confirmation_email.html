@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Activation de votre compte</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f7fc; font-family: Arial, sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="padding: 30px 40px; text-align: center;">
+                            <h2 style="color: #333333; margin-bottom: 10px;">Bienvenue sur Oméga School Manager (OSM)</h2>
+                            <p style="color: #555555; font-size: 16px; line-height: 24px;">Merci de vous être inscrit ! Veuillez confirmer votre adresse email pour activer votre compte.</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 0 40px;">
+                            <p style="color: #555555; font-size: 16px; line-height: 24px;">
+                                {{ salutation }},
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 24px;">
+                                Pour finaliser votre inscription, cliquez sur le bouton ci-dessous afin de confirmer votre adresse email :
+                            </p>
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="http://{{domain}}{% url 'activate' uidb64=uid token=token %}"
+                                   style="background-color: #28a745; color: #ffffff; text-decoration: none;
+                                          padding: 14px 24px; font-size: 16px; border-radius: 6px;
+                                          display: inline-block;">
+                                    Activer mon compte
+                                </a>
+                            </div>
+
+                            <p style="color: #999999; font-size: 14px; text-align: center;">
+                                Ce lien expirera dans une heure.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 30px 40px; text-align: center; background-color: #f1f1f1;">
+                            <p style="color: #888888; font-size: 14px;">
+                                Si vous n’avez pas créé de compte, ignorez cet email ou contactez-nous à
+                                <a href="mailto:omegaschoolmanager@gmail.com" style="color: #28a745; text-decoration: none;">omegaschoolmanager@gmail.com</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

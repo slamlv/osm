@@ -1,0 +1,12 @@
+{% extends "unauthenticated_base.html" %}
+
+{% block content %}
+<div class="alert alert-info mt-3 w-75 w-lg-50 cblock py-2" role="alert">
+    {% if not license %}
+    <p class="bg-transparent ctext">Page ou ressource inaccessible</p>
+    {% else %}
+    <p class="bg-transparent ctext">Votre licence a expirée. Veuillez nous contacter pour renouvellement aux numéros
+        ci-dessous<br>693 293 037 / 653 333 209</p>
+    {% endif %}
+</div>
+{% endblock %}

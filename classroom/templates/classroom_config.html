@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block titre %}
+    <h2 class="text-white ctext fw-bold">@{{ title }} - {{ mateachs_form.classe }}</h2>
+{% endblock %}
+
+{% block content %}
+{% if subjects %}
+<div class="container w-md-75 mt-4">
+    <div class="d-flex mb-3 justify-content-center">
+        <a class="w-auto btn btn-warning" href="{% url 'matiere-add' id=mateachs_form.id %}">
+            <i class="bi bi-plus-circle me-2 bg-transparent"></i>Ajouter une Matière</a>
+    </div>
+    {% if mateachs_form.mateachs_form %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="table-responsive">
+        <table class="table table-striped table-hover text-nowrap align-middle border">
+            <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Matière</th>
+                <th class="d-none d-lg-table-cell">Groupe</th>
+                <th>Coefficient</th>
+                <th>Supprimer</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for mateach_form in mateachs_form.mateachs_form %}
+            <tr class="table-dark border-primary">
+                <td>{{ forloop.counter }}</td>
+                <td><i class="{{ mateach_form.icon }} me-2 d-none d-sm-inline bg-transparent"></i>
+                    {{ mateach_form.label }}</td>
+                <td class="d-none d-lg-table-cell">{{ mateach_form.matiere.sujet.groupe }}</td>
+                <td>{{ mateach_form.coeff }}</td>
+                <td><div class="d-flex bg-transparent">
+                    <a class="btn btn-outline-danger btn-sm" title="Supprimer" data-bs-toggle="tooltip"
+                       href="{% url 'matiere-remove' cid=mateachs_form.id id=mateach_form.id %}">
+                        <i class="bi bi-trash bg-transparent"></i></a></div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center my-2">
+            <button class="btn btn-success" type="submit" data-with-spinner>
+                <i class="bi bi-save me-2 d-none d-sm-inline bg-transparent"></i>Sauvegarder</button>
+            <button class="btn btn-danger" type="reset">
+                <i class="bi bi-arrow-counterclockwise me-2 d-none d-sm-inline bg-transparent"></i>Annuler les changements</button>
+            <a class="btn btn-secondary" href="{% url 'classrooms' %}">
+                <i class="bi bi-arrow-left me-2 d-none d-sm-inline bg-transparent"></i>Retour</a>
+        </div>
+    </form>
+    {% else %}
+    <div class="d-flex justify-content-center fs-5 text-white">Aucune matière pour le moment.</div>
+    {% endif %}
+</div>
+{% else %}
+<div class="container w-md-75 my-4">
+    {% if mateachs_form %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="table-responsive">
+        <table class="table table-striped table-hover text-nowrap align-middle border">
+            <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Matière</th>
+                <th>Enseignant</th>
+                <th>Rapporteur</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for mateach_form in mateachs_form.mateachs_form %}
+            <tr class="table-dark border-primary">
+                <td>{{ forloop.counter }}</td>
+                <td><i class="{{ mateach_form.icon }} me-2 d-none d-sm-inline bg-transparent"></i>
+                    {{ mateach_form.label }}</td>
+                <td>{{ mateach_form.enseignant }}</td>
+                <td>{{ mateach_form.rapporteur }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center my-2">
+            <button class="btn btn-success" type="submit" data-with-spinner>
+                <i class="bi bi-save me-2 d-none d-sm-inline bg-transparent"></i>Sauvegarder</button>
+            <button class="btn btn-danger" type="reset">
+                <i class="bi bi-arrow-counterclockwise me-2 d-none d-sm-inline bg-transparent"></i>Annuler les changements</button>
+            <a class="btn btn-secondary" href="{% url 'classrooms' %}">
+                <i class="bi bi-arrow-left me-2 d-none d-sm-inline bg-transparent"></i>Retour</a>
+        </div>
+    </form>
+    {% else %}
+    <div class="d-flex justify-content-center fs-5 text-white">Aucune matière pour le moment.</div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

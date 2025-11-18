@@ -1,0 +1,37 @@
+{% if show %}
+<div class="w-xl-75 cblock">
+    <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <fieldset class="border border-2 rounded border-info p-3 mb-3">
+        <legend class="fs-5 text-warning">{{ std_info }}</legend>
+            <div class="row">
+                <div class="col-6 col-lg-4 mb-3">
+                    <label for="abs" class="text-white">Absences (heures)</label>
+                    {{ form.abs }}
+                </div>
+                <div class="col-6 col-lg-4 mb-3">
+                    <label for="absj" class="text-white">Absences justifiées (heures)</label>
+                    {{ form.absj }}
+                </div>
+                <div class="col-6 col-lg-4 mb-3">
+                    <label for="retards" class="text-white">Retards</label>
+                    {{ form.retards }}
+                </div>
+                <div class="col-6 col-lg-4 mb-3">
+                    <label for="cons" class="text-white">Consignes (heures)</label>
+                    {{ form.cons }}
+                </div>
+                <div class="col-6 col-lg-4 mb-3">
+                    <label for="excl" class="text-white">Exclusion définitive</label>
+                    {{ form.excl_def }}
+                </div>
+                <div class="d-flex justify-content-center">
+                    <a class="btn btn-success" type="submit" hx-post="{% url 'discipline-edit' id=sid trim=trim %}"
+                       hx-target="#edit" data-with-spinner>
+                        <i class="bi bi-save me-2 bg-transparent"></i>Enregistrer</a>
+                </div>
+            </div>
+    </fieldset>
+    </form>
+</div>
+{% endif %}

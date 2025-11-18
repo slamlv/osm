@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 mt-4">
+    {% if not rapport %}
+    <div class="alert alert-info mt-3 py-2 w-lg-75 cblock" role="alert">
+    <p class="ctext bg-transparent mb-0">NB : Si des notes existaient déjà à la destination, elles seront
+        perdues.</p>
+    </div>
+    <form method="post" enctype="multipart/form-data" id="copy_form">
+        {% csrf_token %}
+        <div class="row row-cols-1 mt-2 w-lg-75 cblock" id="marks_copy_form">
+            {% include 'marks_copy_to_and_from.html' %}
+        </div>
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-success" type="submit"><i class="bi bi-repeat bg-transparent me-2"></i>
+                Reconduire les Notes</button>
+        </div>
+    </form>
+    {% else %}
+    <div class="alert alert-warning mt-3 fade show alert-dismissible py-1" role="alert">
+        <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
+        <p class="mb-1 bg-transparent ctext">{{ rapport }}<br><a class="btn btn-success" href="{% url 'marks_check' %}">
+        <i class="bi bi-gear bg-transparent me-2"></i>Éditer les périodes</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

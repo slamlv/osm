@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="mx-3 mx-md-auto w-md-75 w-lg-50 alert alert-warning">
+        <div class="d-flex justify-content-center bg-transparent">
+            <div class="d-inline bg-transparent"><span class="bg-transparent ">Êtes-vous sûr de vouloir supprimer</span>
+                <span class="fw-bold mx-1 bg-transparent">{{ info }}</span><span class="bg-transparent">{{ alerte }}</span></div>
+        </div>
+        {% if nb %}
+        <div class="d-flex bg-transparent justify-content-center">{{ nb }}</div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" class="bg-transparent">
+            {% csrf_token %}
+            <div class="d-flex gap-2 mt-2 justify-content-center bg-transparent">
+                <button class="btn btn-danger" type="submit" data-with-spinner>
+                    <i class="bi bi-trash me-2 bg-transparent"></i>Supprimer</button>
+                <a class="btn btn-secondary" href="{{ back }}">
+                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+                <!--{% if title == "Suppression d'un Elève" %}
+                <a class="btn btn-secondary" href="{% url 'students' %}">
+                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+                {% elif title == "Suppression d'un Parent d'élève" %}
+                <a class="btn btn-secondary" href="{% url 'parents' %}">
+                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+                {% elif title == "Retirer une Matière" %}
+                <a class="btn btn-secondary" href="{% url 'class-subjects' id=classe.id %}">
+                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+                {% endif %}-->
+            </div>
+        </form>
+    </div>
+{% endblock %}

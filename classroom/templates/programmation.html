@@ -1,0 +1,51 @@
+{% if not msg %}
+  <div class="alert alert-info py-1" role="alert">
+      <p class="ctext bg-transparent mb-0 fw-bold">{{ title }}</p>
+  </div>
+  {% if messages %}
+  <div class="container mt-2">
+    {% for message in messages %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">{{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="container mt-3">
+    <form method="post" enctype="multipart/form-data" hx-post="{% url 'set_programmation' %}" id="programmation"
+          hx-target="#modal-body">
+      {% csrf_token %}
+      {{ form.jour }}
+      {{ form.tranche_horaire }}
+      {{ form.classroom }}
+      {{ form.nb_tranches }}
+      {{ form.programmation_id }}
+      <div class="mb-3">
+        <label for="matiere" class="control-label text-white">Matière</label>
+        {{ form.matiere }}
+      </div>
+      <div class="mb-3" id="enseignants">
+        {% include 'enseignants.html' %}
+      </div>
+
+      <div class="d-flex justify-content-center gap-3 mt-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2 bg-transparent"></i>Enregistrer</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>
+          Annuler</button>
+      </div>
+    </form>
+    <div class="d-flex justify-content-center mt-3">
+      {% if edit %}
+      <form method="post" enctype="multipart/form-data" hx-post="{% url 'set_programmation' %}"
+            hx-include="#programmation" hx-target="#modal-body">
+        {% csrf_token %}
+        <input type="hidden" name="_method" value="DELETE">
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-2 bg-transparent"></i>Supprimer</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+<div class="alert alert-danger py-1" role="alert">
+    <p class="ctext bg-transparent mb-0 fw-bold">Erreur : Une valeur a été altérée</p>
+</div>
+{% endif %}

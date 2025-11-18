@@ -1,0 +1,20 @@
+<div class="mb-3 col w-lg-75 cblock">
+    <label for="classe" class="text-white control-label">Classe</label>
+    {{ marks_copy_form.classe }}
+</div>
+<div class="mb-3 col-sm-6" id="marks_copy_form_from">
+    {% include 'marks_copy_form_from.html' %}
+</div>
+<div class="mb-3 col-sm-6">
+    <fieldset class="border border-2 rounded border-info p-3">
+        <legend class="fs-5 text-warning">Vers</legend>
+            <div class="mb-3">
+                <label for="matiere_to" class="text-white control-label">Matière</label>
+                {{ marks_copy_form.matiere_to }}
+            </div>
+            <div class="mb-3">
+                <label for="eval_to" class="text-white control-label">Évaluation</label>
+                {{ marks_copy_form.eval_to }}
+            </div>
+    </fieldset>
+</div>

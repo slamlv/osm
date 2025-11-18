@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container w-md-75 w-lg-50">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+                <div class="mb-3 col-sm-6">
+                    <label for="nom" class="text-white control-label">Nom</label>
+                    {{ form.nom }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="name" class="text-white control-label">Name</label>
+                    {{ form.name }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="type" class="text-white control-label">Type d'établissement</label>
+                    {{ form.type_ets }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="immatriculation" class="text-white control-label">Immatriculation</label>
+                    {{ form.immatriculation }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="contact" class="text-white control-label">Contact</label>
+                    {{ form.contact }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="contact1" class="text-white">Contact optionnel</label>
+                    {{ form.contact1 }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="pobox" class="text-white control-label">Boîte postale</label>
+                    {{ form.pobox }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="localite" class="text-white control-label">Localité</label>
+                    {{ form.localite }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="email" class="text-white">Email</label>
+                    {{ form.email }}
+                </div>
+                <div class="mb-3 col-sm-6">
+                    <label for="motto" class="text-white">Devise</label>
+                    {{ form.motto }}
+                </div>
+                <div class="mb-3 col-12">
+                    <label for="logo" class="text-white">Logo</label>
+                    {{ form.logo }}
+                </div>
+                <div class="mb-3">
+                    <label for="competences" class="text-info">Inclure les compétences évaluées lors du remplissage des notes</label>
+                    {{ form.with_competences }}
+                </div>
+                <div class="mb-3 col-12">
+                    <label for="programmations" class="text-info">Possibilité de programmer un enseignant pour plusieurs classes à la même heure</label>
+                    {{ form.mergedprogrammations }}
+                </div>
+            </div>
+            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
+                <button class="btn btn-success" type="submit" data-with-spinner>
+                    <i class="bi bi-save me-2 bg-transparent"></i>Sauvegarder</button>
+                <button class="btn btn-danger" type="reset">
+                    <i class="bi bi-arrow-counterclockwise me-2 bg-transparent"></i>Annuler les changements</button>
+                <a class="btn btn-secondary" href="{% url 'school_details' %}">
+                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
