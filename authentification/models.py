@@ -40,7 +40,7 @@ class School(TenantMixin):
 
     nom = models.CharField(verbose_name="Nom", max_length=50)
     name = models.CharField(verbose_name="Name", max_length=50)
-    type_ets = models.CharField(choices=Type.choices, verbose_name="Type", default=Type.GSS)
+    type_ets = models.CharField(choices=Type.choices, verbose_name="Type", default=Type.GSS, max_length=20)
     region = models.CharField(verbose_name="Délégation régionale", max_length=50, default="DÉLÉGATION RÉGIONALE")
     departement = models.CharField(verbose_name="Délégation départementale", max_length=50, default="DÉLÉGATION DÉPARTEMENTALE")
     rgn = models.CharField(verbose_name="Regional delegation", max_length=50, default="REGIONAL DELEGATION")
