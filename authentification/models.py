@@ -87,7 +87,7 @@ class School(TenantMixin):
         return {
             'nom': self.nom,
             'name': self.name,
-            'logo': self.logo if self.logo else "https://res.cloudinary.com/dulmalku0/image/upload/v1763529491/no_image_ejy2dl.jpg",
+            'logo': self.logo if self.logo else "{% static 'image/logo.png' %}",
             'motto': self.motto if self.motto else "",
             'immatriculation': self.immatriculation,
             'region': self.region,
