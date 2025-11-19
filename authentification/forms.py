@@ -132,7 +132,7 @@ class UserForm(DynamicFormMixin, forms.Form):
                 raise forms.ValidationError("")
 
         # Validation du nom et du prénom
-        valid_name(nom, prenom, queryset=staff.objects.all(), request=self.context['request'])
+        valid_name(nom, prenom, queryset=staff.all(), request=self.context['request'])
 
         # Validation du contact et de l'email
         valid_contact(contact, self.context['request'])
