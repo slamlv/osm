@@ -746,7 +746,7 @@ class PDFMarksSheet(FPDF):
         table = Table(self, line_height=5, col_widths=hwidths, text_align="CENTER", first_row_as_headings=False,
                       borders_layout="NONE", markdown=True)
         #
-        logo = (self.school.logo, "media/image/no_image.jpg")[self.school.logo == ""]
+        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
         self.image(resize_image(logo, new_width=308), x=86, y=6, w=26, keep_aspect_ratio=True)
 
         row = table.row()
@@ -869,7 +869,7 @@ class ClassroomList(FPDF):
         table = Table(self, line_height=5, col_widths=hwidths, text_align="CENTER", first_row_as_headings=False,
                       borders_layout="NONE", markdown=True)
         #
-        logo = (self.school.logo, "media/image/no_image.jpg")[self.school.logo == ""]
+        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
         self.image(resize_image(logo, new_width=308), x=86, y=6, w=26, keep_aspect_ratio=True)
 
         row = table.row()
