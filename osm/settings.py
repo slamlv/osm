@@ -160,12 +160,12 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, STATIC_URL)
 ]
 
-INTER_REGULAR = os.path.join(settings.STATIC_ROOT, "fonts", "Inter-regular.ttf")
-INTER_BOLD = os.path.join(settings.STATIC_ROOT, "fonts", "Inter-Bold.ttf")
-INTER_ITALIC = os.path.join(settings.STATIC_ROOT, "fonts", "Inter-Italic.ttf")
-INTER_BOLDITALIC = os.path.join(settings.STATIC_ROOT, "fonts", "Inter-BoldItalic.ttf")
+INTER_REGULAR = os.path.join(STATIC_ROOT, "fonts", "Inter-regular.ttf")
+INTER_BOLD = os.path.join(STATIC_ROOT, "fonts", "Inter-Bold.ttf")
+INTER_ITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-Italic.ttf")
+INTER_BOLDITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-BoldItalic.ttf")
 
-TEMP_URL = os.path.join(settings.STATIC_ROOT, "/temp/")
+TEMP_URL = os.path.join(STATIC_ROOT, "/temp/")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
