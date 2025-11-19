@@ -11,11 +11,11 @@
                         <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
                             data-bs-toggle="modal" data-bs-target="#photoModal">
                         {% else %}
-                        <img src="{{ MEDIA_URL}}image/no_pp.png" alt="Photo de profil" class="profile-img mb-3">
+                        <img src="https://res.cloudinary.com/dulmalku0/image/upload/v1763529491/no_pp_uhg8xk.png" alt="Photo de profil" class="profile-img mb-3">
                         {% endif %}
                         <h4 class="card-title text-white fw-bold">{{ object.user.username }}</h4>
                     {% else %}
-                        <img src="{{ MEDIA_URL}}image/no_pp.png" alt="Photo de profil" class="profile-img mb-1">
+                        <img src="https://res.cloudinary.com/dulmalku0/image/upload/v1763529491/no_pp_uhg8xk.png" alt="Photo de profil" class="profile-img mb-1">
                     {% endif %}
                     <hr class="border border-secondary border-2">
                     <div class="row text-start">
@@ -26,7 +26,7 @@
                         <div class="col-sm-6 mb-2">
                             <span class="text-white">Poste : </span>
                             <span class="text-white fw-bold">
-                                {% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span>
+                                {% if object.poste != "Autre" %}{{ object.poste }}{% else %}Non défini{% endif %}</span>
                         </div>
                         <div class="col-sm-6 mb-2">
                             <span class="text-white">Nom(s) : </span>
