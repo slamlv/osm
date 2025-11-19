@@ -15,7 +15,7 @@ class Parent(models.Model):
     email = models.EmailField(max_length=30, null=True)
     contact = models.CharField(max_length=9, unique=True)
     profession = models.CharField(max_length=50, null=True)
-    civilite = models.CharField(choices=Civilite.choices)
+    civilite = models.CharField(choices=Civilite.choices, max_length=10)
 
     class Meta:
         db_table = '"Parent"'
@@ -79,7 +79,7 @@ class StudentQuerySet(models.QuerySet):
 class Student(models.Model):
     nom = models.CharField(max_length=30)
     prenom = models.CharField(max_length=30, null=True)
-    statut = models.CharField(choices=Statut.choices)
+    statut = models.CharField(choices=Statut.choices, max_length=15)
     date_naissance = models.DateField()
     lieu_naissance = models.CharField(max_length=50)
     sexe = models.CharField(choices=Sexe.choices)
