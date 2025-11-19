@@ -1226,7 +1226,7 @@ class ReportCard(FPDF):
                       markdown=True)
         row = table.row()
         row.cell(
-            img=resize_image(student_data['photo'] if student_data['photo'] else "media/image/student.jpg"),
+            img=resize_image(student_data['photo'] if student_data['photo'] else "https://res.cloudinary.com/dulmalku0/image/upload/v1763529491/student_qpxvam.jpg"),
             padding=(2, 2, 2, 2), rowspan=4, border=CellBordersLayout.NONE)
         row.cell(f"Nom(s) et Prénom(s) de l'élève : **{student_data['nom']}**", colspan=3)
         row.cell(f"Classe : **{classroom_data['label']}**")
