@@ -49,6 +49,8 @@ SHARED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mail',
+    'cloudinary',
+    'cloudinary_storage'
 )
 
 TENANT_APPS = (
@@ -59,6 +61,15 @@ TENANT_APPS = (
 )
 
 INSTALLED_APPS = SHARED_APPS + TENANT_APPS
+
+# Stockage des fichiers médias sur Cloudinary
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dulmalku0',
+    'API_KEY': '912476915712985',
+    'API_SECRET': 'Cha39z6x-YPENngWiwXF6lvS8fU',
+}
 
 MIDDLEWARE = [
     'authentification.middleware.RequestMiddleware',
@@ -146,7 +157,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Fichiers
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/app/media'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, STATIC_URL)
 ]
