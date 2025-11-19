@@ -3,6 +3,7 @@ from io import BytesIO
 
 from django.urls import reverse
 from fpdf.enums import TableHeadingsDisplay
+from django.conf import settings
 
 from authentification.models import TrancheHoraire, School
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
@@ -673,10 +674,10 @@ class PDFMarksSheet(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.add_font('inter', '', 'static/fonts/Inter-regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=10)
@@ -804,10 +805,10 @@ class ClassroomList(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.add_font('inter', '', 'static/fonts/Inter-regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=10)
@@ -910,10 +911,10 @@ class ClassroomTimeTable(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__(orientation='L')
-        self.add_font('inter', '', 'static/fonts/Inter-Regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(12, 10, 12)
         self.set_auto_page_break(auto=True, margin=12)
@@ -1031,10 +1032,10 @@ class StaffMemberTimeTable(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__(orientation='L')
-        self.add_font('inter', '', 'static/fonts/Inter-Regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=12)
