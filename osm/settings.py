@@ -145,7 +145,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Fichiers
 
-MEDIA_URL = 'media/'
+MEDIA_URL = https://osm-images.onrender.com
 MEDIA_ROOT = join(BASE_DIR, 'media/')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, STATIC_URL)
