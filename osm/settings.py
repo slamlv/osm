@@ -49,9 +49,7 @@ SHARED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'mail',
-    'cloudinary',
-    'cloudinary_storage'
+    'mail'
 )
 
 
@@ -64,8 +62,7 @@ TENANT_APPS = (
 
 INSTALLED_APPS = SHARED_APPS + TENANT_APPS
 
-# Stockage des fichiers médias sur Cloudinary
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+#
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dulmalku0',
