@@ -506,10 +506,10 @@ class StudentsIdentityCards(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__(orientation='P')
-        self.add_font('inter', '', 'static/fonts/Inter-Regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(5, 5, 5)
         self.set_auto_page_break(auto=True, margin=12)
