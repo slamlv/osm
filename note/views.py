@@ -785,10 +785,10 @@ class ExamRecord(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.add_font('inter', '', 'static/fonts/Inter-Regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=10)
@@ -908,10 +908,10 @@ class TMarksReport(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__(orientation='L')
-        self.add_font('inter', '', 'static/fonts/Inter-Regular.ttf')
-        self.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf')
-        self.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf')
-        self.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=10)
@@ -1096,10 +1096,10 @@ class ReportCard(FPDF):
                 self.nom = data['students_data'][i]['student']['short_name']
 
     def add_fonts(self, pdf):
-        pdf.add_font('inter', '', 'static/fonts/Inter-Regular.ttf', uni=True)
-        pdf.add_font('inter', 'B', 'static/fonts/Inter-Bold.ttf', uni=True)
-        pdf.add_font('inter', 'I', 'static/fonts/Inter-Italic.ttf', uni=True)
-        pdf.add_font('inter', 'BI', 'static/fonts/Inter-BoldItalic.ttf', uni=True)
+        pdf.add_font('inter', '', settings.INTER_REGULAR)
+        pdf.add_font('inter', 'I', settings.INTER_ITALIC)
+        pdf.add_font('inter', 'B', settings.INTER_BOLD)
+        pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
 
     def footer(self):
         self.set_y(-10)
