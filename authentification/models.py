@@ -2,6 +2,8 @@ from django_tenants.models import TenantMixin, DomainMixin
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from datetime import time
+from django.conf import settings
+from os.path import join
 
 # Create your models here.
 
@@ -87,7 +89,7 @@ class School(TenantMixin):
         return {
             'nom': self.nom,
             'name': self.name,
-            'logo': self.logo if self.logo else "{% static 'image/no_image.jpg' %}",
+            'logo': self.logo if self.logo else join(settings.STATIC_ROOT, "image", "no_image.jpg"),
             'motto': self.motto if self.motto else "",
             'immatriculation': self.immatriculation,
             'region': self.region,
