@@ -151,8 +151,8 @@ class ClassRoomQuerySet(models.QuerySet):
 class ClassRoom(models.Model):
     classe = models.ForeignKey(Class, on_delete=models.CASCADE)
     code = models.CharField(max_length=15)
-    lv2 = models.CharField(choices=LVII.choices, null=True)
-    lv3 = models.CharField(choices=LVIII.choices, null=True)
+    lv2 = models.CharField(choices=LVII.choices, null=True, max_length=15)
+    lv3 = models.CharField(choices=LVIII.choices, null=True, max_length=15)
     matieres = models.ManyToManyField(Matieres, through="Enseignements")
     titulaire = models.ForeignKey(Personnel, on_delete=models.SET_NULL, null=True)
 
