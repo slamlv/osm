@@ -53,6 +53,7 @@ SHARED_APPS = (
     'cloudinary_storage'
 )
 
+
 TENANT_APPS = (
     'staff.apps.StaffConfig',
     'classroom',
