@@ -155,7 +155,7 @@ STATICFILES_DIRS = [
 
 INTER_REGULAR = os.path.join(STATIC_ROOT, "fonts", "Inter-Regular.ttf")
 INTER_BOLD = os.path.join(STATIC_ROOT, "fonts", "Inter-Bold.ttf")
-INTER_ITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-Italic.ttf")
+INTER_ITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-italic.ttf")
 INTER_BOLDITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-BoldItalic.ttf")
 
 
