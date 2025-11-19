@@ -10,7 +10,7 @@
                     <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
                         data-bs-toggle="modal" data-bs-target="#photoModal">
                     {% else %}
-                    <img src="https://res.cloudinary.com/dulmalku0/image/upload/v1763529491/student_qpxvam.jpg" alt="Photo de profil" class="profile-img mb-3">
+                    <img src="{% static 'image/student.jpg' %}" alt="Photo de profil" class="profile-img mb-3">
                     {% endif %}
                     <hr class="border border-secondary border-2">
                     <div class="row text-start">
