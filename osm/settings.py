@@ -15,6 +15,7 @@ from os.path import join
 from pathlib import Path
 from decouple import config
 from pathlib import Path
+import dj_database_url
 
 from django.conf.global_settings import STATICFILES_DIRS, CSRF_COOKIE_SECURE
 
@@ -100,16 +101,8 @@ DATABASE_ROUTERS = (
 )
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-    }
+    "default": dj_database_url.config(conn_max_age=600, ssl_require=True)
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
