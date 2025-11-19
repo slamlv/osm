@@ -62,13 +62,6 @@ TENANT_APPS = (
 
 INSTALLED_APPS = SHARED_APPS + TENANT_APPS
 
-#
-
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'dulmalku0',
-    'API_KEY': '912476915712985',
-    'API_SECRET': 'Cha39z6x-YPENngWiwXF6lvS8fU',
-}
 
 MIDDLEWARE = [
     'authentification.middleware.RequestMiddleware',
@@ -165,7 +158,6 @@ INTER_BOLD = os.path.join(STATIC_ROOT, "fonts", "Inter-Bold.ttf")
 INTER_ITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-Italic.ttf")
 INTER_BOLDITALIC = os.path.join(STATIC_ROOT, "fonts", "Inter-BoldItalic.ttf")
 
-TEMP_URL = os.path.join(STATIC_ROOT, "/temp/")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
