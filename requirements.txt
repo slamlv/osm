@@ -24,4 +24,6 @@ tzdata==2025.2
 whitenoise==6.11.0
 gunicorn
 dj-database-url
+cloudinary
+django-cloudinary-storage
 
