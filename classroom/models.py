@@ -454,7 +454,7 @@ class ClassRoom(models.Model):
             min_max = f"[{minim} - {maxim}]"
             if for_stats:
                 return moyenne_generale, formated_float((nb_admis / nb) * 100), min_max, nb, nb_admis, nbfe, nbfr,\
-                    nbge, nbgr, formated_float((nbfr / nbfe) * 100), formated_float((nbgr / nbge) * 100)
+                    nbge, nbgr, formated_float((nbfr / nbfe) * 100) if nbfe else 0, formated_float((nbgr / nbge) * 100) if nbge else 0
             if pv_orderd:
                 return ordered_data, moyenne_generale, taux, min_max, nb, nb_admis
             return moyenne_generale, taux, min_max, nb, nb_admis
