@@ -699,7 +699,7 @@ def default_competences(level, matiere, evalx):
                 5: "Pratiquer les sports collectifs : Football, Basket-ball, Handball et Volley-ball (empêcher de marquer, récupérer le ballon, gêner la progression de l'adversaire, servir et réceptionner le ballon et bloquer le ballon)",
                 6: "Pratiquer les sports collectifs : Football, Basket-ball, Handball et Volley-ball (empêcher de marquer, récupérer le ballon, gêner la progression de l'adversaire, servir et réceptionner le ballon et bloquer le ballon)"
             },
-            'Tavail Manuel': {
+            'Travail Manuel': {
                 1: "Utiliser le matériel, les matériaux et les techniques pour dessiner le kiosque et autres objets",
                 2: "Utiliser les outils et le matériel agricole pour produire une pépinière, utiliser le matériel et les matériaux pour monter une ferme et y placer des poussins",
                 3: "Utiliser le matériel de dessin et les gouaches pour peindre un kiosque et autres objets",
@@ -813,7 +813,7 @@ def default_competences(level, matiere, evalx):
                 5: "Pratiquer les sports collectifs : Football, Basket-ball, Handball et Volley-ball (empêcher de marquer, récupérer le ballon, gêner la progression de l'adversaire, servir et réceptionner le ballon et bloquer le ballon)",
                 6: "Pratiquer les sports collectifs : Football, Basket-ball, Handball et Volley-ball (empêcher de marquer, récupérer le ballon, gêner la progression de l'adversaire, servir et réceptionner le ballon et bloquer le ballon)"
             },
-            'Tavail Manuel': {
+            'Travail Manuel': {
                 1: "Utiliser le matériel, les matériaux et les techniques pour dessiner et peindre un paysage et les plantes",
                 2: "Utiliser les outils agricoles pour semer / cultiver les légumes à feuilles et les fruits, utiliser le matériel d'élevage pour élever les pondeuses pour les œufs",
                 3: "Entretenir et conserver le matériel, les matériaux et les objets d'arts",
@@ -951,7 +951,7 @@ def default_competences(level, matiere, evalx):
                 5: "Appliquer les stratégies de défense dans la pratique des sports collectifs",
                 6: "Appliquer les stratégies de défense dans la pratique des sports collectifs"
             },
-            'Tavail Manuel': {
+            'Travail Manuel': {
                 1: "Utiliser les matériaux, les matériels et les techniques pour dessiner et peindre un paysage sous ciel gris ou bleu",
                 2: "Maîtriser les étapes du semis et d'entretien de la plantation de légumes racines et bulbes, installer et entretenir un élevage de lapins",
                 3: "Entretenir et conserver les œuvres d'art récoltées (tableaux), récolter et conserver la production de légumes racines et bulbes",
@@ -1089,7 +1089,7 @@ def default_competences(level, matiere, evalx):
                 5: "Appliquer les stratégies de défense dans la pratique des sports collectifs",
                 6: "Appliquer les stratégies de défense dans la pratique des sports collectifs"
             },
-            'Tavail Manuel': {
+            'Travail Manuel': {
                 1: "Utiliser les matériaux, les matériels et les techniques pour modeler et mouler un pot en argile",
                 2: "Maîtriser les étapes du semis et d'entretien de la plantation de légumineuses à grains, installer et entretenir un élevage de poissons",
                 3: "Utiliser les techniques de finition sur les objets fabriqués",
