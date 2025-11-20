@@ -14,6 +14,7 @@ from django.conf import settings
 from fpdf import FPDF
 from fpdf.enums import VAlign
 from fpdf.table import Table
+from babel.dates import format_date
 
 from note.models import Note, Enseignements
 from classroom.models import ClassRoom
@@ -528,8 +529,6 @@ class StudentsIdentityCards(FPDF):
             self.first_and_last_pages((1, 2, 3), logo, height)
 
     def id_cards(self, logo, height):
-        import locale
-        locale.setlocale(locale.LC_ALL, 'fr_FR.utf8')
         students = self.data['students']
         is_not_modulo3 = len(students) % 3 != 0
         j = int(len(students) / 3)
@@ -570,7 +569,7 @@ class StudentsIdentityCards(FPDF):
                 row = table.row()
                 row.cell("**Né(e) le :**")
                 self.set_font_size(9)
-                row.cell(f"**{student.date_naissance.strftime('%d %B %Y')}**", rowspan=2)
+                row.cell(f"**{format_date(student.date_naissance, format="long", locale="fr_FR")}**", rowspan=2)
                 row = table.row()
                 self.set_font_size(7)
                 row.cell("__Born on__")
