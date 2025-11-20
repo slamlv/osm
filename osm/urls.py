@@ -32,4 +32,10 @@ urlpatterns = [
     path("", include("classroom.urls")),
     path("", include("student.urls")),
     path("", include("note.urls")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Production
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
