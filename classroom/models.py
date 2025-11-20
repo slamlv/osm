@@ -359,9 +359,9 @@ class ClassRoom(models.Model):
                         .first().enseignement.enseignant
                     data_matiere['enseignant'] = enseignant.short_name if enseignant else "/"
                     data_matiere['nbfe'], data_matiere['nbfr'], data_matiere['pcf'] = nbfe, nbfr,\
-                        formated_float((nbfr / nbfe) * 100)
+                        formated_float((nbfr / nbfe) * 100) if nbfe else 0
                     data_matiere['nbge'], data_matiere['nbgr'], data_matiere['pcg'] = nbge, nbgr,\
-                        formated_float((nbgr / nbge) * 100)
+                        formated_float((nbgr / nbge) * 100) if nbge else 0
                     data_matiere['nbte'], data_matiere['nbtr'], data_matiere['pct'] = len(notes_moyennes), nbtr,\
                         formated_float((nbtr / len(notes_moyennes)) * 100)
                     data_matiere['min_max'] = f"[{min(notes_moyennes)} - {max(notes_moyennes)}]"
