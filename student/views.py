@@ -10,6 +10,7 @@ from django.views.decorators.http import condition
 from django.views.generic import DeleteView, DetailView
 from django.forms.models import model_to_dict
 from django.db import IntegrityError
+form django.conf import settings
 from fpdf import FPDF
 from fpdf.enums import VAlign
 from fpdf.table import Table
