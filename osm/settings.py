@@ -34,7 +34,7 @@ DEBUG = config('DEBUG', cast=bool)
 
 
 ALLOWED_HOSTS = [
-    'https://osm-ca8p.onrender.com',
+    '*',
 ]
 
 
