@@ -102,7 +102,7 @@ class MemberForm(DynamicFormMixin, forms.ModelForm):
         'placeholder': "Nombre d'années d'ancienneté du membre", 'id': "since", 'class': "form-control fw-bold"
     }))
     photo = DynamicField(forms.FileField, widget=forms.ClearableFileInput(attrs={
-        'placeholder': "Votre photo de profil", 'id': "photo", 'class': "form-control w-auto bg-dark text-white fw-bold",
+        'placeholder': "Votre photo de profil", 'id': "photo", 'class': "form-control w-auto bg-dark text-white fw-bold client-image",
         'accept': "image/*"
     }), include=lambda form: form.include_pp(), initial=lambda form: form.default(1), required=False)
 
