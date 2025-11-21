@@ -48,7 +48,7 @@ class SchoolForm(DynamicFormMixin, forms.ModelForm):
             'email': forms.TextInput(attrs={'class': "form-control fw-bold", 'id': "email", 'placeholder': "Adresse email", 'type': 'email'}),
             'with_competences': forms.CheckboxInput(attrs={'class': "form-check-input", 'id': "competences"}),
             'mergedprogrammations': forms.CheckboxInput(attrs={'class': "form-check-input", 'id': "programmations"}),
-            'logo': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold", 'id': "logo", 'accept': "image/*"})
+            'logo': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold client-image", 'id': "logo", 'accept': "image/*"})
         }
 
     def clean(self):
