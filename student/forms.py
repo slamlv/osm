@@ -146,7 +146,7 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         'placeholder': "Entrez l'identifiant unique", 'class': "form-control fw-bold", 'id': "unique_id"
     }))
     photo = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={
-        'placeholder': "Photo de l'élève", 'id': "photo", 'class': "form-control w-auto bg-dark text-white fw-bold",
+        'placeholder': "Photo de l'élève", 'id': "photo", 'class': "form-control w-auto bg-dark text-white fw-bold client-image",
         'accept': "image/*"
     }))
 
