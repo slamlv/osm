@@ -182,6 +182,9 @@
       const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
 
+      // Important: mark request as AJAX for server detection (useful if you implement Solution B)
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
       // Disable form controls while uploading
       const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
       controls.forEach(c => c.disabled = true);
@@ -194,29 +197,62 @@
         }
       };
 
+      // ---------------------------
+      // Remplacement du xhr.onload
+      // ---------------------------
       xhr.onload = () => {
         controls.forEach(c => c.disabled = false);
-        if (xhr.status >= 200 && xhr.status < 300) {
+
+        let handled = false;
+
+        // 1) Essayer de lire un JSON contenant {"redirect": "..."}
+        try {
+          const data = JSON.parse(xhr.responseText || '{}');
+          if (data && data.redirect) {
+            window.location.href = data.redirect;
+            handled = true;
+            return;
+          }
+        } catch (err) {
+          // pas JSON -> on continue
+        }
+
+        // 2) Si le serveur renvoie une redirection 3xx (souvent 302)
+        if (!handled && xhr.status >= 300 && xhr.status < 400) {
+          const loc = xhr.getResponseHeader('Location');
+          if (loc) {
+            window.location.href = loc;
+            handled = true;
+            return;
+          }
+        }
+
+        // 3) xhr.responseURL = URL finale que le serveur a renvoyée
+        // (Chrome/Firefox peuvent exposer la destination finale)
+        if (!handled && xhr.responseURL) {
+          const initial = (action || window.location.href).split('#')[0];
+          const final = xhr.responseURL.split('#')[0];
+
+          if (final && final !== initial) {
+            window.location.href = final;
+            handled = true;
+            return;
+          }
+        }
+
+        // 4) Si pas de redirection détectée -> comportement par défaut
+        if (!handled && xhr.status >= 200 && xhr.status < 300) {
           prog.bar.style.width = '100%';
           prog.text.textContent = '100% - Téléversement terminé';
-          // Option: si la vue renvoie JSON {redirect: "..."} on peut rediriger
-          try {
-            const data = JSON.parse(xhr.responseText || '{}');
-            if (data.redirect) {
-              window.location.href = data.redirect;
-              return;
-            }
-          } catch (e) { /* non-json, ignore */ }
-          // sinon afficher un petit message
-          // si form a data-success-target, injecter la réponse dedans
           const targetSel = form.getAttribute('data-success-target');
           if (targetSel) {
             const tgt = document.querySelector(targetSel);
             if (tgt) tgt.textContent = 'Téléversement réussi.';
           } else {
+            // Default fallback
             alert('Téléversement réussi.');
           }
-        } else {
+        } else if (!handled) {
           prog.text.textContent = `Erreur upload (${xhr.status})`;
           alert(`Erreur upload (${xhr.status})`);
         }
