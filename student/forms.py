@@ -75,6 +75,11 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
         'class': "form-select fw-bold woption", 'id': "civilite"
     }))
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        # Convertit '' (chaîne vide) en None pour que la DB enregistre NULL
+        return email or None
+
     def clean(self):
         nom = self.cleaned_data.get("nom")
         prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data.keys() else ""
