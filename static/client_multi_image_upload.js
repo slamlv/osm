@@ -1,4 +1,4 @@
-// client_multi_image_upload.js (version robuste checkbox clear)
+// client_multi_image_upload.js - compatible {{ form.photo }}
 (() => {
   const MAX_WIDTH = 1200;
   const QUALITY = 0.75;
@@ -32,144 +32,118 @@
     container.appendChild(text);
     form.appendChild(container);
 
-    const obj = { container, bar, text };
-    form._clientProgress = obj;
-    return obj;
+    return form._clientProgress = { container, bar, text };
   }
 
   async function resizeAndConvert(file) {
     let imgBitmap;
-    try { imgBitmap = window.createImageBitmap ? await createImageBitmap(file) : await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
-    catch { imgBitmap = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
+    try { imgBitmap = window.createImageBitmap ? await createImageBitmap(file) : await new Promise((res, rej) => { const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); }); }
+    catch { imgBitmap = await new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); }); }
 
     const naturalWidth = imgBitmap.width || imgBitmap.naturalWidth;
     const naturalHeight = imgBitmap.height || imgBitmap.naturalHeight;
     let targetWidth = naturalWidth, targetHeight = naturalHeight;
-    if (MAX_WIDTH && naturalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; targetHeight = Math.round(naturalHeight * (MAX_WIDTH / naturalWidth)); }
+    if(MAX_WIDTH && naturalWidth>MAX_WIDTH){ targetWidth=MAX_WIDTH; targetHeight=Math.round(naturalHeight*(MAX_WIDTH/naturalWidth)); }
 
     const canvas = document.createElement('canvas');
-    canvas.width = targetWidth; canvas.height = targetHeight;
+    canvas.width=targetWidth; canvas.height=targetHeight;
     const ctx = canvas.getContext('2d');
+    try { ctx.drawImage(imgBitmap,0,0,targetWidth,targetHeight); }
+    catch { const tmp=URL.createObjectURL(file); await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>{ctx.drawImage(i,0,0,targetWidth,targetHeight); URL.revokeObjectURL(tmp); res(); }; i.onerror=e=>{ URL.revokeObjectURL(tmp); rej(e); }; i.src=tmp; }); }
+    finally { try { if(imgBitmap && imgBitmap.close) imgBitmap.close(); } catch{} }
 
-    try { ctx.drawImage(imgBitmap, 0, 0, targetWidth, targetHeight); }
-    catch {
-      const tmpUrl = URL.createObjectURL(file);
-      await new Promise((res, rej) => {
-        const i = new Image();
-        i.onload = () => { ctx.drawImage(i, 0, 0, targetWidth, targetHeight); URL.revokeObjectURL(tmpUrl); res(); };
-        i.onerror = (e) => { URL.revokeObjectURL(tmpUrl); rej(e); };
-        i.src = tmpUrl;
-      });
-    } finally { try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch {} }
-
-    return await new Promise(resolve => {
-      canvas.toBlob(blob => {
-        if (!blob && OUTPUT_TYPE === 'image/webp') canvas.toBlob(b2 => resolve(b2), 'image/jpeg', QUALITY);
-        else resolve(blob);
-      }, OUTPUT_TYPE, QUALITY);
-    });
+    return await new Promise(resolve=>{ canvas.toBlob(blob=>{ if(!blob && OUTPUT_TYPE==='image/webp') canvas.toBlob(b2=>resolve(b2),'image/jpeg',QUALITY); else resolve(blob); },OUTPUT_TYPE,QUALITY); });
   }
 
-  function blobToFile(blob, filename) {
-    try { return new File([blob], filename, { type: blob.type }); } 
-    catch { blob.name = filename; return blob; }
-  }
+  function blobToFile(blob,filename){ try{return new File([blob],filename,{type:blob.type});} catch{ blob.name=filename; return blob; } }
 
-  async function navigateAndRender(url) {
-    try {
-      const resp = await fetch(url, { credentials:'same-origin', method:'GET' });
-      if (!resp.ok) { window.location.assign(url); return; }
-      const ct = resp.headers.get('Content-Type')||'';
-      if (!ct.includes('text/html')) { window.location.assign(url); return; }
-      const html = await resp.text();
-      history.replaceState(null,'',url);
-      document.open(); document.write(html); document.close();
-    } catch { window.location.assign(url); }
-  }
+  async function navigateAndRender(url){ try{ const resp=await fetch(url,{credentials:'same-origin',method:'GET'}); if(!resp.ok){ window.location.assign(url); return;} const ct=resp.headers.get('Content-Type')||''; if(!ct.includes('text/html')){ window.location.assign(url); return;} const html=await resp.text(); history.replaceState(null,'',url); document.open(); document.write(html); document.close(); } catch{ window.location.assign(url); } }
 
-  function init() {
+  function init(){
     const forms = document.querySelectorAll(`form.${FORM_CLASS}`);
-    forms.forEach(form => setupForm(form));
+    forms.forEach(f=>setupForm(f));
   }
 
-  function setupForm(form) {
+  function setupForm(form){
     const compressedMap = new Map();
     const fileInputs = Array.from(form.querySelectorAll(`input[type=file].${FILE_INPUT_CLASS}`));
 
-    fileInputs.forEach(input => {
-      const preview = document.createElement('img');
-      preview.style = 'max-width:200px; display:none; margin-top:6px; border:1px solid #ddd; padding:4px;';
-      input.insertAdjacentElement('afterend', preview);
-      let info = null;
+    fileInputs.forEach(input=>{
+      const preview=document.createElement('img');
+      preview.style='max-width:200px; display:none; margin-top:6px; border:1px solid #ddd; padding:4px;';
+      input.insertAdjacentElement('afterend',preview);
+      let info=null;
 
-      input.addEventListener('change', async (e) => {
-        const f = e.target.files && e.target.files[0];
-        if (preview._url) try { URL.revokeObjectURL(preview._url); } catch {}
-        if (!f) { compressedMap.delete(input); preview.style.display='none'; if(info) info.textContent=''; return; }
+      input.addEventListener('change',async e=>{
+        const f=e.target.files && e.target.files[0];
+        if(preview._url) try{URL.revokeObjectURL(preview._url);}catch{}
+        if(!f){ compressedMap.delete(input); preview.style.display='none'; if(info) info.textContent=''; return; }
 
         preview._url = URL.createObjectURL(f); preview.src=preview._url; preview.style.display='';
 
-        try {
+        try{
           const blob = await resizeAndConvert(f);
-          const base = f.name.includes('.') ? f.name.substring(0,f.name.lastIndexOf('.')):f.name;
+          const base = f.name.includes('.')?f.name.substring(0,f.name.lastIndexOf('.')):f.name;
           const ext = blob.type==='image/webp'?'webp':(blob.type==='image/jpeg'?'jpg':'img');
           const filename = base+'.'+ext;
-          compressedMap.set(input,[{blob,filename,originalSize:f.size,compressedSize:blob.size}]);
+          compressedMap.set(input,[{blob,filename}]);
 
-          if(!info){info=document.createElement('div'); info.className='text-white'; info.style='font-size:12px;margin-top:4px;color:inherit'; input.insertAdjacentElement('afterend',info);}
+          if(!info){ info=document.createElement('div'); info.className='text-white'; info.style='font-size:12px;margin-top:4px;color:inherit'; input.insertAdjacentElement('afterend',info);}
           info.textContent = `Prêt : ${(f.size/1024).toFixed(1)}KB → ${(blob.size/1024).toFixed(1)}KB`;
-          if (preview._url) try { URL.revokeObjectURL(preview._url); } catch {}
+          if(preview._url) try{URL.revokeObjectURL(preview._url);}catch{}
           preview._url = URL.createObjectURL(blob); preview.src = preview._url;
-        } catch { compressedMap.delete(input); preview.style.display='none'; if(!info){ info=document.createElement('div'); info.className='text-white'; info.style='font-size:12px;margin-top:4px;color:inherit'; input.insertAdjacentElement('afterend',info);} info.textContent='Erreur lors du traitement côté client'; }
+        }catch{ compressedMap.delete(input); preview.style.display='none'; if(!info){ info=document.createElement('div'); info.className='text-white'; info.style='font-size:12px;margin-top:4px;color:inherit'; input.insertAdjacentElement('afterend',info);} info.textContent='Erreur traitement image côté client'; }
       });
     });
 
-    form.addEventListener('submit', async (ev) => {
+    form.addEventListener('submit',async ev=>{
       ev.preventDefault();
       const fd = new FormData(form);
 
-      // --- AJOUT CHECKBOX CLEAR ---
-      form.querySelectorAll('input[type="checkbox"][name$="-clear"]').forEach(cb=>{
-        if(cb.checked && !fd.has(cb.name)) fd.append(cb.name,'on');
-      });
-
-      // --- AJOUT FICHIERS COMPRESSES, sauf si clear est cochée ---
       fileInputs.forEach(input=>{
-        const arr = compressedMap.get(input);
-        if (!arr || arr.length===0) return;
-        const clearChecked = form.querySelector(`input[name="${input.name}-clear"]`)?.checked;
-        if (clearChecked) return; // clear prime sur le fichier
-        fd.delete(input.name);
-        arr.forEach(info => fd.append(input.name, info.blob, info.filename));
+        const clearCheckbox = form.querySelector(`input[name="${input.name}-clear"]`);
+        const clearChecked = clearCheckbox?.checked;
+
+        if(clearChecked){
+          // clear prime: on supprime les fichiers compressés
+          compressedMap.delete(input);
+        } else {
+          // si pas clear, on remplace par le fichier compressé
+          const arr = compressedMap.get(input);
+          if(arr && arr.length){
+            fd.delete(input.name);
+            arr.forEach(info=>fd.append(input.name, info.blob, info.filename));
+          }
+        }
       });
 
       const prog = createProgressElements(form);
       prog.bar.style.width='0%'; prog.text.textContent=''; prog.container.style.display='';
 
       const xhr = new XMLHttpRequest();
-      const action = form.getAttribute('action')||window.location.href;
-      const method = (form.getAttribute('method')||'POST').toUpperCase();
-      xhr.open(method, action, true);
-      const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+      const action=form.getAttribute('action')||window.location.href;
+      const method=(form.getAttribute('method')||'POST').toUpperCase();
+      xhr.open(method,action,true);
+      const csrftoken = getCookie('csrftoken')||form.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if(csrftoken) xhr.setRequestHeader('X-CSRFToken',csrftoken);
 
-      const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
+      const controls=Array.from(form.querySelectorAll('input,button,textarea,select'));
       controls.forEach(c=>c.disabled=true);
 
-      xhr.upload.onprogress=(ev)=>{if(ev.lengthComputable){const pct=Math.round(ev.loaded/ev.total*100); prog.bar.style.width=pct+'%'; prog.text.textContent=`${pct}%`;} else prog.textContent='Envoi...';};
+      xhr.upload.onprogress=(ev)=>{if(ev.lengthComputable){ const pct=Math.round(ev.loaded/ev.total*100); prog.bar.style.width=pct+'%'; prog.textContent=`${pct}%`; } else prog.textContent='Envoi...';};
 
-      xhr.onload=async()=>{
+      xhr.onload=async ()=>{
         controls.forEach(c=>c.disabled=false);
-        if(xhr.responseURL){await navigateAndRender(xhr.responseURL); return;}
-        if(xhr.status>=200 && xhr.status<300){prog.bar.style.width='100%'; prog.textContent='Téléversement terminé';} 
-        else{prog.textContent=`Erreur upload (${xhr.status})`; alert(`Erreur upload (${xhr.status})`);}
+        if(xhr.responseURL){ await navigateAndRender(xhr.responseURL); return; }
+        if(xhr.status>=200 && xhr.status<300){ prog.bar.style.width='100%'; prog.textContent='Téléversement terminé'; }
+        else{ prog.textContent=`Erreur upload (${xhr.status})`; alert(`Erreur upload (${xhr.status})`);}
       };
-      xhr.onerror=()=>{controls.forEach(c=>c.disabled=false); prog.textContent='Erreur réseau.'; alert('Erreur réseau.');};
+
+      xhr.onerror=()=>{ controls.forEach(c=>c.disabled=false); prog.textContent='Erreur réseau'; alert('Erreur réseau'); };
 
       xhr.send(fd);
     });
   }
 
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}
-  else{init();}
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); } else { init(); }
 })();
