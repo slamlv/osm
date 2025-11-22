@@ -75,11 +75,6 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
         'class': "form-select fw-bold woption", 'id': "civilite"
     }))
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        # Convertit '' (chaîne vide) en None pour que la DB enregistre NULL
-        return email or None
-
     def clean(self):
         nom = self.cleaned_data.get("nom")
         prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data.keys() else ""
@@ -104,6 +99,7 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
             self.cleaned_data["profession"] = self.cleaned_data.get("profession").title()
         self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
         self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
+        self.cleaned_data['email'] = self.cleaned_data.get('email') or None
 
 
 class StudentForm(DynamicFormMixin, forms.ModelForm):
