@@ -1,9 +1,9 @@
 // client_multi_image_upload.js
 (() => {
   // CONFIG
-  const MAX_WIDTH = 1200;            // largeur max en px
-  const QUALITY = 0.75;              // 0.0 -> 1.0 (réduit légèrement pour gagner du débit)
-  const OUTPUT_TYPE = 'image/webp';  // 'image/webp' ou 'image/jpeg'
+  const MAX_WIDTH = 1200;            
+  const QUALITY = 0.75;              
+  const OUTPUT_TYPE = 'image/webp';  
   const FILE_INPUT_CLASS = 'client-image';
   const FORM_CLASS = 'client-image-form';
 
@@ -39,7 +39,6 @@
     return obj;
   }
 
-  // resize + convert to Blob using canvas
   async function resizeAndConvert(file) {
     let imgBitmap;
     try {
@@ -95,7 +94,7 @@
         i.src = tmpUrl;
       });
     } finally {
-      try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { /* ignore */ }
+      try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { }
     }
 
     const mime = OUTPUT_TYPE;
@@ -112,18 +111,15 @@
     });
   }
 
-  // helper: create a File from a Blob (with filename & type)
   function blobToFile(blob, filename) {
     try {
       return new File([blob], filename, { type: blob.type });
     } catch (e) {
-      // Older browsers: fallback to Blob with name property shim (may not set input.files properly)
       blob.name = filename;
       return blob;
     }
   }
 
-  // navigateAndRender kept for AJAX path fallback (no X-Requested-With in fetch)
   async function navigateAndRender(url) {
     try {
       const resp = await fetch(url, { credentials: 'same-origin', method: 'GET' });
@@ -150,17 +146,13 @@
     }
   }
 
-  // Init
   function init() {
     const forms = document.querySelectorAll(`form.${FORM_CLASS}`);
     forms.forEach(form => setupForm(form));
   }
 
   function setupForm(form) {
-    // Map input element -> Array of compressed info (for potential multiple files later)
-    // For single-file inputs we store an array length 1.
     const compressedMap = new Map();
-
     const fileInputs = Array.from(form.querySelectorAll(`input[type=file].${FILE_INPUT_CLASS}`));
 
     fileInputs.forEach(input => {
@@ -171,10 +163,9 @@
       let info = null;
 
       input.addEventListener('change', async (e) => {
-        // support only first file (keeps parity with your original)
         const f = e.target.files && e.target.files[0];
-        if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (err) {} preview._url = null; }
-        if (info && info._url) { try { URL.revokeObjectURL(info._url); } catch (err) {} info._url = null; }
+        if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch {} preview._url = null; }
+        if (compressedMap.get(input)?._url) { try { URL.revokeObjectURL(compressedMap.get(input)._url); } catch {} }
 
         if (!f) {
           compressedMap.delete(input);
@@ -196,15 +187,9 @@
           const ext = blob.type === 'image/webp' ? 'webp' : (blob.type === 'image/jpeg' ? 'jpg' : 'img');
           const filename = base + '.' + ext;
 
-          // store one-element array to keep extensibility
-          compressedMap.set(input, [{
-            blob,
-            filename,
-            originalSize: f.size,
-            compressedSize: blob.size
-          }]);
+          compressedMap.set(input, [{ blob, filename, originalSize: f.size, compressedSize: blob.size }]);
 
-          if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (err) {} preview._url = null; }
+          if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch {} preview._url = null; }
           preview._url = URL.createObjectURL(blob);
           preview.src = preview._url;
 
@@ -214,7 +199,7 @@
             info.style = 'font-size:12px; margin-top:4px; color:inherit';
             input.insertAdjacentElement('afterend', info);
           }
-          info.textContent = `Prêt : ${ (f.size/1024).toFixed(1) }KB → ${ (blob.size/1024).toFixed(1) }KB`;
+          info.textContent = `Prêt : ${(f.size/1024).toFixed(1)}KB → ${(blob.size/1024).toFixed(1)}KB`;
 
         } catch (err) {
           console.error('Erreur traitement image:', err);
@@ -231,143 +216,83 @@
       });
     });
 
-    // Submit handler
     form.addEventListener('submit', async (ev) => {
-      // If no special file inputs, nothing to do
+      const fileInputs = Array.from(form.querySelectorAll(`input[type=file].${FILE_INPUT_CLASS}`));
       if (fileInputs.length === 0) return;
 
-      // Decide method: native submit (default) vs AJAX upload
-      // If form has data-ajax="1" we use XHR (old behaviour). Otherwise native submit to preserve Django messages.
       const useAjax = form.getAttribute('data-ajax') === '1';
 
       if (!useAjax) {
-        // Native submit path: replace file inputs' .files with File(s) created from blobs, then call native submit.
         ev.preventDefault();
 
-        // Prepare UI (indeterminate progress)
         const prog = createProgressElements(form);
         prog.bar.style.width = '100%';
         prog.text.textContent = 'Envoi en cours...';
         prog.text.className = 'text-white';
         prog.container.style.display = '';
 
-        // For each file input, if we have compressed blob(s), create a DataTransfer and assign new files.
         try {
           fileInputs.forEach(input => {
             const arr = compressedMap.get(input);
             if (!arr || arr.length === 0) return;
-            // build DataTransfer with new File(s)
             const dt = new DataTransfer();
-            arr.forEach(info => {
-              const fileObj = blobToFile(info.blob, info.filename);
-              dt.items.add(fileObj);
-            });
-            // assign files to input
-            try {
-              input.files = dt.files;
-            } catch (e) {
-              // Some browsers may not allow setting input.files; fallback below by creating a temporary form
-              console.warn('Impossible de définir input.files sur ce navigateur, fallback activé.');
-              throw new Error('cannot-set-input-files');
-            }
+            arr.forEach(info => dt.items.add(blobToFile(info.blob, info.filename)));
+            input.files = dt.files;
           });
 
-          // temporarily remove this submit listener to avoid loop when calling form.submit()
           form.removeEventListener('submit', arguments.callee);
-
-          // submit form normally (browser will perform navigation -> Django messages will show)
           form.submit();
-        } catch (err) {
-          // Fallback: if we cannot set input.files (older browsers), create a hidden form and append File objects via fetch/XHR
-          // We'll fallback to AJAX upload using XHR so at least upload proceeds — after that we'll navigate to server response.
-          console.warn('Fallback to AJAX upload because input.files could not be set:', err);
-
-          // Build FormData from form
+        } catch {
           const fd = new FormData(form);
-          // Replace file entries using compressedMap where possible
+
+          // --- AJOUT CHECKBOX CLEAR ---
+          form.querySelectorAll('input[type="checkbox"][name$="-clear"]').forEach(cb => {
+            if (cb.checked && !fd.has(cb.name)) fd.append(cb.name, 'on');
+          });
+
           fileInputs.forEach(input => {
-            const name = input.name;
-            if (!name) return;
             const arr = compressedMap.get(input);
             if (arr && arr.length) {
-              fd.delete(name);
-              arr.forEach(info => fd.append(name, info.blob, info.filename));
+              fd.delete(input.name);
+              arr.forEach(info => fd.append(input.name, info.blob, info.filename));
             }
           });
 
-          // send via XHR without X-Requested-With header (we removed it previously)
           const xhr = new XMLHttpRequest();
           const action = form.getAttribute('action') || window.location.href;
           const method = (form.getAttribute('method') || 'POST').toUpperCase();
           xhr.open(method, action, true);
-
-          // CSRF
           const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
           if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
 
-          // disable controls
           const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
           controls.forEach(c => c.disabled = true);
 
           xhr.onload = async () => {
             controls.forEach(c => c.disabled = false);
-
-            // Try parse JSON redirect first
-            try {
-              const data = JSON.parse(xhr.responseText || '{}');
-              if (data && data.redirect) {
-                await navigateAndRender(data.redirect);
-                return;
-              }
-            } catch (e) { /* not JSON */ }
-
-            // If 3xx with Location
-            if (xhr.status >= 300 && xhr.status < 400) {
-              const loc = xhr.getResponseHeader('Location');
-              if (loc) {
-                await navigateAndRender(loc);
-                return;
-              }
-            }
-
-            // If responseURL different
-            if (xhr.responseURL) {
-              const initial = (action || window.location.href).split('#')[0];
-              const final = xhr.responseURL.split('#')[0];
-              if (final && final !== initial) {
-                await navigateAndRender(final);
-                return;
-              }
-            }
-
-            // fallback: if status 2xx but no redirect info, reload page
-            if (xhr.status >= 200 && xhr.status < 300) {
-              window.location.reload();
-            } else {
-              alert('Erreur upload (' + xhr.status + ')');
-            }
+            if (xhr.responseURL) await navigateAndRender(xhr.responseURL);
+            else window.location.reload();
           };
-
-          xhr.onerror = () => {
-            controls.forEach(c => c.disabled = false);
-            alert('Erreur réseau pendant l\'upload.');
-          };
-
+          xhr.onerror = () => { controls.forEach(c => c.disabled = false); alert('Erreur réseau.'); };
           xhr.send(fd);
         }
         return;
       }
 
-      // ---------- AJAX path (only when data-ajax="1") ----------
+      // ---------- AJAX path ----------
       ev.preventDefault();
       const fd = new FormData(form);
+
+      // --- AJOUT CHECKBOX CLEAR ---
+      form.querySelectorAll('input[type="checkbox"][name$="-clear"]').forEach(cb => {
+        if (cb.checked && !fd.has(cb.name)) fd.append(cb.name, 'on');
+      });
+
       fileInputs.forEach(input => {
-        const name = input.name;
-        if (!name) return;
-        const entryArr = compressedMap.get(input);
-        if (entryArr && entryArr.length) {
-          fd.delete(name);
-          entryArr.forEach(entry => fd.append(name, entry.blob, entry.filename));
+        const arr = compressedMap.get(input);
+        if (arr && arr.length) {
+          fd.delete(input.name);
+          arr.forEach(info => fd.append(input.name, info.blob, info.filename));
         }
       });
 
@@ -381,11 +306,8 @@
       const action = form.getAttribute('action') || window.location.href;
       const method = (form.getAttribute('method') || 'POST').toUpperCase();
       xhr.open(method, action, true);
-
-      // CSRF
       const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
-      // NOTE: we do NOT set X-Requested-With to force server to act as normal where possible
 
       const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
       controls.forEach(c => c.disabled = true);
@@ -395,69 +317,24 @@
           const pct = Math.round((ev.loaded / ev.total) * 100);
           prog.bar.style.width = pct + '%';
           prog.text.textContent = `${pct}%`;
-          prog.text.className = 'text-white';
         } else {
-          prog.text.textContent = 'Envoi...';
-          prog.text.className = 'text-white';
+          prog.textContent = 'Envoi...';
         }
       };
 
       xhr.onload = async () => {
         controls.forEach(c => c.disabled = false);
-
-        // Try JSON redirect
-        try {
-          const data = JSON.parse(xhr.responseText || '{}');
-          if (data && data.redirect) {
-            await navigateAndRender(data.redirect);
-            return;
-          }
-        } catch (e) { /* not JSON */ }
-
-        if (xhr.status >= 300 && xhr.status < 400) {
-          const loc = xhr.getResponseHeader('Location');
-          if (loc) {
-            await navigateAndRender(loc);
-            return;
-          }
-        }
-
-        if (xhr.responseURL) {
-          const initial = (action || window.location.href).split('#')[0];
-          const final = xhr.responseURL.split('#')[0];
-          if (final && final !== initial) {
-            await navigateAndRender(final);
-            return;
-          }
-        }
-
+        if (xhr.responseURL) { await navigateAndRender(xhr.responseURL); return; }
         if (xhr.status >= 200 && xhr.status < 300) {
           prog.bar.style.width = '100%';
-          prog.text.textContent = '100% - Téléversement terminé';
-          prog.text.className = 'text-white';
-          const targetSel = form.getAttribute('data-success-target');
-          if (targetSel) {
-            const tgt = document.querySelector(targetSel);
-            if (tgt) {
-              tgt.textContent = 'Téléversement réussi.';
-              tgt.classList && tgt.classList.add('text-white');
-            }
-          } else {
-            alert('Téléversement réussi.');
-          }
+          prog.text.textContent = 'Téléversement terminé';
         } else {
-          prog.text.textContent = `Erreur upload (${xhr.status})`;
-          prog.text.className = 'text-white';
+          prog.textContent = `Erreur upload (${xhr.status})`;
           alert(`Erreur upload (${xhr.status})`);
         }
       };
 
-      xhr.onerror = () => {
-        controls.forEach(c => c.disabled = false);
-        prog.text.textContent = 'Erreur réseau pendant l\'upload.';
-        prog.text.className = 'text-white';
-        alert('Erreur réseau pendant l\'upload.');
-      };
+      xhr.onerror = () => { controls.forEach(c => c.disabled = false); prog.textContent = 'Erreur réseau.'; alert('Erreur réseau.'); };
 
       xhr.send(fd);
     });
