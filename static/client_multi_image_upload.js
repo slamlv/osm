@@ -14,7 +14,6 @@
   }
 
   function createProgressElements(form) {
-    // if already created, return
     if (form._clientProgress) return form._clientProgress;
     const container = document.createElement('div');
     container.className = 'client-upload-progress';
@@ -23,13 +22,11 @@
     const barwrap = document.createElement('div');
     barwrap.style = 'width:100%; background:#eee; height:10px; border-radius:6px; overflow:hidden;';
     const bar = document.createElement('div');
-    // apply bootstrap-ish class for bg-warning while keeping inline width control
     bar.className = 'bg-warning';
     bar.style = 'height:10px; width:0%';
     barwrap.appendChild(bar);
 
     const text = document.createElement('div');
-    // make progress text white
     text.className = 'text-white';
     text.style = 'font-size:12px; margin-top:4px;';
 
@@ -44,13 +41,11 @@
 
   // resize + convert to Blob using canvas
   async function resizeAndConvert(file) {
-    // Use createImageBitmap when available (faster decoding, non-blocking)
     let imgBitmap;
     try {
       if (window.createImageBitmap) {
         imgBitmap = await createImageBitmap(file);
       } else {
-        // fallback to Image()
         imgBitmap = await new Promise((res, rej) => {
           const i = new Image();
           i.onload = () => res(i);
@@ -59,7 +54,6 @@
         });
       }
     } catch (err) {
-      // fallback to Image() if createImageBitmap fails
       imgBitmap = await new Promise((res, rej) => {
         const i = new Image();
         i.onload = () => res(i);
@@ -71,7 +65,6 @@
     const naturalWidth = imgBitmap.width || imgBitmap.naturalWidth;
     const naturalHeight = imgBitmap.height || imgBitmap.naturalHeight;
 
-    // compute new size
     let targetWidth = naturalWidth;
     let targetHeight = naturalHeight;
     if (MAX_WIDTH && naturalWidth > MAX_WIDTH) {
@@ -84,11 +77,9 @@
     canvas.height = targetHeight;
     const ctx = canvas.getContext('2d');
 
-    // draw using bitmap or image element
     try {
       ctx.drawImage(imgBitmap, 0, 0, targetWidth, targetHeight);
     } catch (err) {
-      // If drawing a bitmap fails, try creating an Image from blob URL
       const tmpUrl = URL.createObjectURL(file);
       await new Promise((res, rej) => {
         const i = new Image();
@@ -104,18 +95,15 @@
         i.src = tmpUrl;
       });
     } finally {
-      // try to close bitmap if supported
       try { if (imgBitmap && imgBitmap.close) imgBitmap.close(); } catch (e) { /* ignore */ }
     }
 
     const mime = OUTPUT_TYPE;
     const quality = QUALITY;
 
-    // wrapper promise for toBlob with webp fallback
     return await new Promise((resolve) => {
       canvas.toBlob((blob) => {
         if (!blob && mime === 'image/webp') {
-          // fallback to jpeg
           canvas.toBlob((b2) => resolve(b2), 'image/jpeg', quality);
         } else {
           resolve(blob);
@@ -124,25 +112,31 @@
     });
   }
 
-  // Navigate & render final HTML so Django messages (server-rendered) appear.
-  // IMPORTANT: do NOT send X-Requested-With here so server returns full HTML.
+  // helper: create a File from a Blob (with filename & type)
+  function blobToFile(blob, filename) {
+    try {
+      return new File([blob], filename, { type: blob.type });
+    } catch (e) {
+      // Older browsers: fallback to Blob with name property shim (may not set input.files properly)
+      blob.name = filename;
+      return blob;
+    }
+  }
+
+  // navigateAndRender kept for AJAX path fallback (no X-Requested-With in fetch)
   async function navigateAndRender(url) {
     try {
       const resp = await fetch(url, { credentials: 'same-origin', method: 'GET' });
-
       if (!resp.ok) {
         window.location.assign(url);
         return;
       }
-
       const ct = resp.headers.get('Content-Type') || '';
       if (!ct.includes('text/html')) {
         window.location.assign(url);
         return;
       }
-
       const html = await resp.text();
-
       try {
         history.replaceState(null, '', url);
         document.open();
@@ -156,39 +150,31 @@
     }
   }
 
-  // Attach handlers to all forms
+  // Init
   function init() {
     const forms = document.querySelectorAll(`form.${FORM_CLASS}`);
     forms.forEach(form => setupForm(form));
   }
 
   function setupForm(form) {
-    // Map input element -> { blob, filename, originalFileSize, compressedSize }
+    // Map input element -> Array of compressed info (for potential multiple files later)
+    // For single-file inputs we store an array length 1.
     const compressedMap = new Map();
 
-    // Find file inputs inside the form
     const fileInputs = Array.from(form.querySelectorAll(`input[type=file].${FILE_INPUT_CLASS}`));
 
     fileInputs.forEach(input => {
-      // Optional preview element creation (modified to support revocation)
       const preview = document.createElement('img');
       preview.style = 'max-width:200px; display:none; margin-top:6px; border:1px solid #ddd; padding:4px;';
       input.insertAdjacentElement('afterend', preview);
 
-      // info text for size (ensure white text)
       let info = null;
 
       input.addEventListener('change', async (e) => {
+        // support only first file (keeps parity with your original)
         const f = e.target.files && e.target.files[0];
-        // revoke previous preview URL if any
-        if (preview._url) {
-          try { URL.revokeObjectURL(preview._url); } catch (err) { /*ignore*/ }
-          preview._url = null;
-        }
-        if (info && info._url) {
-          try { URL.revokeObjectURL(info._url); } catch (err) { /*ignore*/ }
-          info._url = null;
-        }
+        if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (err) {} preview._url = null; }
+        if (info && info._url) { try { URL.revokeObjectURL(info._url); } catch (err) {} info._url = null; }
 
         if (!f) {
           compressedMap.delete(input);
@@ -197,38 +183,31 @@
           return;
         }
 
-        // immediate preview of original
         preview._url = URL.createObjectURL(f);
         preview.src = preview._url;
         preview.style.display = '';
 
         try {
           const blob = await resizeAndConvert(f);
-          // if blob is null treat as failure
           if (!blob) throw new Error('Conversion returned empty blob');
 
-          // keep suggested filename based on original
           const originalName = f.name || 'photo';
           const base = originalName.includes('.') ? originalName.substring(0, originalName.lastIndexOf('.')) : originalName;
           const ext = blob.type === 'image/webp' ? 'webp' : (blob.type === 'image/jpeg' ? 'jpg' : 'img');
           const filename = base + '.' + ext;
 
-          compressedMap.set(input, {
+          // store one-element array to keep extensibility
+          compressedMap.set(input, [{
             blob,
             filename,
             originalSize: f.size,
             compressedSize: blob.size
-          });
+          }]);
 
-          // update preview to compressed version (revoke previous objectURL)
-          if (preview._url) {
-            try { URL.revokeObjectURL(preview._url); } catch (err) { /*ignore*/ }
-            preview._url = null;
-          }
+          if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (err) {} preview._url = null; }
           preview._url = URL.createObjectURL(blob);
           preview.src = preview._url;
 
-          // add small info text (white)
           if (!info) {
             info = document.createElement('div');
             info.className = 'text-white';
@@ -252,50 +231,162 @@
       });
     });
 
-    // Intercepte la soumission du formulaire
-    form.addEventListener('submit', (ev) => {
-      // If no file inputs with our class, do nothing special
+    // Submit handler
+    form.addEventListener('submit', async (ev) => {
+      // If no special file inputs, nothing to do
       if (fileInputs.length === 0) return;
 
-      ev.preventDefault();
-      // Build FormData from form (includes csrf token and all fields)
-      const fd = new FormData(form);
+      // Decide method: native submit (default) vs AJAX upload
+      // If form has data-ajax="1" we use XHR (old behaviour). Otherwise native submit to preserve Django messages.
+      const useAjax = form.getAttribute('data-ajax') === '1';
 
-      // Replace file fields with compressed blobs if available
+      if (!useAjax) {
+        // Native submit path: replace file inputs' .files with File(s) created from blobs, then call native submit.
+        ev.preventDefault();
+
+        // Prepare UI (indeterminate progress)
+        const prog = createProgressElements(form);
+        prog.bar.style.width = '100%';
+        prog.text.textContent = 'Envoi en cours...';
+        prog.text.className = 'text-white';
+        prog.container.style.display = '';
+
+        // For each file input, if we have compressed blob(s), create a DataTransfer and assign new files.
+        try {
+          fileInputs.forEach(input => {
+            const arr = compressedMap.get(input);
+            if (!arr || arr.length === 0) return;
+            // build DataTransfer with new File(s)
+            const dt = new DataTransfer();
+            arr.forEach(info => {
+              const fileObj = blobToFile(info.blob, info.filename);
+              dt.items.add(fileObj);
+            });
+            // assign files to input
+            try {
+              input.files = dt.files;
+            } catch (e) {
+              // Some browsers may not allow setting input.files; fallback below by creating a temporary form
+              console.warn('Impossible de définir input.files sur ce navigateur, fallback activé.');
+              throw new Error('cannot-set-input-files');
+            }
+          });
+
+          // temporarily remove this submit listener to avoid loop when calling form.submit()
+          form.removeEventListener('submit', arguments.callee);
+
+          // submit form normally (browser will perform navigation -> Django messages will show)
+          form.submit();
+        } catch (err) {
+          // Fallback: if we cannot set input.files (older browsers), create a hidden form and append File objects via fetch/XHR
+          // We'll fallback to AJAX upload using XHR so at least upload proceeds — after that we'll navigate to server response.
+          console.warn('Fallback to AJAX upload because input.files could not be set:', err);
+
+          // Build FormData from form
+          const fd = new FormData(form);
+          // Replace file entries using compressedMap where possible
+          fileInputs.forEach(input => {
+            const name = input.name;
+            if (!name) return;
+            const arr = compressedMap.get(input);
+            if (arr && arr.length) {
+              fd.delete(name);
+              arr.forEach(info => fd.append(name, info.blob, info.filename));
+            }
+          });
+
+          // send via XHR without X-Requested-With header (we removed it previously)
+          const xhr = new XMLHttpRequest();
+          const action = form.getAttribute('action') || window.location.href;
+          const method = (form.getAttribute('method') || 'POST').toUpperCase();
+          xhr.open(method, action, true);
+
+          // CSRF
+          const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+          if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
+
+          // disable controls
+          const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
+          controls.forEach(c => c.disabled = true);
+
+          xhr.onload = async () => {
+            controls.forEach(c => c.disabled = false);
+
+            // Try parse JSON redirect first
+            try {
+              const data = JSON.parse(xhr.responseText || '{}');
+              if (data && data.redirect) {
+                await navigateAndRender(data.redirect);
+                return;
+              }
+            } catch (e) { /* not JSON */ }
+
+            // If 3xx with Location
+            if (xhr.status >= 300 && xhr.status < 400) {
+              const loc = xhr.getResponseHeader('Location');
+              if (loc) {
+                await navigateAndRender(loc);
+                return;
+              }
+            }
+
+            // If responseURL different
+            if (xhr.responseURL) {
+              const initial = (action || window.location.href).split('#')[0];
+              const final = xhr.responseURL.split('#')[0];
+              if (final && final !== initial) {
+                await navigateAndRender(final);
+                return;
+              }
+            }
+
+            // fallback: if status 2xx but no redirect info, reload page
+            if (xhr.status >= 200 && xhr.status < 300) {
+              window.location.reload();
+            } else {
+              alert('Erreur upload (' + xhr.status + ')');
+            }
+          };
+
+          xhr.onerror = () => {
+            controls.forEach(c => c.disabled = false);
+            alert('Erreur réseau pendant l\'upload.');
+          };
+
+          xhr.send(fd);
+        }
+        return;
+      }
+
+      // ---------- AJAX path (only when data-ajax="1") ----------
+      ev.preventDefault();
+      const fd = new FormData(form);
       fileInputs.forEach(input => {
         const name = input.name;
         if (!name) return;
-        const entry = compressedMap.get(input);
-        if (entry && entry.blob) {
-          // delete existing entries for this name and append compressed blob with same name
+        const entryArr = compressedMap.get(input);
+        if (entryArr && entryArr.length) {
           fd.delete(name);
-          fd.append(name, entry.blob, entry.filename);
+          entryArr.forEach(entry => fd.append(name, entry.blob, entry.filename));
         }
-        // else leave original file in formdata (browser kept it when constructing fd)
       });
 
-      // Prepare UI progress
       const prog = createProgressElements(form);
       prog.bar.style.width = '0%';
       prog.text.textContent = '';
-      // ensure progress text white
       prog.text.className = 'text-white';
       prog.container.style.display = '';
 
-      // Send via XHR so we have upload progress
       const xhr = new XMLHttpRequest();
       const action = form.getAttribute('action') || window.location.href;
       const method = (form.getAttribute('method') || 'POST').toUpperCase();
       xhr.open(method, action, true);
 
-      // CSRF header support
+      // CSRF
       const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
+      // NOTE: we do NOT set X-Requested-With to force server to act as normal where possible
 
-      // NOTE: Do NOT set X-Requested-With here so the server treats the POST as a normal request.
-      // This increases the chance that server-side redirects/messages behave exactly as in a normal form submit.
-
-      // Disable form controls while uploading
       const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
       controls.forEach(c => c.disabled = true);
 
@@ -304,57 +395,43 @@
           const pct = Math.round((ev.loaded / ev.total) * 100);
           prog.bar.style.width = pct + '%';
           prog.text.textContent = `${pct}%`;
-          // keep text white
+          prog.text.className = 'text-white';
+        } else {
+          prog.text.textContent = 'Envoi...';
           prog.text.className = 'text-white';
         }
       };
 
-      // ---------------------------
-      // Remplacement du xhr.onload
-      // ---------------------------
       xhr.onload = async () => {
         controls.forEach(c => c.disabled = false);
 
-        let handled = false;
-
-        // 1) Essayer de lire un JSON contenant {"redirect": "..."}
+        // Try JSON redirect
         try {
           const data = JSON.parse(xhr.responseText || '{}');
           if (data && data.redirect) {
-            // use navigateAndRender to fetch the redirected page and render it so messages appear
             await navigateAndRender(data.redirect);
-            handled = true;
             return;
           }
-        } catch (err) {
-          // pas JSON -> on continue
-        }
+        } catch (e) { /* not JSON */ }
 
-        // 2) Si le serveur renvoie une redirection 3xx (souvent 302)
-        if (!handled && xhr.status >= 300 && xhr.status < 400) {
+        if (xhr.status >= 300 && xhr.status < 400) {
           const loc = xhr.getResponseHeader('Location');
           if (loc) {
             await navigateAndRender(loc);
-            handled = true;
             return;
           }
         }
 
-        // 3) xhr.responseURL = URL finale que le serveur a renvoyée
-        // (Chrome/Firefox peuvent exposer la destination finale)
-        if (!handled && xhr.responseURL) {
+        if (xhr.responseURL) {
           const initial = (action || window.location.href).split('#')[0];
           const final = xhr.responseURL.split('#')[0];
-
           if (final && final !== initial) {
             await navigateAndRender(final);
-            handled = true;
             return;
           }
         }
 
-        // 4) Si pas de redirection détectée -> comportement par défaut
-        if (!handled && xhr.status >= 200 && xhr.status < 300) {
+        if (xhr.status >= 200 && xhr.status < 300) {
           prog.bar.style.width = '100%';
           prog.text.textContent = '100% - Téléversement terminé';
           prog.text.className = 'text-white';
@@ -363,27 +440,16 @@
             const tgt = document.querySelector(targetSel);
             if (tgt) {
               tgt.textContent = 'Téléversement réussi.';
-              // make sure the text is white if it's from JS
               tgt.classList && tgt.classList.add('text-white');
             }
           } else {
-            // Default fallback
             alert('Téléversement réussi.');
           }
-        } else if (!handled) {
+        } else {
           prog.text.textContent = `Erreur upload (${xhr.status})`;
           prog.text.className = 'text-white';
           alert(`Erreur upload (${xhr.status})`);
         }
-
-        // Cleanup: revoke any object URLs created for previews or blobs
-        fileInputs.forEach(inp => {
-          const prev = inp.nextElementSibling;
-          if (prev && prev.tagName === 'IMG' && prev._url) {
-            try { URL.revokeObjectURL(prev._url); } catch (err) { /* ignore */ }
-            prev._url = null;
-          }
-        });
       };
 
       xhr.onerror = () => {
@@ -397,7 +463,6 @@
     });
   }
 
-  // Init on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
