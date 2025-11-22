@@ -124,34 +124,34 @@
     });
   }
 
-  // small helper: navigate to an URL but fetch & render its HTML first so Django messages
-  // present in the server-rendered HTML appear correctly.
-  // If fetch fails, fallback to normal navigation.
+  // Navigate & render final HTML so Django messages (server-rendered) appear.
+  // IMPORTANT: do NOT send X-Requested-With here so server returns full HTML.
   async function navigateAndRender(url) {
     try {
-      // fetch with same-origin credentials so session/cookies/messages are included
-      const resp = await fetch(url, { credentials: 'same-origin', method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const resp = await fetch(url, { credentials: 'same-origin', method: 'GET' });
+
       if (!resp.ok) {
-        // fallback to standard navigation on non-OK response
         window.location.assign(url);
         return;
       }
+
+      const ct = resp.headers.get('Content-Type') || '';
+      if (!ct.includes('text/html')) {
+        window.location.assign(url);
+        return;
+      }
+
       const html = await resp.text();
 
-      // Replace the current document with the fetched HTML.
-      // This preserves the server-rendered content including messages.
-      // Update browser URL (replaceState to avoid adding an extra history entry)
       try {
         history.replaceState(null, '', url);
         document.open();
         document.write(html);
         document.close();
       } catch (err) {
-        // if anything goes wrong, fallback to standard navigation
         window.location.assign(url);
       }
     } catch (err) {
-      // network/fetch failed: fallback
       window.location.assign(url);
     }
   }
@@ -292,8 +292,8 @@
       const csrftoken = getCookie('csrftoken') || form.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
 
-      // Important: mark request as AJAX for server detection (useful if you implement Solution B)
-      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      // NOTE: Do NOT set X-Requested-With here so the server treats the POST as a normal request.
+      // This increases the chance that server-side redirects/messages behave exactly as in a normal form submit.
 
       // Disable form controls while uploading
       const controls = Array.from(form.querySelectorAll('input,button,textarea,select'));
