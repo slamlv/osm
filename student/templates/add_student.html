@@ -72,3 +72,46 @@
         </form>
     </div>
 {% endblock %}
+
+document.addEventListener('submit', function(e) {
+  const form = e.target;
+  if (!form.matches('.ajax-form')) return; // adapte la classe si nécessaire
+
+  e.preventDefault();
+
+  const fd = new FormData(form);
+
+  // --- s'assurer que la checkbox "clear" est transmise ---
+  // change 'photo' par le name exact de ton champ image
+  const fileFieldName = 'photo';
+  const clearName = fileFieldName + '-clear';
+  const clearInput = form.querySelector(`input[name="${clearName}"]`);
+  if (clearInput && clearInput.checked && !fd.has(clearName)) {
+    fd.append(clearName, 'on'); // valeur attendue par Django
+  }
+
+  fetch(form.action, {
+    method: form.method || 'POST',
+    body: fd,
+    credentials: 'same-origin',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'), // fonction getCookie() ci-dessous
+    }
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url; // suit la redirection côté client
+    } else {
+      return response.text().then(html => {
+        document.documentElement.innerHTML = html; // remplace la page
+      });
+    }
+  })
+  .catch(err => console.error(err));
+});
+
+// helper pour récupérer le csrf token depuis les cookies
+function getCookie(name) {
+  const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+  return v ? decodeURIComponent(v.split('=')[1]) : null;
+}
