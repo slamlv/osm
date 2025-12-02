@@ -86,7 +86,7 @@ class Student(models.Model):
     pere = models.ForeignKey(Parent, on_delete=models.SET_NULL, related_name="father_children", null=True)
     mere = models.ForeignKey(Parent, on_delete=models.SET_NULL, related_name="mother_children", null=True)
     classe = models.ForeignKey(ClassRoom, on_delete=models.SET_NULL, related_name="students", null=True)
-    photo = models.ImageField(upload_to="image/student")
+    photo = models.ImageField(upload_to="image/student", blank=True, null=True)
     unique_id = models.IntegerField(unique=True)
 
     UniqueConstraint(name="unique_student", fields=['nom', 'prenom', 'date_naissance'])
