@@ -361,7 +361,7 @@ class StudentEdit(LoggedAdminView):
         return get_object_or_404(students, pk=student_id)
 
     def post(self, *args, **kwargs):
-        defaul = self.object()
+        default = self.object()
         old_image = default.photo
         form = StudentForm(self.request.POST, self.request.FILES, context={'request': self.request},
                            instance=default)
