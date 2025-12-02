@@ -366,6 +366,7 @@ class StudentEdit(LoggedAdminView):
         form = StudentForm(self.request.POST, self.request.FILES, context={'request': self.request},
                            instance=default)
         default_classroom = default.classe.classe.__str__() if default.classe else None
+        default = model_to_dict(default)
         if form.is_valid():
             student = form.save()
             image = form.cleaned_data["photo"]
@@ -379,7 +380,6 @@ class StudentEdit(LoggedAdminView):
                 notes = Note.objects.filter(eleve=student)
                 notes.delete()
             student = model_to_dict(student)
-            default = model_to_dict(default)
             if student != default:
                 message(self.request, "Élève modifié avec succès.")
             else:
