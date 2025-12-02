@@ -136,9 +136,9 @@ class StaffMemberEdit(LoggedAdminView):
         return get_object_or_404(members, pk=member_id)
 
     def post(self, *args, **kwargs):
-        before = self.get_object().discipline.all().__str__()
         default = self.get_object()
-        form = MemberForm(self.request.POST, context={'request': self.request}, instance=self.get_object())
+        before = default.discipline.all().__str__()
+        form = MemberForm(self.request.POST, context={'request': self.request}, instance=default)
         if form.is_valid():
             member = form.save()
             Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
@@ -222,13 +222,14 @@ class UserEdit(LoggedUserView):
 
     def post(self, *args, **kwargs):
         default = self.get_object()
+        before = default.discipline.all().__str__()
         old_image = default.photo
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
-            if model_to_dict(default) == model_to_dict(self.get_object()):
+            if model_to_dict(default) == model_to_dict(self.get_object()) or (before == default.discipline.all().__str__()):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
-            elif form.has_changed():
+            else:
                 user = self.request.user
                 user.username = form.cleaned_data['username']
                 user.first_name, user.last_name = form.cleaned_data['prenom'], form.cleaned_data['nom']
