@@ -219,9 +219,10 @@ class UserEdit(LoggedUserView):
         return get_object_or_404(members, user_id=self.request.user.pk)
 
     def post(self, *args, **kwargs):
-        old_image = self.get_object().photo
+        default = self.get_object()
+        old_image = default.photo
         form_context = {'request': self.request, 'user': True, 'pp': True}
-        form = MemberForm(self.request.POST, self.request.FILES, instance=self.get_object(), context=form_context)
+        form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
             if form.has_changed():
                 user = self.request.user
@@ -236,6 +237,8 @@ class UserEdit(LoggedUserView):
                         os.remove(old_image.path)
                 Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
                 message(self.request, "Vos informations ont étés modifiées avec succès.")
+            else:
+                message(self.request, "Aucune modification effectuée", msg_type='warning')
             return redirect("user-details")
         context = {"title": self.title, "form": form, 'reset': "Annuler les changements",
                    'back': reverse('user-details')}
