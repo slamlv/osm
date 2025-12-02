@@ -239,7 +239,7 @@ class UserEdit(LoggedUserView):
                         os.remove(old_image.path)
                 Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
                 message(self.request, "Vos informations ont étés modifiées avec succès.")
-            else:
+            elif model_to_dict(default) == model_to_dict(self.get_object()):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
             return redirect("user-details")
         context = {"title": self.title, "form": form, 'reset': "Annuler les changements",
