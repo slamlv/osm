@@ -123,7 +123,7 @@ class Personnel(models.Model):
     poste = models.CharField(choices=Poste.choices, max_length=30)
     since = models.IntegerField(null=True)
     discipline = models.ManyToManyField(Discipline)
-    photo = models.ImageField(upload_to="image/staff", null=True)
+    photo = models.ImageField(upload_to="image/staff", null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, unique=True, null=True, related_name="staff_member")
 
     objects = StaffQuerySet.as_manager()
