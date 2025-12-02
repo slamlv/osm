@@ -139,10 +139,11 @@ class StaffMemberEdit(LoggedAdminView):
         default = self.get_object()
         before = default.discipline.all().__str__()
         form = MemberForm(self.request.POST, context={'request': self.request}, instance=default)
+        default = model_to_dict(default)
         if form.is_valid():
             member = form.save()
             Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
-            if (model_to_dict(default) != model_to_dict(member)) or (before != member.discipline.all().__str__()):
+            if (default != model_to_dict(member)) or (before != member.discipline.all().__str__()):
                 if member.user:
                     User.objects.filter(pk=member.user.pk).update(last_name=member.nom, first_name=member.prenom,
                                                                   contact=member.contact, email=member.email,
