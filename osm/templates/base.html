@@ -135,16 +135,16 @@
         </div>
       </div>
     </nav>
-    <a class="text-decoration-none" href="{% if user.admin %} {% url 'school_details' %} {% else %} # {% endif %}">
     <div>
+        <a class="text-decoration-none" href="{% if user.is_admin %} {% url 'school_details' %} {% else %} # {% endif %}">
         {% if not user.school.logo %}
         <h2 class="text-warning ctext fw-bold"><img src="{% static 'image/no_image.jpg' %}" class="rounded-circle" id="logosm"> {{ user.school.nom }} / {{ user.school.name }}</h2>
         {% else %}
         <h2 class="text-warning ctext fw-bold"><img src="{{ user.school.logo.url }}" class="rounded-circle" id="logosm"> {{ user.school.nom }} / {{ user.school.name }}</h2>
         {% endif %}
         <hr class="w-sm-100 w-md-75 w-lg-50 border border-info border-2 cblock">
+        </a>
     </div>
-    </a>
     <header>
         {% block titre %}
         <h2 class="text-white ctext fw-bold">{% if title %} @{{ title }} {% endif %}</h2>
