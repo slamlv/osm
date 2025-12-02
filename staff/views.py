@@ -228,7 +228,7 @@ class UserEdit(LoggedUserView):
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
-            if model_to_dict(default) == model_to_dict(self.get_object()) or (before == default.discipline.all().__str__()):
+            if model_to_dict(default) == model_to_dict(self.get_object()) and (before == default.discipline.all().__str__()) and not self.request.POST.get('image-clear'):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
             else:
                 user = self.request.user
