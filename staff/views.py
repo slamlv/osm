@@ -137,13 +137,13 @@ class StaffMemberEdit(LoggedAdminView):
 
     def post(self, *args, **kwargs):
         default = self.get_object()
-        before = default.discipline.all().__str__()
+        before = set(default.discipline.values_list('id', flat=True))
         form = MemberForm(self.request.POST, context={'request': self.request}, instance=default)
         default = model_to_dict(default)
         if form.is_valid():
             member = form.save()
             Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
-            if (default != model_to_dict(member)) or (before != member.discipline.all().__str__()):
+            if (default != model_to_dict(member)) or (before != set(member.discipline.values_list('id', flat=True))):
                 if member.user:
                     User.objects.filter(pk=member.user.pk).update(last_name=member.nom, first_name=member.prenom,
                                                                   contact=member.contact, email=member.email,
@@ -223,12 +223,13 @@ class UserEdit(LoggedUserView):
 
     def post(self, *args, **kwargs):
         default = self.get_object()
-        before = default.discipline.all().__str__()
+        before = set(default.discipline.values_list('id', flat=True))
         old_image = default.photo
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
-            if model_to_dict(default) == model_to_dict(self.get_object()) and (before == default.discipline.all().__str__()) and not self.request.POST.get('image-clear'):
+            now = [] if not form.cleaned_data.get('discipline') else set(form.cleaned_data.get('discipline').values_list('id', flat=True))
+            if model_to_dict(default) == model_to_dict(self.get_object()) and (before == now) and not self.request.POST.get('image-clear'):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
             else:
                 user = self.request.user
