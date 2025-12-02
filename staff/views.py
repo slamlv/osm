@@ -228,7 +228,8 @@ class UserEdit(LoggedUserView):
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
-            member = form.save(commit=False)
+            member = form.save()
+            Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
             now = set(member.discipline.values_list('id', flat=True))
             if model_to_dict(default) == model_to_dict(member) and (before == now) and not self.request.POST.get('image-clear'):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
@@ -238,12 +239,10 @@ class UserEdit(LoggedUserView):
                 user.first_name, user.last_name = form.cleaned_data['prenom'], form.cleaned_data['nom']
                 user.email = form.cleaned_data['email']
                 user.save()
-                member.save()
                 image = form.cleaned_data["photo"]
                 if old_image and old_image != image:
                     if os.path.exists(old_image.path):
                         os.remove(old_image.path)
-                Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
                 message(self.request, "Vos informations ont étés modifiées avec succès.")
             return redirect("user-details")
         context = {"title": self.title, "form": form, 'reset': "Annuler les changements",
