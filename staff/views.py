@@ -226,7 +226,9 @@ class UserEdit(LoggedUserView):
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
         if form.is_valid():
-            if form.has_changed():
+            if model_to_dict(default) == model_to_dict(self.get_object()):
+                message(self.request, "Aucune modification effectuée", msg_type='warning')
+            elif form.has_changed():
                 user = self.request.user
                 user.username = form.cleaned_data['username']
                 user.first_name, user.last_name = form.cleaned_data['prenom'], form.cleaned_data['nom']
@@ -239,8 +241,6 @@ class UserEdit(LoggedUserView):
                         os.remove(old_image.path)
                 Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
                 message(self.request, "Vos informations ont étés modifiées avec succès.")
-            elif model_to_dict(default) == model_to_dict(self.get_object()):
-                message(self.request, "Aucune modification effectuée", msg_type='warning')
             return redirect("user-details")
         context = {"title": self.title, "form": form, 'reset': "Annuler les changements",
                    'back': reverse('user-details')}
