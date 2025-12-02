@@ -232,7 +232,7 @@ class UserEdit(LoggedUserView):
             member = form.save()
             Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
             now = set(member.discipline.values_list('id', flat=True))
-            if défaut  == model_to_dict(member) and (before == now) and not self.request.POST.get('image-clear'):
+            if (default  == model_to_dict(member)) and (before == now) and not self.request.POST.get('image-clear'):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
             else:
                 user = self.request.user
