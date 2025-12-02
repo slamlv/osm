@@ -227,11 +227,12 @@ class UserEdit(LoggedUserView):
         old_image = default.photo
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=default, context=form_context)
+        default = model_to_dict(default)
         if form.is_valid():
             member = form.save()
             Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
             now = set(member.discipline.values_list('id', flat=True))
-            if model_to_dict(default) == model_to_dict(member) and (before == now) and not self.request.POST.get('image-clear'):
+            if défaut  == model_to_dict(member) and (before == now) and not self.request.POST.get('image-clear'):
                 message(self.request, "Aucune modification effectuée", msg_type='warning')
             else:
                 user = self.request.user
