@@ -1532,87 +1532,10 @@ class ReportCard(FPDF):
 
     def discipline(self, pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef):
-        """widths = (25, 9.9, 24.7, 9.9, 19.5, 21.2, 24.5, 15.4, 31.5, 15.4)
-        table = Table(pdf, line_height=4.5, col_widths=widths, text_align="L", markdown=True,
-                      repeat_headings=TableHeadingsDisplay.NONE)
-        th = table.row()
-        th.cell("Discipline", colspan=4, align='C')
-        th.cell("Travail de l'élève", colspan=4, align='C')
-        th.cell("Profil de la classe", colspan=2, align='C')
-
-        tr = table.row()
-        tr.cell("Abs. non J (h)")
-        tr.cell(f"**{discipline['absnj']}**", align='C')
-        tr.cell("Avertissement")
-        self.draw_tic_orx(tr, discipline['avert'])
-        tr.cell("TOTAL")
-        self.colored_cell(tr, total_notes, align='C', condition=moyenne < 10)
-        tr.cell("**APPRÉCIATIONS**", colspan=2, align='C')
-        tr.cell("Moyenne générale")
-        self.colored_cell(tr, moy_gen, align='C')
-
-        tr = table.row()
-        tr.cell("Abs just. (h)", rowspan=2)
-        tr.cell(f"**{discipline['absj']}**", align='C', rowspan=2)
-        tr.cell("Blàme de conduite", rowspan=2)
-        self.draw_tic_orx(tr, discipline['blame'], rowspan=2)
-        tr.cell("COEF")
-        tr.cell(f"{total_coef}", align='C')
-        tr.cell("CTBA")
-        self.draw_tic_orx(tr, appr == "CTBA")
-        tr.cell("**[Min - Max]**", rowspan=2)
-        tr.cell(f"**{min_max}**", align='C', rowspan=2)
-
-        tr = table.row()
-        tr.cell(f"MOYENNE {'ANNUELLE' if self.trimestre == 'ANNUEL' else 'TRIM'}", rowspan=2)
-        self.colored_cell(tr, moyenne if moyenne else "/", align='C', rowspan=2)
-        tr.cell("CBA")
-        self.draw_tic_orx(tr, appr == "CBA")
-
-        tr = table.row()
-        tr.cell("Retards (nb de fois)", rowspan=2)
-        tr.cell(f"**{discipline['retards']}**", align='C', rowspan=2)
-        tr.cell("Exclusions (jours)", rowspan=2)
-        tr.cell(f"**{discipline['excl']}**", align='C', rowspan=2)
-        tr.cell("CA")
-        self.draw_tic_orx(tr, appr == "CA")
-        tr.cell("Nombre de moyennes", rowspan=2)
-        tr.cell(f"**{nb_admis}**", align='C', rowspan=2)
-
-        tr = table.row()
-        tr.cell("RANG")
-        if rang == "/":
-            tr.cell(f"**{rang}**", align='C')
-        else:
-            tr.cell(f"**{rang} / {nb}**", align='C')
-        tr.cell("CMA")
-        self.draw_tic_orx(tr, appr == "CMA")
-
-        tr = table.row()
-        tr.cell("Consignes (h)")
-        tr.cell(f"**{discipline['consignes']}**", align='C')
-        tr.cell("Exclusion déf")
-        self.draw_tic_orx(tr, discipline['excl_def'])
-        tr.cell("COTE")
-        tr.cell(f"{cote}", align='C')
-        tr.cell("CNA")
-        self.draw_tic_orx(tr, appr == "CNA")
-        tr.cell("Taux de réussite")
-        tr.cell(f"**{taux}**", align='C')
-
-        tr = table.row()
-        tr.cell(f"Appréciation du travail de l'élève (points forts et poins à améliorer) : "
-                f"**__{appreciation}__**", colspan=4, v_align=VAlign.T)
-        tr.cell("Visa du Parent/\nTuteur\n\n\n\n\n", align='C', colspan=2, v_align=VAlign.T)
-        tr.cell("Nom et visa du professeur principal", align='C', colspan=2, v_align=VAlign.T)
-        tr.cell(f"Le {chef}", align='C', colspan=2, v_align=VAlign.T)"""
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
-        print(height)
-        print(pdf.get_y())
         if pdf.get_y() + height > 287:
             pdf.add_page()
-            print(1111111111111)
         table.render()
 
     def draw_tic_orx(self, tr, condition, align="C", **kwargs):
