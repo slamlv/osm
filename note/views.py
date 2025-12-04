@@ -849,7 +849,7 @@ class ExamRecord(FPDF):
         self.cell(150, 5, f"Nombre de moyennes : **{self.data['nbr']} / {self.data['nbe']}**", markdown=True)
         self.cell(0, 5, f"Taux de réussite : **{self.data['taux']}**", markdown=True)
         self.ln()
-        self.cell(0, 5, f"[Min - Max ] : **{self.data['min_max']}**", markdown=True)
+        self.cell(0, 5, f"[Min - Max] : **{self.data['min_max']}**", markdown=True)
 
     def infos(self):
         self.set_font_size(13)
