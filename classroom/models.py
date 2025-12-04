@@ -321,8 +321,9 @@ class ClassRoom(models.Model):
         ]
         if not pv:
             classroom_matieres = self.matieres.all().order_by_domain_and_coef(serie=self.classe.serie)
-            while len(classroom_matieres) > 15:
-                classroom_matieres.exclude(pk=classroom_matieres.last().pk)
+            if not for_stats:
+                if classroom_matieres.count() > 15:
+                    classroom_matieres = classroom_matieres[:15]
             matieres = list(classroom_matieres)
             matieres_data = list()
             max_words = 1
