@@ -1522,6 +1522,7 @@ class ReportCard(FPDF):
         tr.cell("Nom et visa du professeur principal", align='C', colspan=2, v_align=VAlign.T)
         tr.cell(f"Le {chef}", align='C', colspan=2, v_align=VAlign.T)
 
+        table.render()
         height = pdf.get_y() - y_start
         # --- restauration de l'état original ---
         pdf.page = page_backup
