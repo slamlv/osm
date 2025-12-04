@@ -1071,6 +1071,7 @@ class ReportCard(FPDF):
         matieres_data = data['matieres_data']
         total_coef = classroom_data['total_coef']
         with_competences = data['with_competences']
+        self.nb_pages = 1
         for i in range(len(data['students_data'])):
             if i == 0:
                 if self.trimestre != "ANNUEL" and with_competences:
@@ -1087,8 +1088,6 @@ class ReportCard(FPDF):
                     buffer.seek(0)
                     reader = PdfReader(buffer)
                     self.nb_pages = len(reader.pages)
-                else:
-                    self.nb_pages = 1
 
             self.draw_student_reportcard(self, data, i, school_data, self.trimestre, annee, classroom_data,
                                          matieres_data, total_coef, min_max, moy_gen, taux, nb, nb_admis,
