@@ -499,7 +499,7 @@ def cote_and_appr(note):
     return cote, appr
 
 
-def resize_image(image_path, new_width=295, quality=100, return_height=False, id_card=False):
+def resize_image(image_path, new_width=295, quality=80, return_height=False, id_card=False):
     img = Image.open(image_path)
     if id_card:
         new_size = (413, 472)
