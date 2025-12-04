@@ -1159,7 +1159,7 @@ class ReportCard(FPDF):
         pdf.ln(4)
         self.discipline(pdf, discipline=data['students_data'][i]['discipline'], total_notes=total_notes, appr=appr,
                         total_coef=total_coef, moyenne=moyenne, rang=rang, cote=cote, moy_gen=moy_gen, taux=taux,
-                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef, i=i)
+                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef, nom=data['students_data'][i]['student']['short_name'])
 
     def school_infos(self, pdf, school_data):
         widths = (75.25, 47.5, 75.25)
@@ -1531,12 +1531,12 @@ class ReportCard(FPDF):
         return table, height
 
     def discipline(self, pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
-                   nb, nb_admis, appreciation, chef, i):
+                   nb, nb_admis, appreciation, chef, nom):
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
         if pdf.get_y() + height > 287:
             if self.nb_pages > 1:
-                self.nom = data['students_data'][i]['student']['short_name']
+                self.nom = nom
             pdf.add_page()
         table.render()
 
