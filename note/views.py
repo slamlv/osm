@@ -1606,8 +1606,12 @@ class ReportCard(FPDF):
         tr.cell(f"Le {chef}", align='C', colspan=2, v_align=VAlign.T)"""
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
+        print(pdf.page_break_trigger)
+        print(height)
+        print(pdf.get_y())
         if pdf.get_y() + height > pdf.page_break_trigger:
             pdf.add_page()
+            print(1111111111111)
         table.render()
 
     def draw_tic_orx(self, tr, condition, align="C", **kwargs):
