@@ -1094,7 +1094,7 @@ class ReportCard(FPDF):
                                          matieres_data, total_coef, min_max, moy_gen, taux, nb, nb_admis,
                                          chef=school_data['chef'])
             if self.nb_pages > 1:
-                self.nom = data['students_data'][i]['student']['short_name']
+                self.nom = data['students_data'][i + 1]['student']['short_name']
 
     def add_fonts(self, pdf):
         pdf.add_font('inter', '', settings.INTER_REGULAR)
