@@ -3,6 +3,7 @@ import datetime
 import os.path
 import threading
 import time
+import copy
 from io import BytesIO
 import uuid
 import django.db.models
@@ -1441,7 +1442,7 @@ class ReportCard(FPDF):
         """
         # --- sauvegarde de l'état réel ---
         page_backup = pdf.page
-        pages_backup = pdf.pages.copy()
+        pages_backup = copy.deepcopy(pdf.pages)
         y_backup = pdf.get_y()
         # --- on simule dans une page temporaire ---
         pdf.add_page()
@@ -1606,10 +1607,9 @@ class ReportCard(FPDF):
         tr.cell(f"Le {chef}", align='C', colspan=2, v_align=VAlign.T)"""
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
-        print(pdf.page_break_trigger)
         print(height)
         print(pdf.get_y())
-        if pdf.get_y() + height > pdf.page_break_trigger:
+        if pdf.get_y() + height > 287:
             pdf.add_page()
             print(1111111111111)
         table.render()
