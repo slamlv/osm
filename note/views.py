@@ -1072,6 +1072,7 @@ class ReportCard(FPDF):
         total_coef = classroom_data['total_coef']
         with_competences = data['with_competences']
         self.nb_pages = 1
+        self.nom = ""
         for i in range(len(data['students_data'])):
             if i == 0:
                 if self.trimestre != "ANNUEL" and with_competences:
@@ -1089,6 +1090,8 @@ class ReportCard(FPDF):
                     reader = PdfReader(buffer)
                     self.nb_pages = len(reader.pages)
 
+            if self.nb_pages > 1:
+                self.nom = data['students_data'][i]['student']['short_name']
             self.draw_student_reportcard(self, data, i, school_data, self.trimestre, annee, classroom_data,
                                          matieres_data, total_coef, min_max, moy_gen, taux, nb, nb_admis,
                                          chef=school_data['chef'])
@@ -1116,8 +1119,6 @@ class ReportCard(FPDF):
 
     def draw_student_reportcard(self, pdf, data, i, school_data, trimestre, annee, classroom_data, matieres_data,
                                 total_coef, min_max, moy_gen, taux, nb, nb_admis, chef):
-        if self.nb_pages > 1:
-                self.nom = data['students_data'][i]['student']['short_name']
         pdf.add_page()
         pdf.set_y(6)
         self.school_infos(pdf, school_data=school_data)
@@ -1158,7 +1159,7 @@ class ReportCard(FPDF):
         pdf.ln(4)
         self.discipline(pdf, discipline=data['students_data'][i]['discipline'], total_notes=total_notes, appr=appr,
                         total_coef=total_coef, moyenne=moyenne, rang=rang, cote=cote, moy_gen=moy_gen, taux=taux,
-                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef, nom=data['students_data'][i]['student']['short_name'])
+                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef])
 
     def school_infos(self, pdf, school_data):
         widths = (75.25, 47.5, 75.25)
@@ -1530,13 +1531,12 @@ class ReportCard(FPDF):
         return table, height
 
     def discipline(self, pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
-                   nb, nb_admis, appreciation, chef, nom):
+                   nb, nb_admis, appreciation, chef):
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
         if pdf.get_y() + height > 287:
-            if self.nb_pages > 1:
-                self.nom = nom
-            pdf.add_page()
+            #pdf.add_page()
+            pass
         table.render()
 
     def draw_tic_orx(self, tr, condition, align="C", **kwargs):
