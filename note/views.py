@@ -1159,7 +1159,7 @@ class ReportCard(FPDF):
         pdf.ln(4)
         self.discipline(pdf, discipline=data['students_data'][i]['discipline'], total_notes=total_notes, appr=appr,
                         total_coef=total_coef, moyenne=moyenne, rang=rang, cote=cote, moy_gen=moy_gen, taux=taux,
-                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef])
+                        min_max=min_max, nb=nb, nb_admis=nb_admis, appreciation=appreciation, chef=chef)
 
     def school_infos(self, pdf, school_data):
         widths = (75.25, 47.5, 75.25)
