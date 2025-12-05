@@ -368,67 +368,91 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', initSpinner);
-document.body.addEventListener('htmx:afterSettle', initSpinner); // Pour les éléments injectés par htmx
+(function() {
+  const SPINNER_HTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Traitement...';
 
-function initSpinner() {
-  const SPINNER_HTML = `
-    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-  `;
+  /* Active le spinner sur un bouton */
+  function activateSpinner(button) {
+    if (!button || button.dataset.spinnerActive) return;
 
-  /* ------------------- Helpers ------------------- */
-  const isDownloadForm = btn => btn.closest('form')?.id === 'download-form';
-
-  function activate(button) {
-    if (button.disabled || button.dataset.spinnerActive) return;
-
-    button.dataset.spinnerActive = "1";
-    button.dataset.originalText = button.innerHTML;
+    button.dataset.spinnerActive = 'true';
+    button.dataset.originalHtml = button.innerHTML;
     button.disabled = true;
-    button.innerHTML = `${SPINNER_HTML}Traitement...`;
+    button.innerHTML = SPINNER_HTML;
   }
 
-  function restore(button) {
-    if (!button.dataset.originalText) return;
+  /* Restaure le bouton à son état initial */
+  function restoreButton(button) {
+    if (!button || !button.dataset.originalHtml) return;
 
-    button.innerHTML = button.dataset.originalText;
+    button.innerHTML = button.dataset.originalHtml;
     button.disabled = false;
-    delete button.dataset.originalText;
+    delete button.dataset.originalHtml;
     delete button.dataset.spinnerActive;
   }
 
+  /* Restaure tous les boutons actifs */
   function restoreAll() {
-    document.querySelectorAll('button[data-spinner-active]').forEach(btn => {
-      if (!isDownloadForm(btn)) restore(btn);
+    document.querySelectorAll('button[data-spinner-active]').forEach(btn => restoreButton(btn));
+  }
+
+  /* Attache le click listener sur tous les boutons data-with-spinner */
+  function attachButtons(root = document) {
+    root.querySelectorAll('button[data-with-spinner]').forEach(btn => {
+      if (btn.dataset.listenerAttached) return;
+      btn.dataset.listenerAttached = 'true';
+
+      btn.addEventListener('click', function() {
+        const inForm = btn.closest('form');
+        // si submit dans un form, le submit handler s'en chargera
+        if (!(btn.type === 'submit' && inForm)) activateSpinner(btn);
+      });
     });
   }
 
-  /* ------------------- Boutons hors form ------------------- */
-  document.querySelectorAll('button[data-with-spinner]').forEach(btn => {
-    if (!btn.dataset.listenerClick && !isDownloadForm(btn)) {
-      btn.dataset.listenerClick = "1";
-      btn.addEventListener('click', () => {
-        const form = btn.closest('form');
-        if (!(btn.type === 'submit' && form)) activate(btn);
-      });
-    }
-  });
+  /* Attache submit listener sur tous les forms */
+  function attachForms(root = document) {
+    root.querySelectorAll('form').forEach(form => {
+      if (form.dataset.submitListenerAttached) return;
+      form.dataset.submitListenerAttached = 'true';
 
-  /* ------------------- Boutons submit dans form ------------------- */
-  document.querySelectorAll('form:not(#download-form)').forEach(form => {
-    if (!form.dataset.listenerSubmit) {
-      form.dataset.listenerSubmit = "1";
-      form.addEventListener('submit', () => {
-        const btn = form.querySelector('button[data-with-spinner][type="submit"]');
-        if (btn) activate(btn);
+      form.addEventListener('submit', function() {
+        const submitBtn = form.querySelector('button[data-with-spinner][type="submit"]');
+        if (submitBtn) activateSpinner(submitBtn);
       });
-    }
-  });
+    });
+  }
 
-  /* ------------------- Évènements HTMX ------------------- */
-  document.body.addEventListener('htmx:afterRequest', restoreAll, { once: true });
-  document.body.addEventListener('htmx:responseError', restoreAll, { once: true });
-}
+  /* Initialisation */
+  function initSpinner() {
+    attachButtons();
+    attachForms();
+  }
+
+  /* Hooks HTMX */
+  function registerHTMX() {
+    if (!window.htmx) return;
+
+    document.body.addEventListener('htmx:afterRequest', restoreAll);
+    document.body.addEventListener('htmx:responseError', restoreAll);
+    document.body.addEventListener('htmx:afterSettle', function(e) {
+      // réattache listeners sur le DOM injecté
+      attachButtons(e.target);
+      attachForms(e.target);
+    });
+  }
+
+  /* Lancement */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initSpinner();
+      registerHTMX();
+    });
+  } else {
+    initSpinner();
+    registerHTMX();
+  }
+})();
 </script>
 
 <script>
