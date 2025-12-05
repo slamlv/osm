@@ -368,77 +368,68 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 </script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const SPINNER_HTML = '<span class="spinner-border spinner-border-sm me-2 bg-transparent" role="status" aria-hidden="true"></span>';
+<script>
+document.addEventListener('DOMContentLoaded', initSpinner);
+document.body.addEventListener('htmx:afterSettle', initSpinner); // Pour les éléments injectés par htmx
 
-    function isInsideDownloadForm(button) {
-      const form = button.closest('form');
-      return form && form.id === 'download-form';
+function initSpinner() {
+  const SPINNER_HTML = `
+    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+  `;
+
+  /* ------------------- Helpers ------------------- */
+  const isDownloadForm = btn => btn.closest('form')?.id === 'download-form';
+
+  function activate(button) {
+    if (button.disabled || button.dataset.spinnerActive) return;
+
+    button.dataset.spinnerActive = "1";
+    button.dataset.originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = `${SPINNER_HTML}Traitement...`;
+  }
+
+  function restore(button) {
+    if (!button.dataset.originalText) return;
+
+    button.innerHTML = button.dataset.originalText;
+    button.disabled = false;
+    delete button.dataset.originalText;
+    delete button.dataset.spinnerActive;
+  }
+
+  function restoreAll() {
+    document.querySelectorAll('button[data-spinner-active]').forEach(btn => {
+      if (!isDownloadForm(btn)) restore(btn);
+    });
+  }
+
+  /* ------------------- Boutons hors form ------------------- */
+  document.querySelectorAll('button[data-with-spinner]').forEach(btn => {
+    if (!btn.dataset.listenerClick && !isDownloadForm(btn)) {
+      btn.dataset.listenerClick = "1";
+      btn.addEventListener('click', () => {
+        const form = btn.closest('form');
+        if (!(btn.type === 'submit' && form)) activate(btn);
+      });
     }
-
-    function activateSpinner(button) {
-      if (button.hasAttribute('data-spinner-active')) return;
-
-      button.setAttribute('data-spinner-active', 'true');
-      const originalText = button.innerHTML;
-      button.setAttribute('data-original-text', originalText);
-      button.disabled = true;
-      button.innerHTML = SPINNER_HTML + 'Traitement...';
-    }
-
-    function restoreButton(button) {
-      if (!button.hasAttribute('data-original-text')) return;
-      button.innerHTML = button.getAttribute('data-original-text');
-      button.removeAttribute('data-original-text');
-      button.removeAttribute('data-spinner-active');
-      button.disabled = false;
-    }
-
-    // 1. Boutons cliqués directement (hors form ou HTMX)
-    document.querySelectorAll('button[data-with-spinner]').forEach(button => {
-      if (isInsideDownloadForm(button)) return;
-
-      // Pour tous les boutons (submit ou non)
-      button.addEventListener('click', function () {
-        // Si c’est un bouton submit dans un form, on laisse le form gérer l’enchaînement
-        const isSubmit = this.type === 'submit';
-        const inForm = this.closest('form');
-
-        if (isSubmit && inForm) {
-          // Laisser le submit gérer, hook via form. (évite double appel)
-          return;
-        }
-        activateSpinner(this);
-      });
-    });
-
-    // 2. Gestion des formulaires (submit)
-    document.querySelectorAll('form').forEach(form => {
-      if (form.id === 'download-form') return;
-
-      form.addEventListener('submit', function () {
-        // Trouve le bouton submit ayant data-with-spinner
-        const submitBtn = form.querySelector('button[data-with-spinner][type="submit"]');
-        if (submitBtn && !submitBtn.disabled) {
-          activateSpinner(submitBtn);
-        }
-      });
-    });
-
-    // 3. HTMX – restaurer après chargement
-    document.body.addEventListener('htmx:afterRequest', () => {
-      document.querySelectorAll('button[data-with-spinner][data-spinner-active]').forEach(button => {
-        if (!isInsideDownloadForm(button)) restoreButton(button);
-      });
-    });
-
-    // 4. HTMX – restaurer en cas d’erreur
-    document.body.addEventListener('htmx:responseError', () => {
-      document.querySelectorAll('button[data-with-spinner][data-spinner-active]').forEach(button => {
-        if (!isInsideDownloadForm(button)) restoreButton(button);
-      });
-    });
   });
+
+  /* ------------------- Boutons submit dans form ------------------- */
+  document.querySelectorAll('form:not(#download-form)').forEach(form => {
+    if (!form.dataset.listenerSubmit) {
+      form.dataset.listenerSubmit = "1";
+      form.addEventListener('submit', () => {
+        const btn = form.querySelector('button[data-with-spinner][type="submit"]');
+        if (btn) activate(btn);
+      });
+    }
+  });
+
+  /* ------------------- Évènements HTMX ------------------- */
+  document.body.addEventListener('htmx:afterRequest', restoreAll, { once: true });
+  document.body.addEventListener('htmx:responseError', restoreAll, { once: true });
+}
 </script>
 
 <script>
