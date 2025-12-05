@@ -1072,7 +1072,7 @@ class ReportCard(FPDF):
         total_coef = classroom_data['total_coef']
         with_competences = data['with_competences']
         self.nb_pages = 1
-        self.nom = ""
+        self.nom = data['students_data'][0]['student']['short_name']
         for i in range(len(data['students_data'])):
             if i == 0:
                 if self.trimestre != "ANNUEL" and with_competences:
@@ -1535,15 +1535,19 @@ class ReportCard(FPDF):
         table, height = self.discipline_height_and_table(pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux, min_max,
                    nb, nb_admis, appreciation, chef)
         if pdf.get_y() + height > 287:
-            #pdf.add_page()
+            pdf.add_page()
             pass
         table.render()
 
     def draw_tic_orx(self, tr, condition, align="C", **kwargs):
         current_font, current_style, current_size = self.font_family, self.font_style, 9
         self.set_font("ZapfDingbats", '', current_size)
-        self.set_text_color(0, 0, 255)
-        tr.cell(chr(52) if condition else chr(54), align=align, **kwargs)
+        if condition:
+            self.set_text_color(0, 0, 255)
+            tr.cell(chr(52), align=align, **kwargs)
+        else:
+            self.set_text_color(255, 0, 0)
+            tr.cell(chr(54), align=align, **kwargs)
         self.set_font(current_font, current_style, current_size)
         self.set_text_color(0)
 
