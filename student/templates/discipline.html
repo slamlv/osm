@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container w-md-75">
     <div class="alert alert-info mt-3 cblock py-2  w-lg-75" role="alert">
-    <p class="ctext bg-transparent mb-0">Une fois la recherche terminée, vous n'avez qu'à cliquer sur le résultat qui vous intéresse.</p>
+    <p class="ctext bg-transparent mb-0">Une fois la recherche terminée, vous n'avez qu'à cliquer sur le résultat qui vous intéresse et retrouver le formulaire de remplissage en dessous des résultats.</p>
     </div>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -26,8 +26,8 @@
     <div class="d-flex justify-content-center mb-3">
         <div>
         {% for student in students %}
-            <a class="text-info" href="" hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
-                {{ student.nom }}</a><br>
+            <a class="text-success" href="" hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
+                <i class='bi bi-graduation-cap'></i>{{ student.nom }}</a><br>
         {% endfor %}
         </div>
     </div>
