@@ -26,8 +26,8 @@
     <div class="d-flex justify-content-center mb-3">
         <div>
         {% for student in students %}
-            <a class="text-success" href="" hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
-                <i class='bi bi-graduation-cap'></i>{{ student.nom }}</a><br>
+            <a class="text-info" href="" hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
+                <i class='bi bi-mortarboard'></i>{{ student.nom }}</a><br>
         {% endfor %}
         </div>
     </div>
