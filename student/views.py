@@ -422,7 +422,7 @@ def discipline(request):
     def student_list(search):
         students_set = list()
         students_list = Student.objects.filter(Q(unique_id__icontains=search) | Q(nom__icontains=search) |
-                                               Q(prenom__icontains=search),
+                                               Q(prenom__icontains=search) | Q(classe__in=ClassRoom.objects.filter(code__icontains=search)),
                                                classe__isnull=False).order_by_classroom_level()
         for student in students_list:
             students_set.append(student.dstd)
