@@ -934,7 +934,7 @@ class ExamRecord(FPDF):
         self.school = self.data['school_data']
         self.add_page()
         base_header(self)
-        base_infos(self, f"RELEVÉ DE NOTES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
+        base_infos(self, f"PROCÈS VERBAL {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
                    self.data['garcons'], self.data['redoublants'], self.data['label'])
         self.students_results()
 
