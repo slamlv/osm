@@ -900,7 +900,7 @@ class TableaudHonneur(FPDF):
                 self.set_text_color(0)
                 self.set_font('inter', '', 9)
                 self.ln()
-                texte = (f"\n      L'élève **{student['nom']}** de la classe de **{self.data['classe']}** a obtenu(e) "
+                texte = (f"\n      L'élève **{student['nom']}** de la classe de **{self.data['classe']}** a obtenu "
                          f"**{student['moyenne']}** comme moyenne {self.data['trimestre']} de l'année scolaire "
                          f"**{self.data['annee']}**, en étant classé **{student['rang']}**. Ce résultat témoigne d'un travail "
                          f"remarquable et d'un engagement vers la quête de l'execellence scolaire. En foi de quoi le présent "
