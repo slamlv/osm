@@ -905,7 +905,7 @@ class TableaudHonneur(FPDF):
                          f"**{self.data['annee']}**, en étant classé **{student['rang']}**. Ce résultat témoigne d'un travail "
                          f"remarquable et d'un engagement vers la quête de l'execellence scolaire. En foi de quoi le présent "
                          f"**TABLEAU D'HONNEUR** lui est remis pour servir et valoir ce que de droit.")
-                self.multi_cell(w=198, h=5, align='L', center=True, text=texte, markdown=True)
+                self.multi_cell(w=198, h=6, align='L', center=True, text=texte, markdown=True)
                 self.ln()
                 self.ln()
                 self.cell(w=198, h=5, align='R', center=True, text=f"Fait à {self.school.localite}, le --                          --",
