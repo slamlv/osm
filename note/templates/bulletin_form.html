@@ -19,7 +19,7 @@
                 <label for="eval" class="text-white control-label">Trimestre</label>
                 {{ form.evl }}
             </div>
-            {% if form.checkbox %}
+            {% if form.checkbox and not tableau %}
             <div class="mb-3 col form-check ms-3">
                 {% if not marks_report %}
                 <label for="checkbox" class="text-white fw-bold">Inclure les compétences évaluées</label>
