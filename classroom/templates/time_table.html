@@ -25,7 +25,7 @@
                         data-tranche="{{ elt.tranche }}" data-programmation-id="{{ elt.programmation_id }}"
                         data-nb-tranches="{{ elt.rowspan }}" data-classroom-id="{{ classroom_id }}">
                         {% if elt.matiere %}
-                        <div class="{{ elt.colors }} rounded {% if elt.rowspan == 1 %} py-1 {% elif elt.rowspan == 2 %} py-3 {% else %} py-5 {% endif %} text-center fw-bold">
+                        <div class="{{ elt.colors }} rounded {% if elt.enseignant %} py-1 {% else %} py-3 {% endif %} text-center fw-bold">
                             {{ elt.matiere }}
                             {% if elt.enseignant %} <div class="small {{ elt.colors }}">{{ elt.enseignant.short_firstname }}</div> {% endif %}
                         </div>
