@@ -868,7 +868,7 @@ class TableaudHonneur(FPDF):
         self.draw_tables()
 
     def filligranne(self, x=70, y=70, w=70):
-        logo = (self.school.logo, "media/image/no_image.jpg")[self.school.logo == ""]
+        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
         if logo:
             with self.local_context(fill_opacity=0.2):
                 self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
