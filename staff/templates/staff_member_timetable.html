@@ -26,7 +26,7 @@
                         {% if elt and not forloop.first %}
                         <td rowspan="{{ elt.rowspan }}">
                             {% if elt.matiere %}
-                            <div class="{{ elt.colors }} rounded {% if elt.rowspan == 1 %} py-1 {% elif elt.rowspan == 2 %} py-3 {% else %} py-5 {% endif %} text-center fw-bold">
+                            <div class="{{ elt.colors }} rounded py-1 text-center fw-bold">
                                 {{ elt.matiere }}
                                 <div class="small {{ elt.colors }}">{{ elt.classes }}</div>
                             </div>
