@@ -101,7 +101,7 @@ class MatieresQuerySet(models.QuerySet):
                 default=Value(999),
                 output_field=IntegerField()
             ),
-            '-coeff'
+            '-coeff', 'sujet__label'
         )
 
 
