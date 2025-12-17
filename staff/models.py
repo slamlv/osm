@@ -212,7 +212,7 @@ class Personnel(models.Model):
         school = School.objects.prefetch_related('tranches_horaires').get(id=school_id)
         tranches_horaires = school.tranches_horaires.all()
         if empty:
-            return tranches_horaires, school.school_to_dict()
+            return tranches_horaires, school
         programmations = list(self.programmations.order_by('jour', 'tranche_horaire__number'))
         classrooms = list()
         for programmation in programmations:
@@ -275,7 +275,7 @@ class Personnel(models.Model):
                 'nom': f"{self.nom} {self.prenom}" if self.prenom else self.nom,
                 'grade': self.grade if self.grade != "Autre" else ""
             }
-            return time_table, infos, school.school_to_dict(), recap(classrooms, mp)
+            return time_table, infos, school, recap(classrooms, mp)
         return time_table, recap(classrooms, mp)
 
     @property
