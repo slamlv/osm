@@ -243,7 +243,7 @@ class Personnel(models.Model):
             )
             matrice[day][index_tranche]['classes'] = classes
         # Fusion
-        for _, liste in matrice.items():
+        """for _, liste in matrice.items():
             i = 0
             while i < len(liste):
                 current = liste[i]
@@ -256,7 +256,7 @@ class Personnel(models.Model):
                     liste[i + rowspan] = None
                     rowspan += 1
                 current['rowspan'] = rowspan
-                i += rowspan
+                i += rowspan"""
         time_table = list()
         for tranche_horaire in tranches_horaires:
             if not tranche_horaire.is_cours:
