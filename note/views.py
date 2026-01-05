@@ -1378,9 +1378,9 @@ class ReportCard(FPDF):
             total_coefg = 0
             while matiere_data['groupe'] == groupe:
                 tr = table.row()
-                label = truncate_str(pdf, matiere_data['label'], 30)
+                label = truncate_str(pdf, matiere_data['label'], 34)
                 tr.cell(f"**{label}**", align="LEFT")
-                enseignant = truncate_str(self, matiere_data['enseignant'], 30)
+                enseignant = truncate_str(self, matiere_data['enseignant'], 34)
                 tr.cell(f"{enseignant}", align="LEFT")
                 moy1 = "/" if not student_notes.get(matiere_data['id']) \
                     else student_notes[matiere_data['id']].get('moy1', '/')
@@ -1448,9 +1448,9 @@ class ReportCard(FPDF):
             total_coefg = 0
             while matiere_data['groupe'] == groupe:
                 tr = table.row()
-                label = truncate_str(self, matiere_data['label'], 30)
+                label = truncate_str(self, matiere_data['label'], 34)
                 tr.cell(f"**{label}**", align="LEFT")
-                enseignant = truncate_str(self, matiere_data['enseignant'], 30)
+                enseignant = truncate_str(self, matiere_data['enseignant'], 34)
                 tr.cell(f"{enseignant}", align="LEFT")
                 note1 = "/" if not student_notes.get(matiere_data['id']) \
                     else student_notes[matiere_data['id']].get('note1', '/')
