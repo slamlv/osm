@@ -1,0 +1,48 @@
+<div class="alert alert-info py-1 mt-3" role="alert">
+    <p class="ctext bg-transparent mb-0">{{ titre }}</p>
+</div>
+<div class="table-responsive">
+<table class="table table-striped table-hover table-bordered align-middle text-center">
+    <thead class="table-light">
+    <tr>
+        <th rowspan="2" class="border">Matière</th>
+        <th colspan="4" class="border">Leçons théoriques</th>
+        <th colspan="4" class="border">Leçons pratiques</th>
+        <th colspan="4" class="border">Total</th>
+    </tr>
+    <tr>
+        <th>Trim1</th>
+        <th>Trim2</th>
+        <th>Trim3</th>
+        <th>Annuel</th>
+        <th>Trim1</th>
+        <th>Trim2</th>
+        <th>Trim3</th>
+        <th>Annuel</th>
+        <th>Trim1</th>
+        <th>Trim2</th>
+        <th>Trim3</th>
+        <th>Annuel</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for prog in progression %}
+    <tr class="table-dark border-primary">
+        <td>{{ prog.label }}{% if prog.ens %}<br><span class="text-warning">{{ prog.ens }}</span>{% endif %}</td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt1 }}</span><br><span class="text-warning">{{ prog.plt1 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt2 }}</span><br><span class="text-warning">{{ prog.plt2 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt3 }}</span><br><span class="text-warning">{{ prog.plt3 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt }}</span><br><span class="text-warning">{{ prog.plt }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr1 }}</span><br><span class="text-warning">{{ prog.plp1 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr2 }}</span><br><span class="text-warning">{{ prog.plp2 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr3 }}</span><br><span class="text-warning">{{ prog.plp3 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr }}</span><br><span class="text-warning">{{ prog.plp }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl1 }}</span><br><span class="text-warning">{{ prog.pl1 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl2 }}</span><br><span class="text-warning">{{ prog.pl2 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl3 }}</span><br><span class="text-warning">{{ prog.pl3 }}</span></td>
+        <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl }}</span><br><span class="text-warning">{{ prog.pl }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

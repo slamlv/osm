@@ -1,0 +1,113 @@
+{% if not status %}
+<div class="alert alert-warning mt-3 fade show alert-dismissible w-md-75 cblock py-1" role="alert">
+    <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
+    <p class="mb-1 bg-transparent ctext">{{ rapport }}<br><a class="btn btn-success" href="{% url 'marks_check' %}">
+        <i class="bi bi-search me-2 bg-transparent"></i>Vérifier le remplissage</a></p>
+</div>
+{% else %}
+    {% if global_stats %}
+    <div class="alert alert-success py-2 mt-3" role="alert">
+        <p class="ctext bg-transparent mb-0">Statistiques {{ trim }}</p>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="table-light">
+        <tr>
+            <th rowspan="2" class="align-middle">Classe</th>
+            <th colspan="3" class="text-center">Pourcentage de réussite</th>
+            <th rowspan="2" class="align-middle">[Min-Max]</th>
+            <th rowspan="2" class="align-middle">Moyenne générale</th>
+        </tr>
+        <tr>
+            <th>Filles</th>
+            <th>Garçons</th>
+            <th>Total</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for stat in data %}
+        <tr class="{% if forloop.counter == 1 %} table-warning {% else %} table-dark {% endif %}border-primary text-dark fw-bold">
+            <td class="align-middle">{{ stat.label }}</td>
+            <td class="{% if stat.pcf < 50 %} text-danger {% endif %} align-middle">
+                {{ stat.pcf }}%<br>{{ stat.nbfr }} / {{ stat.nbfe }}</td>
+            <td class="{% if stat.pcg < 50 %} text-danger {% endif %} align-middle">
+                {{ stat.pcg }}%<br>{{ stat.nbgr }} / {{ stat.nbge }}</td>
+            <td class="{% if stat.taux < 50 %} text-danger {% endif %} align-middle">
+                {{ stat.taux }}%<br>{{ stat.nbr }} / {{ stat.nbe }}</td>
+            <td class="align-middle">{{ stat.min_max }}</td>
+            <td class="{% if stat.moyenne_generale < 10 %} text-danger {% endif %} align-middle">
+                {{ stat.moyenne_generale }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+        <div class="alert alert-info mt-3 py-2" role="alert">
+            <p class="ctext bg-transparent mb-0">Informations complémentaires</p>
+            <ul class="mb-0 bg-transparent">
+                <li class="bg-transparent text-dark fw-bold">Premier de l'établissement : {{ data.0.max_std }} ({{ data.0.max }})</li>
+                <li class="bg-transparent text-dark fw-bold">Dernier de l'établissement : {{ data.0.min_std }} ({{ data.0.min }})</li>
+                <li class="bg-transparent text-dark fw-bold">Taux de réussite le plus élevé : {{ data.0.max_clst }}</li>
+                <li class="bg-transparent text-dark fw-bold">Taux de réussite le plus faible : {{ data.0.min_clst }}</li>
+                <li class="bg-transparent text-dark fw-bold">Moyenne générale la plus élevée : {{ data.0.max_clsmg }}</li>
+                <li class="bg-transparent text-dark fw-bold">Moyenne générale la plus faible : {{ data.0.min_clsmg }}</li>
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success py-2 mt-3" role="alert">
+        <p class="ctext bg-transparent mb-0">Statistiques {{ trim }} en {{ data.label }}</p>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="table-light">
+        <tr>
+            <th rowspan="2" class="align-middle">Matière<br>Enseignant</th>
+            <th colspan="3" class="text-center">Pourcentage de réussite</th>
+            <th rowspan="2" class="align-middle">[Min-Max]</th>
+            <th rowspan="2" class="align-middle">Moyenne générale</th>
+        </tr>
+        <tr>
+            <th>Filles</th>
+            <th>Garçons</th>
+            <th>Total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="table-warning border-primary text-dark fw-bold">
+            <td class="align-middle">Global</td>
+            <td class="{% if data.pcf < 50 %} text-danger {% endif %} align-middle">
+                {{ data.pcf }}%<br>{{ data.nbfr }} / {{ data.nbfe }}</td>
+            <td class="{% if data.pcg < 50 %} text-danger {% endif %} align-middle">
+                {{ data.pcg }}%<br>{{ data.nbgr }} / {{ data.nbge }}</td>
+            <td class="{% if data.taux < 50 %} text-danger {% endif %} align-middle">
+                {{ data.taux }}%<br>{{ data.nbr }} / {{ data.nbe }}</td>
+            <td class="align-middle">{{ data.min_max }}</td>
+            <td class="{% if data.moyenne_generale < 10 %} text-danger {% endif %} align-middle">
+                {{ data.moyenne_generale }}</td>
+        </tr>
+        {% for matiere in data.matieres_data %}
+        <tr class="table-dark border-primary">
+            <td class="align-middle">{{ matiere.label }}<br>
+                <span class="text-warning bg-transparent">{{ matiere.enseignant }}</span></td>
+            <td class="{% if matiere.pcf < 50 %} text-danger {% endif %} align-middle">
+                {{ matiere.pcf }}%<br>{{ matiere.nbfr }} / {{ matiere.nbfe }}</td>
+            <td class="{% if matiere.pcg < 50 %} text-danger {% endif %} align-middle">
+                {{ matiere.pcg }}%<br>{{ matiere.nbgr }} / {{ matiere.nbge }}</td>
+            <td class="{% if elt.pct < 50 %} text-danger {% endif %} align-middle">
+                {{ matiere.pct }}%<br>{{ matiere.nbtr }} / {{ matiere.nbte }}</td>
+            <td class="align-middle">{{ matiere.min_max }}</td>
+            <td class="{% if matiere.moyenne < 10 %} text-danger {% endif %} align-middle">{{ matiere.moyenne }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+        <div class="alert alert-info mt-3 py-2" role="alert">
+            <p class="ctext bg-transparent mb-0">Informations complémentaires</p>
+            <ul class="mb-0 bg-transparent">
+                <li class="bg-transparent text-dark fw-bold">Premier de la classe : {{ data.max_std }} ({{ data.max }})</li>
+                <li class="bg-transparent text-dark fw-bold">Dernier de la classe : {{ data.min_std }} ({{ data.min }})</li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
