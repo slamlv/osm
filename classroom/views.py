@@ -487,7 +487,6 @@ def stats(request):
             status = False if rapport else True
             if status:
                 data = school_stats(classrooms, evl_in)
-        print(data)
         context = {'status': status, 'rapport': rapport, 'trim': trim, 'data': data,
                    'global_stats': False if classroom_id else True}
         return render(request, template_name, context)
@@ -1174,3 +1173,4 @@ class StaffMemberTimeTable(FPDF):
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le"
                              f" {datetime.datetime.now().strftime('%d-%m-%Y à %H:%M')}", align='L')
         self.cell(142.5, 6, f"{self.data['filename']}", align='R')
+
