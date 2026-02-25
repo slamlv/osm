@@ -263,7 +263,8 @@ class Student(models.Model):
             return {
                 'sexe': self.genre,
                 'matieres_data': matieres_data,
-                'moyenne': moyenne
+                'moyenne': moyenne,
+                'nom': self.__str__()
             }
 
         if pv:
@@ -408,7 +409,6 @@ class Student(models.Model):
             results['moyenne2'] = formated_float(total_notes2 / total_coef)
             results['moyenne3'] = formated_float(total_notes3 / total_coef)
 
-        return results
         return results
 
 
