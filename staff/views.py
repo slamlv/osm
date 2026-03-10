@@ -32,7 +32,7 @@ class Progression(LoggedUserView):
 
     def get(self, *args, **kwargs):
         i = kwargs.get("id")
-        if (not self.request.user.is_admin) and i != 0:
+        if (not self.request.user.is_admin) and i != self.request.user.staff_member.first().pk:
             return render(self.request, "404.html")
         msg, staff_member = ProgressionSelectForm.check(self, i)
         if i == 0 or i == self.request.user.staff_member.first().pk:
@@ -440,3 +440,4 @@ def active(request, pk: int):
         user.is_active = True
     user.save()
     return render(request, "reload_details.html", {"object": member, 'm_user': user})
+
