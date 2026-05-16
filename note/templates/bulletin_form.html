@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container w-md-75 mt-4">
+    {% if not marks_report %}
+    <div class="alert alert-info mt-3 py-2 w-lg-75 cblock" role="alert">
+        <p class="ctext bg-transparent mb-0">NB : La génération du bulletin scolaire peut prendre quelques
+            instants pour des classes à fort effectif, prière de patienter le cas échéant.</p>
+    </div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" id="download-form">
+        {% csrf_token %}
+        <div class="row row-cols-1 mt-2 w-lg-75 cblock" id="classroom_form">
+            <div class="mb-3 col-sm-6">
+                <label for="classe" class="text-white control-label">Classe</label>
+                {{ form.clsrm }}
+            </div>
+            <div class="mb-3 col-sm-6">
+                <label for="eval" class="text-white control-label">Trimestre</label>
+                {{ form.evl }}
+            </div>
+            {% if form.checkbox and not tableau %}
+                {% if marks_report %}
+                <div class="mb-3 col-sm-6">
+                    <label for="seuil" class="text-white">Moyenne minimale d'admission</label>
+                    <input name="seuil" id="seuil" type="number" class="form-control fw-bold" value="10" step="0.01">
+                </div>
+                {% endif %}
+            <div class="mb-3 col-sm-6 form-check ms-3">
+                {% if not marks_report %}
+                <label for="checkbox" class="text-white fw-bold">Inclure les compétences évaluées</label>
+                {% else %}
+                <label for="checkbox" class="text-white fw-bold">Par ordre de mérite</label>
+                {% endif %}
+                {{ form.checkbox }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="right"
+                title="Télécharger en pdf" data-bs-trigger="hover">
+                <span class="btn-text bg-transparent" id="btn-text">
+                    <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
+                </span>
+                <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
+            </button>
+        </div>
+    </form>
+    <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+</div>
+{% endblock %}
