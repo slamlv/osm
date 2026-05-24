@@ -489,7 +489,7 @@ def message(request, msg: str, msg_type="success"):
 
 
 def cote_and_appr(note):
-    if note <= 0 or note >= 20:
+    if note <= 0 or note > 20:
         return "/", "/"
     cote = (((((("D", "C")[10 <= note < 12], "C+")[12 <= note < 14], "B")[14 <= note < 15], "B+")
              [15 <= note < 16], "A")[16 <= note < 18], "A+")[18 <= note <= 20]
