@@ -240,7 +240,7 @@ class Student(models.Model):
                 n = t = 0
                 for m in moys:
                     if m is not None:
-                        t += m
+                        t += float(m)
                         n += 1
                 moy = t / n if n else 0
 
