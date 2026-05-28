@@ -34,7 +34,10 @@ DEBUG = config('DEBUG', cast=bool)
 
 
 ALLOWED_HOSTS = [
-    '*',
+    'osmmanager.com',
+    'www.osmmanager.com',
+    'localhost',
+    '127.0.0.1',
 ]
 
 
