@@ -414,14 +414,16 @@ class MarksCopyForm(DynamicFormMixin, forms.Form):
         if matiere_from != matiere_to or eval_from != eval_to:
             notes = Note.objects.filter(eleve__classe_id=classe_id, enseignement_id=matiere_from, eval=eval_from)
             for note in notes:
-                if note.note != -1:
-                    i += 1
+                if note.note == -1:
+                    continue
+                i += 1
                 try:
                     note_to = (
                         Note.objects.get(eleve__id=note.eleve.id, enseignement_id=matiere_to, eval=eval_to)
                     )
                     note_to.note = note.note
-                except:
+                    note_to.save()
+                except Note.DoesNotExist:
                     if matiere_from == matiere_to:
                         competences = note.competences
                     else:
@@ -432,7 +434,7 @@ class MarksCopyForm(DynamicFormMixin, forms.Form):
         if i == 0:
             return "Aucune note copiée."
         else:
-            nb = "Une note copié" if i == 1 else f"{i} notes copiées"
+            nb = "Une note copiée" if i == 1 else f"{i} notes copiées"
             classe = dict(self.fields['classe'].choices).get(classe_id)
             from_matiere = dict(self.fields['matiere_from'].choices).get(matiere_from)
             to_matiere = dict(self.fields['matiere_to'].choices).get(matiere_to)
