@@ -10,6 +10,17 @@ from datetime import time, datetime
 from staff.models import Activities
 
 
+def offline_index(request):
+    schools_infos = [
+        {
+            'nom': school.nom,
+            'logo': school.logo if school.logo.url else "static/image/no_image.jpg",
+            'localite': school.localite
+        } for school in School.objects.exclude(nom="Test")
+    ]
+    return render(request, "offline_index.html", context={'schools_infos': schools_infos})
+
+
 # Page d'accueil après connexion
 @login_required(login_url="signin")
 @with_users_school_schema

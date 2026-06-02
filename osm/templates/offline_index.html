@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="{% static 'image/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'style.css' %}" type="text/css">
+    <script src="{% static 'bootstrap.bundle.min.js' %}"></script>
+    <title>OmegaSchoolManager — Accueil</title>
+    <style>
+        /* Hero gradient overlay */
+        .hero-section {
+            background: linear-gradient(135deg, #152f45 0%, #214868 60%, #1b3a57 100%);
+            border-bottom: 2px solid #1b3a57;
+        }
+
+        /* Feature cards hover effect */
+        .feature-card {
+            background-color: #1b3a57;
+            border: 1px solid #1b3a57;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+            border-color: #0d6efd;
+        }
+
+        /* Partner card */
+        .partner-card {
+            background-color: #1b3a57;
+            border: 1px solid #1b3a57;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .partner-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        }
+        .partner-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #214868;
+            padding: 6px;
+        }
+        .partner-logo-placeholder {
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            background: #214868;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: #ffc107;
+            flex-shrink: 0;
+        }
+
+        /* Divider */
+        .section-divider {
+            border: none;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #0d6efd55, transparent);
+            margin: 0;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #152f45;
+            border-top: 1px solid #1b3a57;
+        }
+
+        /* Navbar sticky */
+        .osm-navbar {
+            background-color: #214868;
+            border-bottom: 1px solid #1b3a57;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="osm-navbar navbar navbar-expand-md px-3 px-md-5">
+    <a class="navbar-brand text-warning fw-bold d-flex align-items-center gap-2" href="#">
+        <img src="{% static 'image/logo.png' %}" alt="OSM" width="32" height="32">
+        <span>OmegaSchoolManager</span>
+    </a>
+    <button class="navbar-toggler text-warning border-warning" type="button"
+            data-bs-toggle="collapse" data-bs-target="#landingNav"
+            aria-controls="landingNav" aria-expanded="false" aria-label="Menu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="landingNav">
+        <ul class="navbar-nav ms-auto mb-2 mb-md-0 align-items-md-center gap-md-1">
+            <li class="nav-item">
+                <a class="nav-link text-warning fw-semibold" href="#fonctionnalites">Fonctionnalités</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-warning fw-semibold" href="#partenaires">Partenaires</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-warning fw-semibold" href="#contact">Contact</a>
+            </li>
+            <li class="nav-item ms-md-2">
+                <a class="btn btn-warning fw-bold px-4" href="{% url 'signin' %}">
+                    <i class="fa fa-sign-in-alt me-1"></i>Connexion
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero-section py-5">
+    <div class="container w-md-75 w-lg-50 text-center py-3">
+        <img src="{% static 'image/logo.png' %}" alt="Oméga" width="100" class="mb-3">
+        <h1 class="fw-bold text-white mb-1">OmegaSchoolManager</h1>
+        <p class="lead text-info mb-4">Un outil de gestion au service de l'éducation</p>
+        <p class="text-white-50 mb-4">
+            Gérez élèves, enseignants, classes, notes et emplois du temps depuis une seule plateforme.
+            Simple, rapide et pensé pour les établissements scolaires camerounais.
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'signin' %}" class="btn btn-warning btn-lg fw-bold px-5">
+                <i class="fa fa-sign-in-alt me-2"></i>Se connecter
+            </a>
+            <a href="#fonctionnalites" class="btn btn-outline-info btn-lg px-4">
+                Découvrir
+            </a>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ===== FONCTIONNALITÉS ===== -->
+<section id="fonctionnalites" class="py-5">
+    <div class="container w-md-75 w-lg-50">
+        <h2 class="text-white fw-bold text-center mb-1">
+            <i class="bi bi-grid me-2 text-primary"></i>Fonctionnalités
+        </h2>
+        <p class="text-center text-white-50 mb-4">Tout ce dont votre établissement a besoin, au même endroit.</p>
+        <div class="row text-center g-3">
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="bi bi-people fs-1 text-primary mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Élèves</h5>
+                    <p class="text-white-50 small">Inscriptions, dossiers, discipline et cartes scolaires.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="bi bi-person-badge fs-1 text-success mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Personnel</h5>
+                    <p class="text-white-50 small">Suivi des enseignants, documents administratifs.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="fa fa-chalkboard-teacher fs-1 text-info mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Classes</h5>
+                    <p class="text-white-50 small">Gestion des classes, matières et taux de couverture. Bulletins,
+                    tableaux d'honneur et procès verbaux</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="bi bi-file-text fs-1 text-warning mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Notes</h5>
+                    <p class="text-white-50 small">Saisie par classe, par niveau ou par trimestre.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="bi bi-calendar-week fs-1 text-danger mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Emploi du temps</h5>
+                    <p class="text-white-50 small">Programmation des cours et consultation par enseignant.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 px-3 py-4 h-100">
+                    <i class="bi bi-bar-chart fs-1 text-warning mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Statistiques</h5>
+                    <p class="text-white-50 small">Statistiques détaillés, pour l'établissement, pour une classe.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ===== ÉTABLISSEMENTS PARTENAIRES ===== -->
+<section id="partenaires" class="py-5">
+    <div class="container w-md-75 w-lg-50">
+        <h2 class="text-white fw-bold text-center mb-1">
+            <i class="bi bi-building me-2 text-warning"></i>Établissements partenaires
+        </h2>
+        <p class="text-center text-white-50 mb-4">Ils nous font confiance pour gérer leur quotidien.</p>
+        <div class="row g-3 justify-content-center">
+
+            <!-- Carte partenaire — dupliquez ce bloc pour chaque établissement -->
+            {% for infos in schools_infos %}
+            <div class="col-md-6">
+                <div class="partner-card rounded-3 p-3 d-flex align-items-center gap-3">
+                    <!-- Remplacez l'icône par <img src="..." class="partner-logo"> si vous avez un logo -->
+                    <div class="partner-logo-placeholder rounded-3">
+                        <img src="{{ infos.logo }}" class="partner-logo">
+                    </div>
+                    <div>
+                        <h6 class="text-white fw-bold mb-0">{{ infos.nom}}</h6>
+                        <small class="text-white-50">{{ infos.localite }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+        <p class="text-center text-white-50 small mt-4">
+            Vous souhaitez rejoindre nos partenaires ?
+            <a href="#contact" class="text-warning">Contactez-nous</a>
+        </p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ===== CONTACT ===== -->
+<section id="contact" class="py-5">
+    <div class="container w-md-75 w-lg-50 text-center">
+        <h2 class="text-white fw-bold mb-1">
+            <i class="bi bi-envelope me-2 text-info"></i>Contact
+        </h2>
+        <p class="text-white-50 mb-4">Une question ou envie d'adopter OmegaSchoolManager dans votre école ?</p>
+        <div class="row justify-content-center g-3">
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 p-4 text-center h-100">
+                    <i class="bi bi-envelope-at fs-2 text-info mb-2 d-block"></i>
+                    <p class="text-white-50 small mb-0"><a href="mailto:omegaschoolmanager@gmail.com" class="text-decoration-none text-light">contact@schoolmanager.com</a></p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 p-4 text-center h-100">
+                    <i class="bi bi-telephone fs-2 text-success mb-2 d-block"></i>
+                    <p class="text-white-50 small mb-0">+237 693 293 037</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card rounded-3 p-4 text-center h-100">
+                    <i class="bi bi-geo-alt fs-2 text-danger mb-2 d-block"></i>
+                    <p class="text-white-50 small mb-0">Douala, Cameroun</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="py-4 mt-2">
+    <div class="container text-center">
+        <p class="text-white-50 small mb-1">
+            © {% now "Y" %} <span class="text-warning fw-semibold">OmegaSchoolManager</span> — Tous droits réservés.
+        </p>
+        <p class="text-white-50 small mb-0">
+            Conçu pour simplifier la gestion scolaire au Cameroun.
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>

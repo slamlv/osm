@@ -15,13 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include, re_path
-from django.views.static import serve
+from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
-from .views import index, ajax_messages, SchoolDetails, TranchesHorairesEdit, SchoolInformations
+from .views import index, ajax_messages, SchoolDetails, TranchesHorairesEdit, SchoolInformations, offline_index
 
 urlpatterns = [
+    path("", offline_index, name="offline_home"),
     path("index", index, name="index"),
     path("school_details", SchoolDetails.as_view(), name="school_details"),
     path("school_infos_edit", SchoolInformations.as_view(), name="school_infos_edit"),
@@ -33,12 +33,4 @@ urlpatterns = [
     path("", include("classroom.urls")),
     path("", include("student.urls")),
     path("", include("note.urls")),
-]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
-    # Production
-    urlpatterns += [
-        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-    ]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
