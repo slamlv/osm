@@ -14,9 +14,9 @@ def offline_index(request):
     schools_infos = [
         {
             'nom': school.nom,
-            'logo': school.logo if school.logo.url else "static/image/no_image.jpg",
+            'logo': school.logo,
             'localite': school.localite
-        } for school in School.objects.exclude(nom="Test")
+        } for school in School.objects.exclude(name="GBHS Demo")
     ]
     return render(request, "offline_index.html", context={'schools_infos': schools_infos})
 

@@ -211,9 +211,12 @@
             {% for infos in schools_infos %}
             <div class="col-md-6">
                 <div class="partner-card rounded-3 p-3 d-flex align-items-center gap-3">
-                    <!-- Remplacez l'icône par <img src="..." class="partner-logo"> si vous avez un logo -->
                     <div class="partner-logo-placeholder rounded-3">
-                        <img src="{{ infos.logo }}" class="partner-logo">
+                        {% if infos.logo %}
+                        <img src="{{ infos.logo.url }}" class="partner-logo">
+                        {% else %}
+                        <img src="{% static 'image/no_image.jpg' %}" class="partner-logo">
+                        {% endif %}
                     </div>
                     <div>
                         <h6 class="text-white fw-bold mb-0">{{ infos.nom}}</h6>
