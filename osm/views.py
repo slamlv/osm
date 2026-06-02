@@ -3,6 +3,7 @@ import os
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 
+from authentification.views import anonymous_required
 from .forms import TranchesHorairesForm, SchoolForm
 from .utils import with_users_school_schema, ADetailView, LoggedAdminView, add_minutes, greet
 from authentification.models import School, TrancheHoraire
@@ -10,13 +11,14 @@ from datetime import time, datetime
 from staff.models import Activities
 
 
+@anonymous_required
 def offline_index(request):
     schools_infos = [
         {
             'nom': school.nom,
             'logo': school.logo,
             'localite': school.localite
-        } for school in School.objects.exclude(name="GBHS Demo")
+        } for school in School.objects.exclude(name__in=["GBHS Demo", "Public"])
     ]
     return render(request, "offline_index.html", context={'schools_infos': schools_infos})
 
