@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block content %}
 <style>
   .mod-card {
@@ -64,7 +66,7 @@
 
   <!-- Hero -->
   <div class="hero-banner p-3 p-sm-4 mb-4 d-flex align-items-center gap-3">
-    <img src="{{ MEDIA_URL }}image/logo.png" alt="Oméga" width="60" height="60"
+    <img src="{% static 'image/logo.png' %}" alt="Oméga" width="60" height="60"
          class="rounded-3 flex-shrink-0">
     <div>
       <p class="text-white-50 small mb-0">{{ greet }}</p>
