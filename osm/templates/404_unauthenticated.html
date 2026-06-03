@@ -1,12 +1,39 @@
 {% extends "unauthenticated_base.html" %}
 
 {% block content %}
-<div class="alert alert-info mt-3 w-75 w-lg-50 cblock py-2" role="alert">
+<style>
+  .error-card {
+    background: linear-gradient(145deg, #1b3a57, #172e45);
+    border: 1px solid rgba(23,162,184,0.25);
+    border-radius: 20px;
+    max-width: 480px;
+  }
+</style>
+
+<div class="d-flex justify-content-center align-items-center py-5">
+  <div class="error-card p-4 p-sm-5 text-center mx-3">
     {% if not license %}
-    <p class="bg-transparent ctext">Page ou ressource inaccessible</p>
+      <div class="mb-3" style="font-size:3.5rem; line-height:1;">🔒</div>
+      <h5 class="text-info fw-bold mb-2">Page inaccessible</h5>
+      <p class="text-white-50 small mb-4">La page ou la ressource demandée est introuvable ou inaccessible.</p>
     {% else %}
-    <p class="bg-transparent ctext">Votre licence a expirée. Veuillez nous contacter pour renouvellement aux numéros
-        ci-dessous<br>693 293 037 / 653 333 209</p>
+      <div class="mb-3" style="font-size:3.5rem; line-height:1;">📋</div>
+      <h5 class="text-warning fw-bold mb-2">Licence expirée</h5>
+      <p class="text-white-50 small mb-3">
+        Votre licence a expiré. Veuillez nous contacter pour un renouvellement.
+      </p>
+      <div class="d-flex flex-column gap-2 align-items-center mb-4">
+        <a href="tel:693293037" class="text-decoration-none text-white fw-semibold">
+          <i class="bi bi-telephone-fill text-success me-2"></i>693 293 037
+        </a>
+        <a href="tel:653333209" class="text-decoration-none text-white fw-semibold">
+          <i class="bi bi-telephone-fill text-success me-2"></i>653 333 209
+        </a>
+      </div>
     {% endif %}
+    <a href="/" class="btn btn-outline-info fw-semibold px-4">
+      <i class="bi bi-arrow-left me-2"></i>Retour
+    </a>
+  </div>
 </div>
 {% endblock %}

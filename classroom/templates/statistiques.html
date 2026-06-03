@@ -1,113 +1,108 @@
+<style>
+  .osm-table-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+  .osm-table-wrap table { margin-bottom:0; }
+  .osm-table-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-wrap thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 12px; white-space:nowrap; text-align:center; vertical-align:middle; }
+  .osm-table-wrap thead th.col-label { text-align:left; }
+  .osm-table-wrap tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-wrap tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-wrap tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.84rem; border-color:rgba(255,255,255,0.06)!important; padding:9px 12px; vertical-align:middle; text-align:center; }
+  .osm-table-wrap tbody td.col-label { text-align:left; font-weight:600; }
+  .osm-table-wrap tbody tr.row-global { background:rgba(255,193,7,0.12)!important; }
+  .osm-table-wrap tbody tr.row-global td { color:#ffc107!important; font-weight:700; }
+  .stat-fail { color:#ff6b6b!important; font-weight:700; }
+  .stat-sub { font-size:0.72rem; color:rgba(255,255,255,0.45); display:block; }
+  .info-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
+  .info-panel li { font-size:0.84rem; color:rgba(255,255,255,0.8); padding:3px 0; font-weight:600; }
+</style>
+
 {% if not status %}
-<div class="alert alert-warning mt-3 fade show alert-dismissible w-md-75 cblock py-1" role="alert">
-    <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
-    <p class="mb-1 bg-transparent ctext">{{ rapport }}<br><a class="btn btn-success" href="{% url 'marks_check' %}">
-        <i class="bi bi-search me-2 bg-transparent"></i>Vérifier le remplissage</a></p>
+<div class="alert alert-warning py-2 small rounded-3 mt-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <span>{{ rapport }}</span>
+  <a class="btn btn-success btn-sm fw-semibold" href="{% url 'marks_check' %}"><i class="bi bi-search me-1"></i>Vérifier le remplissage</a>
 </div>
+
 {% else %}
-    {% if global_stats %}
-    <div class="alert alert-success py-2 mt-3" role="alert">
-        <p class="ctext bg-transparent mb-0">Statistiques {{ trim }}</p>
-    </div>
-    <div class="table-responsive">
-    <table class="table table-striped table-hover table-bordered">
-        <thead class="table-light">
+  {% if global_stats %}
+  <div class="alert alert-success py-2 small rounded-3 mt-3"><i class="bi bi-bar-chart me-2"></i><strong>Statistiques {{ trim }}</strong></div>
+  <div class="osm-table-wrap table-responsive mt-2">
+    <table class="table table-hover align-middle">
+      <thead>
         <tr>
-            <th rowspan="2" class="align-middle">Classe</th>
-            <th colspan="3" class="text-center">Pourcentage de réussite</th>
-            <th rowspan="2" class="align-middle">[Min-Max]</th>
-            <th rowspan="2" class="align-middle">Moyenne générale</th>
+          <th rowspan="2" class="col-label align-middle">Classe</th>
+          <th colspan="3">Pourcentage de réussite</th>
+          <th rowspan="2" class="align-middle">[Min–Max]</th>
+          <th rowspan="2" class="align-middle">Moy. générale</th>
         </tr>
-        <tr>
-            <th>Filles</th>
-            <th>Garçons</th>
-            <th>Total</th>
-        </tr>
-        </thead>
-        <tbody>
+        <tr><th>Filles</th><th>Garçons</th><th>Total</th></tr>
+      </thead>
+      <tbody>
         {% for stat in data %}
-        <tr class="{% if forloop.counter == 1 %} table-warning {% else %} table-dark {% endif %}border-primary text-dark fw-bold">
-            <td class="align-middle">{{ stat.label }}</td>
-            <td class="{% if stat.pcf < 50 %} text-danger {% endif %} align-middle">
-                {{ stat.pcf }}%<br>{{ stat.nbfr }} / {{ stat.nbfe }}</td>
-            <td class="{% if stat.pcg < 50 %} text-danger {% endif %} align-middle">
-                {{ stat.pcg }}%<br>{{ stat.nbgr }} / {{ stat.nbge }}</td>
-            <td class="{% if stat.taux < 50 %} text-danger {% endif %} align-middle">
-                {{ stat.taux }}%<br>{{ stat.nbr }} / {{ stat.nbe }}</td>
-            <td class="align-middle">{{ stat.min_max }}</td>
-            <td class="{% if stat.moyenne_generale < 10 %} text-danger {% endif %} align-middle">
-                {{ stat.moyenne_generale }}</td>
+        <tr class="{% if forloop.counter == 1 %}row-global{% endif %}">
+          <td class="col-label">{{ stat.label }}</td>
+          <td class="{% if stat.pcf < 50 %}stat-fail{% endif %}">{{ stat.pcf }}%<span class="stat-sub">{{ stat.nbfr }} / {{ stat.nbfe }}</span></td>
+          <td class="{% if stat.pcg < 50 %}stat-fail{% endif %}">{{ stat.pcg }}%<span class="stat-sub">{{ stat.nbgr }} / {{ stat.nbge }}</span></td>
+          <td class="{% if stat.taux < 50 %}stat-fail{% endif %}">{{ stat.taux }}%<span class="stat-sub">{{ stat.nbr }} / {{ stat.nbe }}</span></td>
+          <td>{{ stat.min_max }}</td>
+          <td class="{% if stat.moyenne_generale < 10 %}stat-fail{% endif %} fw-bold">{{ stat.moyenne_generale }}</td>
         </tr>
         {% endfor %}
-        </tbody>
+      </tbody>
     </table>
-        <div class="alert alert-info mt-3 py-2" role="alert">
-            <p class="ctext bg-transparent mb-0">Informations complémentaires</p>
-            <ul class="mb-0 bg-transparent">
-                <li class="bg-transparent text-dark fw-bold">Premier de l'établissement : {{ data.0.max_std }} ({{ data.0.max }})</li>
-                <li class="bg-transparent text-dark fw-bold">Dernier de l'établissement : {{ data.0.min_std }} ({{ data.0.min }})</li>
-                <li class="bg-transparent text-dark fw-bold">Taux de réussite le plus élevé : {{ data.0.max_clst }}</li>
-                <li class="bg-transparent text-dark fw-bold">Taux de réussite le plus faible : {{ data.0.min_clst }}</li>
-                <li class="bg-transparent text-dark fw-bold">Moyenne générale la plus élevée : {{ data.0.max_clsmg }}</li>
-                <li class="bg-transparent text-dark fw-bold">Moyenne générale la plus faible : {{ data.0.min_clsmg }}</li>
-            </ul>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-success py-2 mt-3" role="alert">
-        <p class="ctext bg-transparent mb-0">Statistiques {{ trim }} en {{ data.label }}</p>
-    </div>
-    <div class="table-responsive">
-    <table class="table table-striped table-hover table-bordered">
-        <thead class="table-light">
+  </div>
+  <div class="info-panel">
+    <p class="text-white-50 small fw-bold mb-2">Informations complémentaires</p>
+    <ul class="list-unstyled mb-0">
+      <li><i class="bi bi-trophy text-warning me-2"></i>Premier : {{ data.0.max_std }} ({{ data.0.max }})</li>
+      <li><i class="bi bi-arrow-down text-danger me-2"></i>Dernier : {{ data.0.min_std }} ({{ data.0.min }})</li>
+      <li><i class="bi bi-graph-up text-success me-2"></i>Taux le plus élevé : {{ data.0.max_clst }}</li>
+      <li><i class="bi bi-graph-down text-danger me-2"></i>Taux le plus faible : {{ data.0.min_clst }}</li>
+      <li><i class="bi bi-star text-warning me-2"></i>Moy. la plus élevée : {{ data.0.max_clsmg }}</li>
+      <li><i class="bi bi-star-half text-secondary me-2"></i>Moy. la plus faible : {{ data.0.min_clsmg }}</li>
+    </ul>
+  </div>
+
+  {% else %}
+  <div class="alert alert-success py-2 small rounded-3 mt-3"><i class="bi bi-bar-chart me-2"></i><strong>Statistiques {{ trim }} — {{ data.label }}</strong></div>
+  <div class="osm-table-wrap table-responsive mt-2">
+    <table class="table table-hover align-middle">
+      <thead>
         <tr>
-            <th rowspan="2" class="align-middle">Matière<br>Enseignant</th>
-            <th colspan="3" class="text-center">Pourcentage de réussite</th>
-            <th rowspan="2" class="align-middle">[Min-Max]</th>
-            <th rowspan="2" class="align-middle">Moyenne générale</th>
+          <th rowspan="2" class="col-label align-middle">Matière / Enseignant</th>
+          <th colspan="3">Pourcentage de réussite</th>
+          <th rowspan="2" class="align-middle">[Min–Max]</th>
+          <th rowspan="2" class="align-middle">Moy. générale</th>
         </tr>
-        <tr>
-            <th>Filles</th>
-            <th>Garçons</th>
-            <th>Total</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr class="table-warning border-primary text-dark fw-bold">
-            <td class="align-middle">Global</td>
-            <td class="{% if data.pcf < 50 %} text-danger {% endif %} align-middle">
-                {{ data.pcf }}%<br>{{ data.nbfr }} / {{ data.nbfe }}</td>
-            <td class="{% if data.pcg < 50 %} text-danger {% endif %} align-middle">
-                {{ data.pcg }}%<br>{{ data.nbgr }} / {{ data.nbge }}</td>
-            <td class="{% if data.taux < 50 %} text-danger {% endif %} align-middle">
-                {{ data.taux }}%<br>{{ data.nbr }} / {{ data.nbe }}</td>
-            <td class="align-middle">{{ data.min_max }}</td>
-            <td class="{% if data.moyenne_generale < 10 %} text-danger {% endif %} align-middle">
-                {{ data.moyenne_generale }}</td>
+        <tr><th>Filles</th><th>Garçons</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        <tr class="row-global">
+          <td class="col-label">Global</td>
+          <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{{ data.pcf }}%<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
+          <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{{ data.pcg }}%<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
+          <td class="{% if data.taux < 50 %}stat-fail{% endif %}">{{ data.taux }}%<span class="stat-sub">{{ data.nbr }} / {{ data.nbe }}</span></td>
+          <td>{{ data.min_max }}</td>
+          <td class="{% if data.moyenne_generale < 10 %}stat-fail{% endif %} fw-bold">{{ data.moyenne_generale }}</td>
         </tr>
         {% for matiere in data.matieres_data %}
-        <tr class="table-dark border-primary">
-            <td class="align-middle">{{ matiere.label }}<br>
-                <span class="text-warning bg-transparent">{{ matiere.enseignant }}</span></td>
-            <td class="{% if matiere.pcf < 50 %} text-danger {% endif %} align-middle">
-                {{ matiere.pcf }}%<br>{{ matiere.nbfr }} / {{ matiere.nbfe }}</td>
-            <td class="{% if matiere.pcg < 50 %} text-danger {% endif %} align-middle">
-                {{ matiere.pcg }}%<br>{{ matiere.nbgr }} / {{ matiere.nbge }}</td>
-            <td class="{% if elt.pct < 50 %} text-danger {% endif %} align-middle">
-                {{ matiere.pct }}%<br>{{ matiere.nbtr }} / {{ matiere.nbte }}</td>
-            <td class="align-middle">{{ matiere.min_max }}</td>
-            <td class="{% if matiere.moyenne < 10 %} text-danger {% endif %} align-middle">{{ matiere.moyenne }}</td>
+        <tr>
+          <td class="col-label">{{ matiere.label }}<span class="stat-sub text-warning">{{ matiere.enseignant }}</span></td>
+          <td class="{% if matiere.pcf < 50 %}stat-fail{% endif %}">{{ matiere.pcf }}%<span class="stat-sub">{{ matiere.nbfr }} / {{ matiere.nbfe }}</span></td>
+          <td class="{% if matiere.pcg < 50 %}stat-fail{% endif %}">{{ matiere.pcg }}%<span class="stat-sub">{{ matiere.nbgr }} / {{ matiere.nbge }}</span></td>
+          <td class="{% if matiere.pct < 50 %}stat-fail{% endif %}">{{ matiere.pct }}%<span class="stat-sub">{{ matiere.nbtr }} / {{ matiere.nbte }}</span></td>
+          <td>{{ matiere.min_max }}</td>
+          <td class="{% if matiere.moyenne < 10 %}stat-fail{% endif %} fw-bold">{{ matiere.moyenne }}</td>
         </tr>
         {% endfor %}
-        </tbody>
+      </tbody>
     </table>
-        <div class="alert alert-info mt-3 py-2" role="alert">
-            <p class="ctext bg-transparent mb-0">Informations complémentaires</p>
-            <ul class="mb-0 bg-transparent">
-                <li class="bg-transparent text-dark fw-bold">Premier de la classe : {{ data.max_std }} ({{ data.max }})</li>
-                <li class="bg-transparent text-dark fw-bold">Dernier de la classe : {{ data.min_std }} ({{ data.min }})</li>
-            </ul>
-        </div>
-    </div>
-    {% endif %}
+  </div>
+  <div class="info-panel">
+    <p class="text-white-50 small fw-bold mb-2">Informations complémentaires</p>
+    <ul class="list-unstyled mb-0">
+      <li><i class="bi bi-trophy text-warning me-2"></i>Premier de la classe : {{ data.max_std }} ({{ data.max }})</li>
+      <li><i class="bi bi-arrow-down text-danger me-2"></i>Dernier de la classe : {{ data.min_std }} ({{ data.min }})</li>
+    </ul>
+  </div>
+  {% endif %}
 {% endif %}

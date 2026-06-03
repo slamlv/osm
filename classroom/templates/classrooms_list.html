@@ -1,112 +1,81 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex flex-column flex-sm-row justify-content-center align-items-center gap-2 w-auto alert alert-info w-md-75 mx-3 mx-md-auto py-1">
-    {{ info }}
-    {% if search %}
-    <a class="btn btn-secondary btn-sm" href="{% url 'classrooms' %}">
-        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-    {% endif %}
-</div>
-{% if datas %}
-<form method="post" enctype="multipart/form-data">
+<style>
+  .osm-table-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+  .osm-table-wrap table { margin-bottom:0; }
+  .osm-table-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-wrap thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-wrap tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-wrap tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-wrap tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .toolbar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:0.75rem 1rem; }
+  .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3" style="max-width:1100px;">
+
+  <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>{{ info }}</span>
+    {% if search %}<a class="btn btn-secondary btn-sm" href="{% url 'classrooms' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>{% endif %}
+  </div>
+
+  {% if datas %}
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    <div class="d-flex flex-column flex-sm-row w-md-75 cblock mb-3 justify-content-center gap-2 px-3">
-        {{ search_form.search }}
-        <button class="w-auto btn btn-info" type="submit">
-            <i class="bi bi-search me-2 bg-transparent"></i>Rechercher</button>
-        <a class="w-auto btn btn-warning" href="{% url 'classroom-add' %}">
-            <i class="bi bi-people me-2 bg-transparent"></i>Ajouter une Salle de classe</a>
+    <div class="toolbar d-flex flex-column flex-sm-row gap-2 mb-3 align-items-stretch align-items-sm-center">
+      <div class="flex-grow-1">{{ search_form.search }}</div>
+      <button class="btn btn-info btn-sm fw-semibold" type="submit"><i class="bi bi-search me-1"></i>Rechercher</button>
+      <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'classroom-add' %}"><i class="bi bi-plus-circle me-1"></i>Ajouter une classe</a>
     </div>
-</form>
-<div class="container w-md-75">
-    <div class="table-responsive">
-    <table class="table table-striped table-hover text-nowrap align-middle border">
-        <thead class="table-light">
-        <tr>
-            <th>#</th>
-            <th>Intitulé</th>
-            <th>Niveau</th>
-            <th>Effectif</th>
-            <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
+  </form>
+
+  <div class="osm-table-wrap table-responsive">
+    <table class="table table-hover align-middle text-nowrap">
+      <thead><tr>
+        <th style="width:36px;color:rgba(255,255,255,0.3)!important;">#</th>
+        <th>Intitulé</th>
+        <th>Niveau</th>
+        <th>Effectif</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
         {% for classroom in datas %}
-        <tr class="table-dark border-primary">
-            <td>{{ forloop.counter }}</td>
-            <td><a href="{% url 'classroom-students' id=classroom.id %}" class="link-info bg-transparent"
-                   title="Liste des Élèves" data-bs-toggle="tooltip">{{ classroom.code }}</a></td>
-            <td><span class="d-none d-md-inline bg-transparent">{{ classroom.level }}</span>
-                <span class="d-md-none bg-transparent">{{ classroom.classe }}</span></td>
-            <td>{{ classroom.effectif }}
-                {% if classroom.effectif %}
-                <span class="bg-transparent d-none d-lg-inline"> : {{ classroom.kind_numbers }}</span></td>
-                {% endif %}
-            <td><div class="d-flex gap-2 gap-lg-3 bg-transparent">
-                <a class="btn btn-outline-warning btn-sm" title="Modifier"
-                   href="{% url 'classroom-edit' id=classroom.id %}" data-bs-toggle="tooltip">
-                    <i class="bi bi-pencil-square bg-transparent"></i></a>
-                <a class="btn btn-outline-info btn-sm" title="Enseignants"
-                   href="{% url 'classroom-teachers' id=classroom.id %}" data-bs-toggle="tooltip">
-                    <i class="fas fa-chalkboard-teacher bg-transparent"></i></a>
-                <a class="btn btn-outline-warning btn-sm" title="Matières"
-                   href="{% url 'class-subjects' id=classroom.id %}" data-bs-toggle="tooltip">
-                    <i class="fas fa-book bg-transparent"></i></a>
-                <a class="btn btn-outline-danger btn-sm" title="Supprimer"
-                   href="{% url 'classroom-delete' id=classroom.id %}" data-bs-toggle="tooltip">
-                    <i class="bi bi-trash bg-transparent"></i></a>
-            </div></td>
+        <tr>
+          <td style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
+          <td>
+            <a href="{% url 'classroom-students' id=classroom.id %}" class="text-info fw-semibold text-decoration-none"
+               title="Liste des Élèves" data-bs-toggle="tooltip">{{ classroom.code }}</a>
+          </td>
+          <td>
+            <span class="d-none d-md-inline">{{ classroom.level }}</span>
+            <span class="d-md-none">{{ classroom.classe }}</span>
+          </td>
+          <td>
+            {{ classroom.effectif }}
+            {% if classroom.effectif %}<span class="d-none d-lg-inline" style="color:rgba(255,255,255,0.45);font-size:0.8rem;"> — {{ classroom.kind_numbers }}</span>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-2">
+              <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'classroom-edit' id=classroom.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
+              <a class="btn btn-outline-info btn-sm" title="Enseignants" href="{% url 'classroom-teachers' id=classroom.id %}" data-bs-toggle="tooltip"><i class="fas fa-chalkboard-teacher"></i></a>
+              <a class="btn btn-outline-warning btn-sm" title="Matières" href="{% url 'class-subjects' id=classroom.id %}" data-bs-toggle="tooltip"><i class="fas fa-book"></i></a>
+              <a class="btn btn-outline-danger btn-sm" title="Supprimer" href="{% url 'classroom-delete' id=classroom.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
         </tr>
         {% endfor %}
-        </tbody>
+      </tbody>
     </table>
-    </div>
-    {% elif not search %}
-    <div class="d-flex justify-content-center">
-        <a class="w-auto btn btn-warning" href="{% url 'classroom-add' %}">
-            <i class="bi bi-people me-2 bg-transparent"></i>Ajouter une Salle de classe</a>
-    </div>
-</div>
-{% endif %}
-{% endblock %}
+  </div>
 
-{% block footer %}
-<footer>
-    <div class="container mt-3">
-      <div class="row">
-        <!-- Section 1 -->
-        <div class="col-md-4 mb-3">
-          <h5 class="fw-bold text-warning">OmegaSchoolManager</h5>
-          <p class="small text-light">Un outil de gestion au service de l'éducation.</p>
-        </div>
-        <!-- Section 2 -->
-        <div class="col-md-4 mb-3">
-          <h5 class="fw-bold text-warning">Liens rapides</h5>
-          <ul class="list-unstyled small">
-            <li><a href="{% url 'index' %}" class="text-decoration-none text-light"><i class="bi bi-house-door me-2"></i>Accueil</a></li>
-            <li><a href="{% url 'user-details' %}" class="text-decoration-none text-light"><i class="bi bi-speedometer2 me-2"></i>Mes informations</a></li>
-            <li><a href="{% url 'marks' %}" class="text-decoration-none text-light"><i class="bi bi-journal-text me-2"></i>Notes</a></li>
-            <li><a href="#" class="text-decoration-none text-light"><i class="bi bi-gear"></i> Paramètres</a></li>
-          </ul>
-        </div>
-        <!-- Section 3 -->
-        <div class="col-md-4 mb-3">
-          <h5 class="fw-bold text-warning">Contact</h5>
-          <p class="small mb-1 text-white"><a href="mailto:omegaschoolmanager@gmail.com" class="text-decoration-none text-light"><i class="fa fa-envelope me-2"></i>contact@schoolmanager.com</p>
-          <p class="small mb-1 text-white"><i class="fa fa-phone text-success me-2"></i>+237 679 022 278</p>
-          <p class="small mb-3 text-white"><i class="fa fa-map-marker-alt text-danger me-2"></i>Nkongsamba, Cameroun</p>
-          <div>
-            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-facebook"></i></a>
-            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="text-light me-3 fs-5"><i class="fab fa-github"></i></a>
-            <a href="#" class="text-light fs-5"><i class="fab fa-whatsapp"></i></a>
-          </div>
-        </div>
-      </div>
-      <div class="border-top border-secondary pt-2 my-2 text-center small text-white">
-        © {% now "Y" %} <strong>OmegaSchoolManager</strong>. Tous droits réservés.
-      </div>
-    </div>
-</footer>
+  {% elif not search %}
+  <div class="empty-state">
+    <i class="bi bi-door-open fs-2 mb-2 d-block"></i>
+    <p class="mb-3">Aucune salle de classe pour le moment.</p>
+    <a class="btn btn-warning fw-semibold" href="{% url 'classroom-add' %}"><i class="bi bi-plus-circle me-2"></i>Ajouter une classe</a>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}

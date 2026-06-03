@@ -1,25 +1,72 @@
 {% extends "unauthenticated_base.html" %}
 
 {% block content %}
-    <form method="post" enctype="multipart/form-data">
+<style>
+  .auth-card {
+    background: linear-gradient(145deg, #1b3a57, #172e45);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 420px;
+  }
+  .auth-card-header {
+    background: linear-gradient(135deg, #152f45, #1e4266);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+  }
+  .auth-card-body { padding: 1.5rem; }
+  .auth-card label { font-size: 0.82rem; margin-bottom: 4px; color: rgba(255,255,255,0.75); }
+  .auth-card input {
+    background-color: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+  }
+  .auth-card input:focus {
+    background-color: rgba(255,255,255,0.11) !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.2) !important;
+    color: #fff !important;
+  }
+  .auth-card input::placeholder { color: rgba(255,255,255,0.25) !important; }
+</style>
+
+<div class="d-flex justify-content-center align-items-start py-4 px-3">
+  <div class="auth-card">
+
+    <div class="auth-card-header">
+      <i class="bi bi-box-arrow-in-right fs-3 text-primary mb-2 d-block"></i>
+      <h6 class="text-white fw-bold mb-0">Connexion</h6>
+      <p class="text-white-50 small mb-0">Accédez à votre espace</p>
+    </div>
+
+    <div class="auth-card-body">
+      <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="container w-md-75 w-lg-50">
-            <div class="mb-3">
-                <label for="username" class="text-white">Nom d'utilisateur</label>
-                {{ form.username }}
-            </div>
-            <div class="mb-3">
-                <label for="mdp" class="text-white">Mot de passe</label>
-                {{ form.mdp }}
-            </div>
+        <div class="mb-3">
+          <label>Nom d'utilisateur</label>
+          {{ form.username }}
         </div>
-        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 px-2 px-sm-0">
-            <button class="btn btn-primary" type="submit">
-                <i class="bi bi-box-arrow-in-right me-2 bg-transparent"></i>Se connecter</button>
-            <a class="btn btn-danger" href="{% url 'code' %}">
-                <i class="bi bi-person-plus me-2 bg-transparent"></i>Je n'ai pas de compte</a>
-            <a class="btn btn-warning" href="{% url 'reset' %}">
-                <i class="bi bi-key me-2 bg-transparent"></i>Mot de passe oublié</a>
+        <div class="mb-4">
+          <label>Mot de passe</label>
+          {{ form.mdp }}
         </div>
-    </form>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary fw-semibold" type="submit">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+          </button>
+          <a class="btn btn-outline-warning fw-semibold" href="{% url 'reset' %}">
+            <i class="bi bi-key me-2"></i>Mot de passe oublié
+          </a>
+          <a class="btn btn-outline-secondary" href="{% url 'code' %}">
+            <i class="bi bi-person-plus me-2"></i>Je n'ai pas de compte
+          </a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
 {% endblock %}

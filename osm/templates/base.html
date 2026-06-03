@@ -4,201 +4,505 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-with, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="{% static 'image/logo.png' %}">
     <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
     <link rel="stylesheet" href="{% static 'bootstrap-icons/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'choices.min.css' %}">
-    <link rel="stylesheet" href="{% static 'style.css' %}" style="text/css">
+    <link rel="stylesheet" href="{% static 'style.css' %}" type="text/css">
     <script src="{% static 'bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'choices.min.js' %}"></script>
     <script src="{% static 'htmx.min.js' %}" defer></script>
     <script src="{% static 'client_multi_image_upload.js' %}"></script>
     <title>{{ title }}</title>
+    <style>
+        /* ═══════════════════════════════════════
+           NAVBAR
+        ═══════════════════════════════════════ */
+        .osm-nav {
+            background-color: #1a3a55;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            padding: 0 1rem;
+        }
+        .osm-nav .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 0;
+            text-decoration: none;
+        }
+        .osm-nav .navbar-brand img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+        .osm-nav .navbar-brand .brand-text {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #ffc107;
+            letter-spacing: -0.01em;
+        }
+        /* Toggler */
+        .osm-nav .navbar-toggler {
+            border: 1px solid rgba(255,193,7,0.4);
+            border-radius: 8px;
+            padding: 5px 8px;
+            color: #ffc107;
+        }
+        .osm-nav .navbar-toggler:focus { box-shadow: 0 0 0 3px rgba(255,193,7,0.2); }
+
+        /* Nav links */
+        .osm-nav .nav-link {
+            color: rgba(255,255,255,0.75) !important;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.6rem 0.75rem !important;
+            border-radius: 8px;
+            transition: color 0.15s, background 0.15s;
+        }
+        .osm-nav .nav-link:hover,
+        .osm-nav .nav-link:focus {
+            color: #ffc107 !important;
+            background: rgba(255,193,7,0.08);
+        }
+        .osm-nav .nav-link.active-link { color: #ffc107 !important; }
+
+        /* Dropdown menus */
+        .osm-nav .dropdown-menu {
+            background-color: #162e44;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 6px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            min-width: 210px;
+        }
+        .osm-nav .dropdown-item {
+            color: rgba(255,255,255,0.75) !important;
+            font-weight: 600;
+            font-size: 0.83rem;
+            border-radius: 8px;
+            padding: 7px 12px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .osm-nav .dropdown-item:hover,
+        .osm-nav .dropdown-item:focus {
+            background: rgba(255,193,7,0.12) !important;
+            color: #ffc107 !important;
+        }
+        .osm-nav .dropdown-divider {
+            border-color: rgba(255,255,255,0.08);
+            margin: 4px 6px;
+        }
+
+        /* Submenu */
+        .osm-nav .dropdown-submenu { position: relative; }
+        .osm-nav .dropdown-submenu > .dropdown-menu {
+            top: 0; left: 100%;
+            margin-left: 2px;
+            display: none;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .osm-nav .dropdown-submenu:hover > .dropdown-menu { display: block; }
+        }
+        .osm-nav .dropdown-submenu.show > .dropdown-menu { display: block; }
+
+        /* Déconnexion */
+        .osm-nav .nav-signout {
+            color: rgba(255,100,100,0.85) !important;
+        }
+        .osm-nav .nav-signout:hover {
+            color: #ff6b6b !important;
+            background: rgba(255,107,107,0.1) !important;
+        }
+
+        /* Mobile : menu ouvert */
+        @media (max-width: 1399px) {
+            .osm-nav .navbar-collapse {
+                background: #162e44;
+                border-radius: 12px;
+                margin-top: 6px;
+                padding: 8px;
+                border: 1px solid rgba(255,255,255,0.07);
+            }
+            .osm-nav .dropdown-menu {
+                background: rgba(255,255,255,0.04);
+                border: none;
+                box-shadow: none;
+                padding-left: 12px;
+            }
+        }
+
+        /* ═══════════════════════════════════════
+           HEADER ÉCOLE
+        ═══════════════════════════════════════ */
+        .school-header {
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 0.5rem 1rem;
+            background: rgba(0,0,0,0.15);
+        }
+        .school-header a { text-decoration: none; }
+        .school-header .school-logo {
+            width: 38px;
+            height: 38px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid rgba(255,193,7,0.4);
+            flex-shrink: 0;
+        }
+        .school-header .school-name {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #ffc107;
+            line-height: 1.2;
+            /* Tronquer si trop long sur mobile */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 55vw;
+        }
+        @media (min-width: 576px) {
+            .school-header .school-name { max-width: none; }
+        }
+
+        /* ═══════════════════════════════════════
+           TITRE DE PAGE
+        ═══════════════════════════════════════ */
+        .page-title-bar {
+            padding: 0.4rem 1rem;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .page-title-bar h6 {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.45);
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            margin: 0;
+        }
+
+        /* ═══════════════════════════════════════
+           FOOTER
+        ═══════════════════════════════════════ */
+        .osm-footer {
+            background: #152f45;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            margin-top: 3rem;
+        }
+        .osm-footer .footer-brand {
+            font-weight: 800;
+            color: #ffc107;
+            font-size: 0.95rem;
+        }
+        .osm-footer .footer-tagline {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+        }
+        .osm-footer .footer-heading {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.35);
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+        }
+        .osm-footer .footer-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.82rem;
+            padding: 3px 0;
+            transition: color 0.15s;
+        }
+        .osm-footer .footer-link:hover { color: #ffc107; }
+        .osm-footer .footer-contact {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.55);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+        }
+        .osm-footer .social-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.06);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+        }
+        .osm-footer .social-icon:hover {
+            background: rgba(255,193,7,0.15);
+            color: #ffc107;
+        }
+        .osm-footer .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.25);
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-xxl container w-md-75 w-lg-50 w-xxl-75 justify-content-xxl-center">
-      <div class="d-flex justify-content-center">
-        <a class="navbar-brand text-warning fw-bold" href="{% url 'index' %}"><img src="{% static 'image/logo.png' %}" alt="Oméga" width="30" height="24">OSM</a>
-        <button class="navbar-toggler me-2 text-warning" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon text-warning"></span>
+
+    <!-- ═══════════ NAVBAR ═══════════ -->
+    <nav class="osm-nav navbar navbar-expand-xxl">
+      <div class="container-fluid w-xxl-75 px-0">
+
+        <a class="navbar-brand" href="{% url 'index' %}">
+          <img src="{% static 'image/logo.png' %}" alt="OSM">
+          <span class="brand-text">OSM</span>
+        </a>
+
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+          <i class="bi bi-list fs-5"></i>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <ul class="navbar-nav me-auto mb-2 mb-xxl-0">
+
             {% if user.is_admin %}
+            <!-- Personnel -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-               <i class="fa fa-users me-2 d-xxl-none"></i>Personnel
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa fa-users me-2 d-xxl-none"></i>Personnel
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'staff' %}">Liste du Personnel</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'add_staff_member' %}">Ajouter un membre</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'activities' %}">Activités</a></li>
+                <li><a class="dropdown-item" href="{% url 'staff' %}"><i class="bi bi-people me-2 text-success"></i>Liste du Personnel</a></li>
+                <li><a class="dropdown-item" href="{% url 'add_staff_member' %}"><i class="bi bi-person-plus me-2 text-success"></i>Ajouter un membre</a></li>
+                <li><a class="dropdown-item" href="{% url 'activities' %}"><i class="bi bi-megaphone me-2 text-info"></i>Activités</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'add_user' %}">Nouvel utilisateur</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'users' %}">Comptes utilisateurs</a></li>
+                <li><a class="dropdown-item" href="{% url 'add_user' %}"><i class="bi bi-person-badge me-2 text-warning"></i>Nouvel utilisateur</a></li>
+                <li><a class="dropdown-item" href="{% url 'users' %}"><i class="bi bi-shield-person me-2 text-warning"></i>Comptes utilisateurs</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Prise de service</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Reprise de service</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Présence éffective</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-in-right me-2 text-white-50"></i>Prise de service</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2 text-white-50"></i>Reprise de service</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-check2-circle me-2 text-white-50"></i>Présence effective</a></li>
               </ul>
             </li>
+
+            <!-- Élèves -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-               <i class="fa fa-graduation-cap me-2 d-xxl-none"></i>Élèves
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa fa-graduation-cap me-2 d-xxl-none"></i>Élèves
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'students' %}">Liste des Élèves</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'student-add' %}">Ajouter un Élève</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'students_import' %}">Importer une liste</a></li>
+                <li><a class="dropdown-item" href="{% url 'students' %}"><i class="bi bi-people me-2 text-primary"></i>Liste des Élèves</a></li>
+                <li><a class="dropdown-item" href="{% url 'student-add' %}"><i class="bi bi-person-plus me-2 text-primary"></i>Ajouter un Élève</a></li>
+                <li><a class="dropdown-item" href="{% url 'students_import' %}"><i class="bi bi-upload me-2 text-primary"></i>Importer une liste</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'discipline' %}">Discipline</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Inscription</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Certificat de scolarité</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'students_id_cards' %}">Cartes d'identité scolaire</a></li>
+                <li><a class="dropdown-item" href="{% url 'discipline' %}"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Discipline</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-pencil-square me-2 text-white-50"></i>Inscription</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Certificat de scolarité</a></li>
+                <li><a class="dropdown-item" href="{% url 'students_id_cards' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Cartes d'identité scolaire</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'parents' %}">Liste des Parents</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'parent-add' %}">Ajouter un Parent</a></li>
+                <li><a class="dropdown-item" href="{% url 'parents' %}"><i class="bi bi-people-fill me-2 text-warning"></i>Liste des Parents</a></li>
+                <li><a class="dropdown-item" href="{% url 'parent-add' %}"><i class="bi bi-person-plus-fill me-2 text-warning"></i>Ajouter un Parent</a></li>
               </ul>
             </li>
+
+            <!-- Classes -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-               <i class="fa fa-chalkboard-teacher me-2 d-xxl-none"></i>Classes
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa fa-chalkboard-teacher me-2 d-xxl-none"></i>Classes
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'classrooms' %}">Liste des Classes</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'classroom-add' %}">Ajouter une Classe</a></li>
+                <li><a class="dropdown-item" href="{% url 'classrooms' %}"><i class="bi bi-grid me-2 text-info"></i>Liste des Classes</a></li>
+                <li><a class="dropdown-item" href="{% url 'classroom-add' %}"><i class="bi bi-plus-square me-2 text-info"></i>Ajouter une Classe</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'classroom_time_table' %}">Emploi du temps</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'plages_horaires' %}">Plages horaires</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'classroom-progression-select' %}">Taux de couverture</a></li>
+                <li><a class="dropdown-item" href="{% url 'classroom_time_table' %}"><i class="bi bi-calendar-week me-2 text-danger"></i>Emploi du temps</a></li>
+                <li><a class="dropdown-item" href="{% url 'plages_horaires' %}"><i class="bi bi-clock me-2 text-danger"></i>Plages horaires</a></li>
+                <li><a class="dropdown-item" href="{% url 'classroom-progression-select' %}"><i class="bi bi-graph-up me-2 text-success"></i>Taux de couverture</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'subjects' %}">Liste des Matières</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'subject-add' %}">Ajouter une Matière</a></li>
+                <li><a class="dropdown-item" href="{% url 'subjects' %}"><i class="bi bi-book me-2 text-warning"></i>Liste des Matières</a></li>
+                <li><a class="dropdown-item" href="{% url 'subject-add' %}"><i class="bi bi-book-fill me-2 text-warning"></i>Ajouter une Matière</a></li>
               </ul>
             </li>
+
+            <!-- Résultats -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-               <i class="bi bi-bar-chart me-2 d-xxl-none"></i>Résultats
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bar-chart me-2 d-xxl-none"></i>Résultats
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'bulletin' %}">Bulletin scolaire</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'tableau_honneur' %}">Tableau d'honneur</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'stats-check' %}">Statistiques</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'exam_report' %}">Procès verbal</a></li>
+                <li><a class="dropdown-item" href="{% url 'bulletin' %}"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Bulletin scolaire</a></li>
+                <li><a class="dropdown-item" href="{% url 'tableau_honneur' %}"><i class="bi bi-trophy me-2 text-warning"></i>Tableau d'honneur</a></li>
+                <li><a class="dropdown-item" href="{% url 'stats-check' %}"><i class="bi bi-bar-chart me-2 text-info"></i>Statistiques</a></li>
+                <li><a class="dropdown-item" href="{% url 'exam_report' %}"><i class="bi bi-file-earmark-check me-2 text-success"></i>Procès verbal</a></li>
               </ul>
             </li>
             {% endif %}
+
+            <!-- Notes -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-               <i class="fa fa-file-edit me-2 d-xxl-none"></i>Notes
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa fa-file-edit me-2 d-xxl-none"></i>Notes
               </a>
               <ul class="dropdown-menu">
                 <li class="dropdown-submenu">
-                  <a class="dropdown-item text-warning fw-bold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Remplissage<span class="chevron ms-auto">&#9656</span>
+                  <a class="dropdown-item" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-pencil me-2 text-primary"></i>Remplissage<span class="chevron ms-auto">&#9656;</span>
                   </a>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item text-warning fw-bold" href="{% url 'marks' %}">Par Classe</a></li>
-                    <li><a class="dropdown-item text-warning fw-bold" href="{% url 'level-marks' %}">Par Niveau</a></li>
-                    <li><a class="dropdown-item text-warning fw-bold" href="{% url 'trimester-marks' %}">Trimestriel par Classe</a></li>
-                    <li><a class="dropdown-item text-warning fw-bold" href="{% url 'tlevel-marks' %}">Trimestriel par Niveau</a></li>
+                    <li><a class="dropdown-item" href="{% url 'marks' %}">Par Classe</a></li>
+                    <li><a class="dropdown-item" href="{% url 'level-marks' %}">Par Niveau</a></li>
+                    <li><a class="dropdown-item" href="{% url 'trimester-marks' %}">Trimestriel par Classe</a></li>
+                    <li><a class="dropdown-item" href="{% url 'tlevel-marks' %}">Trimestriel par Niveau</a></li>
                   </ul>
                 </li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'marks-copy' %}">Reconduction</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'marks-sheet' %}">Fiche de Notes</a></li>
+                <li><a class="dropdown-item" href="{% url 'marks-copy' %}"><i class="bi bi-arrow-repeat me-2 text-info"></i>Reconduction</a></li>
+                <li><a class="dropdown-item" href="{% url 'marks-sheet' %}"><i class="bi bi-file-ruled me-2 text-info"></i>Fiche de Notes</a></li>
                 {% if user.is_admin %}
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'set_periods' %}">Périodes de remplissage</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'marks_check' %}">Vérifier le remplissage</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'marks_report' %}">Relevé de Notes trimestriel</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'fill_livret_bepc' %}">Livret BEPC</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'set_periods' %}"><i class="bi bi-calendar-range me-2 text-warning"></i>Périodes de remplissage</a></li>
+                <li><a class="dropdown-item" href="{% url 'marks_check' %}"><i class="bi bi-check2-square me-2 text-warning"></i>Vérifier le remplissage</a></li>
+                <li><a class="dropdown-item" href="{% url 'marks_report' %}"><i class="bi bi-file-earmark-bar-graph me-2 text-warning"></i>Relevé trimestriel</a></li>
+                <li><a class="dropdown-item" href="{% url 'fill_livret_bepc' %}"><i class="bi bi-journal-bookmark me-2 text-warning"></i>Livret BEPC</a></li>
                 {% endif %}
               </ul>
             </li>
+
+            <!-- Mon espace -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-warning fw-bold" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  <i class="bi bi-person-badge me-2 d-xxl-none"></i>Mon espace
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle me-2 d-xxl-none"></i>Mon espace
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'user-details' %}">Mes informations</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'user-timetable' %}">Mon emploi du temps</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'progression' id=user.staff_member.first.id %}">Ma progression</a></li>
+                <li><a class="dropdown-item" href="{% url 'user-details' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Mes informations</a></li>
+                <li><a class="dropdown-item" href="{% url 'user-timetable' %}"><i class="bi bi-calendar-week me-2 text-info"></i>Mon emploi du temps</a></li>
+                <li><a class="dropdown-item" href="{% url 'progression' id=user.staff_member.first.id %}"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ma progression</a></li>
                 {% if user.is_admin %}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="{% url 'school_details' %}">Informations Établissement</a></li>
+                <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-warning"></i>Informations Établissement</a></li>
                 {% endif %}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Thème</a></li>
-                <li><a class="dropdown-item text-warning fw-bold" href="#">Assistance</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-palette me-2 text-white-50"></i>Thème</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2 text-white-50"></i>Assistance</a></li>
               </ul>
             </li>
+
+            <!-- Déconnexion -->
             <li class="nav-item">
-              <a class="nav-link active text-warning fw-bold" aria-current="page" href="{% url 'signout' %}">
-                  <i class="fa fa-sign-out me-2 d-xxl-none"></i>Déconnexion</a>
+              <a class="nav-link nav-signout" href="{% url 'signout' %}">
+                <i class="fa fa-sign-out me-2"></i>Déconnexion
+              </a>
             </li>
+
           </ul>
-        </div>
+        </div><!-- /collapse -->
       </div>
     </nav>
-    <div>
-        <a class="text-decoration-none" href="{% if user.is_admin %} {% url 'school_details' %} {% else %} # {% endif %}">
+
+    <!-- ═══════════ HEADER ÉCOLE ═══════════ -->
+    <div class="school-header">
+      <a href="{% if user.is_admin %}{% url 'school_details' %}{% else %}#{% endif %}"
+         class="d-flex align-items-center gap-2 w-100">
         {% if not user.school.logo %}
-        <h2 class="text-warning ctext fw-bold"><img src="{% static 'image/no_image.jpg' %}" class="rounded-circle" id="logosm"> {{ user.school.nom }} / {{ user.school.name }}</h2>
+        <img src="{% static 'image/no_image.jpg' %}" class="school-logo" alt="Logo">
         {% else %}
-        <h2 class="text-warning ctext fw-bold"><img src="{{ user.school.logo.url }}" class="rounded-circle" id="logosm"> {{ user.school.nom }} / {{ user.school.name }}</h2>
+        <img src="{{ user.school.logo.url }}" class="school-logo" alt="Logo">
         {% endif %}
-        <hr class="w-sm-100 w-md-75 w-lg-50 border border-info border-2 cblock">
-        </a>
+        <span class="school-name">{{ user.school.nom }} / {{ user.school.name }}</span>
+      </a>
     </div>
+
+    <!-- ═══════════ TITRE DE PAGE ═══════════ -->
     <header>
-        {% block titre %}
-        <h2 class="text-white ctext fw-bold">{% if title %} @{{ title }} {% endif %}</h2>
-        {% endblock %}
+      {% block titre %}
+      {% if title %}
+      <div class="page-title-bar">
+        <h6><i class="bi bi-chevron-right me-1 text-warning" style="font-size:0.7rem;"></i>{{ title }}</h6>
+      </div>
+      {% endif %}
+      {% endblock %}
     </header>
+
+    <!-- Messages -->
     <div id="messages">
         {% include 'messages.html' %}
     </div>
+
+    <!-- Contenu des pages enfants -->
     {% block content %}{% endblock %}
+
+    <!-- ═══════════ FOOTER ═══════════ -->
     {% block footer %}
-    <footer>
-        <div class="container mt-5 w-md-75 w-lg-50">
-          <div class="row">
-            <!-- Section 1 -->
-            <div class="col-md-4 mb-3">
-              <h5 class="fw-bold text-warning">OmegaSchoolManager</h5>
-              <p class="small text-light">Un outil de gestion au service de l'éducation.</p>
+    <footer class="osm-footer">
+      <div class="container w-md-75 w-lg-50 py-4">
+        <div class="row g-4">
+
+          <!-- Branding -->
+          <div class="col-12 col-sm-6 col-md-4">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <img src="{% static 'image/logo.png' %}" alt="OSM" width="28" height="28"
+                   style="border-radius:6px;">
+              <span class="footer-brand">OmegaSchoolManager</span>
             </div>
-            <!-- Section 2 -->
-            <div class="col-md-4 mb-3">
-              <h5 class="fw-bold text-warning">Liens rapides</h5>
-              <ul class="list-unstyled small">
-                <li><a href="{% url 'index' %}" class="text-decoration-none text-light"><i class="bi bi-house-door me-2"></i>Accueil</a></li>
-                <li><a href="{% url 'user-details' %}" class="text-decoration-none text-light"><i class="bi bi-speedometer2 me-2"></i>Mes informations</a></li>
-                <li><a href="{% url 'marks' %}" class="text-decoration-none text-light"><i class="bi bi-journal-text me-2"></i>Notes</a></li>
-                <li><a href="#" class="text-decoration-none text-light"><i class="bi bi-gear me-é"></i> Paramètres</a></li>
-              </ul>
+            <p class="footer-tagline mb-0">Un outil de gestion au service de l'éducation.</p>
+          </div>
+
+          <!-- Liens rapides -->
+          <div class="col-6 col-md-4">
+            <p class="footer-heading">Liens rapides</p>
+            <a href="{% url 'index' %}" class="footer-link">
+              <i class="bi bi-house-door text-warning" style="font-size:0.8rem;"></i>Accueil
+            </a>
+            <a href="{% url 'user-details' %}" class="footer-link">
+              <i class="bi bi-person-circle text-warning" style="font-size:0.8rem;"></i>Mes informations
+            </a>
+            <a href="{% url 'marks' %}" class="footer-link">
+              <i class="bi bi-journal-text text-warning" style="font-size:0.8rem;"></i>Notes
+            </a>
+            <a href="#" class="footer-link">
+              <i class="bi bi-gear text-warning" style="font-size:0.8rem;"></i>Paramètres
+            </a>
+          </div>
+
+          <!-- Contact -->
+          <div class="col-6 col-md-4">
+            <p class="footer-heading">Contact</p>
+            <a href="mailto:omegaschoolmanager@gmail.com" class="footer-link">
+              <i class="fa fa-envelope" style="color:#17a2b8; font-size:0.8rem;"></i>contact@schoolmanager.com
+            </a>
+            <div class="footer-contact">
+              <i class="fa fa-phone text-success" style="font-size:0.8rem;"></i>+237 693 293 037
             </div>
-            <!-- Section 3 -->
-            <div class="col-md-4 mb-3">
-              <h5 class="fw-bold text-warning">Contact</h5>
-              <p class="small mb-1 text-white"><a href="mailto:omegaschoolmanager@gmail.com" class="text-decoration-none text-light"><i class="fa fa-envelope me-2"></i>contact@schoolmanager.com</a></p>
-              <p class="small mb-1 text-white"><i class="fa fa-phone text-success me-2"></i>+237 693 293 037</p>
-              <p class="small mb-3 text-white"><i class="fa fa-map-marker-alt text-danger me-2"></i>Douala, Cameroun</p>
-              <div>
-                <a href="#" class="text-light me-3 fs-5"><i class="fab fa-facebook"></i></a>
-                <a href="#" class="text-light me-3 fs-5"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="text-light me-3 fs-5"><i class="fab fa-github"></i></a>
-                <a href="#" class="text-light fs-5"><i class="fab fa-whatsapp"></i></a>
-              </div>
+            <div class="footer-contact mb-3">
+              <i class="fa fa-map-marker-alt text-danger" style="font-size:0.8rem;"></i>Douala, Cameroun
+            </div>
+            <div class="d-flex gap-2">
+              <a href="#" class="social-icon"><i class="fab fa-facebook"></i></a>
+              <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+              <a href="#" class="social-icon"><i class="fab fa-github"></i></a>
+              <a href="#" class="social-icon"><i class="fab fa-whatsapp"></i></a>
             </div>
           </div>
-          <div class="border-top border-secondary pt-2 my-2 text-center small text-white">
-            © {% now "Y" %} <strong>OmegaSchoolManager</strong>. Tous droits réservés.
-          </div>
+
         </div>
+      </div>
+      <div class="footer-bottom">
+        © {% now "Y" %} <strong class="text-warning">OmegaSchoolManager</strong>. Tous droits réservés.
+      </div>
     </footer>
     {% endblock %}
+
+<!-- ═══════════════════════════════════════
+     SCRIPTS — inchangés
+═══════════════════════════════════════ -->
 <script>
     document.body.addEventListener('AJAXMessages', function () {
         htmx.ajax('GET', 'ajax_messages', '#messages');
@@ -464,6 +768,7 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("download-form");
+  if (!form) return;
   const spinner = document.getElementById("spinner");
   const btnText = document.getElementById("btn-text");
   const erreurZone = document.getElementById("error-zone");

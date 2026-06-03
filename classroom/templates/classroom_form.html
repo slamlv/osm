@@ -1,36 +1,9 @@
-<div class="row mt-2" id="classroom_form">
-    <div class="mb-3 col-sm-6">
-        <label for="cycle" class="text-white control-label">Cycle</label>
-        {{ classroom_form.cycle }}
-    </div>
-    <div class="mb-3 col-sm-6">
-        <label for="niveau" class="text-white control-label">Niveau</label>
-        {{ classroom_form.niveau }}
-    </div>
-    {% if classroom_form.option %}
-    <div class="mb-3 col-sm-6">
-        <label for="option" class="text-white control-label">Spécialité</label>
-        {{ classroom_form.option }}
-    </div>
-    {% endif %}
-    {% if classroom_form.lv2 %}
-    <div class="mb-3 col-sm-6">
-        <label for="lv2" class="text-white control-label">Langue vivante 2 (LVII)</label>
-        {{ classroom_form.lv2 }}
-    </div>
-    {% endif %}
-    {% if classroom_form.lv3 %}
-    <div class="mb-3 col-sm-6">
-        <label for="lv3" class="text-white control-label">Langue vivante 3 (LVIII)</label>
-        {{ classroom_form.lv3 }}
-    </div>
-    {% endif %}
-    <div class="mb-3 col-sm-6">
-        <label for="code" class="text-white control-label">Intitulé de la classe</label>
-        {{ classroom_form.code }}
-    </div>
-    <div class="mb-3 col-sm-6">
-        <label for="titulaire" class="text-white">Professeur Titulaire</label>
-        {{ classroom_form.titulaire }}
-    </div>
+<div class="row g-3" id="classroom_form">
+  <div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Cycle</label>{{ classroom_form.cycle }}</div>
+  <div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Niveau</label>{{ classroom_form.niveau }}</div>
+  {% if classroom_form.option %}<div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Spécialité</label>{{ classroom_form.option }}</div>{% endif %}
+  {% if classroom_form.lv2 %}<div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Langue vivante 2 (LVII)</label>{{ classroom_form.lv2 }}</div>{% endif %}
+  {% if classroom_form.lv3 %}<div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Langue vivante 3 (LVIII)</label>{{ classroom_form.lv3 }}</div>{% endif %}
+  <div class="col-sm-6"><label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Intitulé de la classe</label>{{ classroom_form.code }}</div>
+  <div class="col-sm-6"><label class="text-white" style="font-size:0.82rem;margin-bottom:4px;display:block;">Professeur Titulaire</label>{{ classroom_form.titulaire }}</div>
 </div>

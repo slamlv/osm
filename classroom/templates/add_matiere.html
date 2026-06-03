@@ -1,36 +1,39 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="container w-md-75 w-lg-50">
-        <p class="text-white text-center d-none">TODO</p>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="row row-cols-1 mt-2 cblock" id="classroom_form">
-                <div class="mb-3 col-sm-6">
-                    <label for="classe" class="text-white control-label">Classe</label>
-                    {{ matiere_form.classe }}
-                </div>
-                <div class="mb-3 col-sm-6" id="reload">
-                    <label for="discipline" class="text-white control-label">Matière</label>
-                    {{ matiere_form.discipline }}
-                </div>
-                <div class="mb-3 col-sm-6" id="reload">
-                    <label for="coeff" class="text-white control-label">Coefficient</label>
-                    {{ matiere_form.coeff }}
-                </div>
-                <div class="mb-3 col-sm-6" id="reload">
-                    <p class="text-white mt-3 mb-0">Vous ne trouvez pas la discipline ?</p>
-                    <a href="{% url 'subject-add' %}" class="link-warning">Ajouter une Discipline</a>
-                </div>
-            </div>
-            <div class="d-flex mt-2 gap-2 justify-content-center">
-                <button class="btn btn-success" type="submit">
-                    <i class="bi bi-save me-2 bg-transparent"></i>Sauvegarder</button>
-                <!--button class="btn btn-danger" type="reset">
-                    <i class="bi bi-arrow-counterclockwise d-none d-sm-inline me-2 bg-transparent"></i>Annuler les changements</button-->
-                <a class="btn btn-secondary" href="{% url 'class-subjects' id=id %}">
-                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
-            </div>
-        </form>
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+</style>
+<div class="container py-3" style="max-width:580px;">
+  <div class="form-card">
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="bi bi-book text-warning fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Ajouter une matière</h6>
     </div>
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3 mb-4" id="classroom_form">
+          <div class="col-sm-6"><label class="text-white control-label">Classe</label>{{ matiere_form.classe }}</div>
+          <div class="col-sm-6" id="reload"><label class="text-white control-label">Matière</label>{{ matiere_form.discipline }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Coefficient</label>{{ matiere_form.coeff }}</div>
+          <div class="col-sm-6 d-flex align-items-end">
+            <div class="p-2 rounded-3 w-100" style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2);">
+              <p class="text-white-50 small mb-1">Discipline introuvable ?</p>
+              <a href="{% url 'subject-add' %}" class="text-warning small fw-semibold"><i class="bi bi-plus-circle me-1"></i>Ajouter une Discipline</a>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+          <button class="btn btn-success fw-semibold" type="submit"><i class="bi bi-save me-2"></i>Sauvegarder</button>
+          <a class="btn btn-outline-secondary" href="{% url 'class-subjects' id=id %}"><i class="bi bi-x-circle me-2"></i>Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}

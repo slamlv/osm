@@ -1,8 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="alert alert-warning mt-3 fade show alert-dismissible w-75 w-lg-50 cblock py-2" role="alert">
-    <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
-    <p class="bg-transparent ctext">Page ou ressource inaccessible</p>
+<style>
+  .error-card {
+    background: linear-gradient(145deg, #1b3a57, #172e45);
+    border: 1px solid rgba(255,193,7,0.2);
+    border-radius: 20px;
+    max-width: 480px;
+  }
+</style>
+
+<div class="d-flex justify-content-center align-items-center py-5">
+  <div class="error-card p-4 p-sm-5 text-center mx-3">
+    <div class="mb-3" style="font-size:3.5rem; line-height:1;">⚠️</div>
+    <h5 class="text-warning fw-bold mb-2">Page inaccessible</h5>
+    <p class="text-white-50 small mb-4">La page ou la ressource demandée est introuvable ou inaccessible.</p>
+    <a href="{% url 'index' %}" class="btn btn-warning fw-semibold px-4">
+      <i class="bi bi-house-door me-2"></i>Retour à l'accueil
+    </a>
+  </div>
 </div>
 {% endblock %}

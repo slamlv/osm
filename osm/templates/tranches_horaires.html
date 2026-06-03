@@ -1,60 +1,151 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container w-md-75 w-lg-50">
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="row mt-3">
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="day_start" class="text-white control-label">Début des cours</label>
-                {{ form.day_start }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="duration" class="text-white control-label">Durée tranche horaire</label>
-                {{ form.duration }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="first_break_after" class="text-white control-label">Première pause après</label>
-                {{ form.first_break }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="first_break_duration" class="text-white control-label">Durée première pause</label>
-                {{ form.first_break_duration }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="second_break_after" class="text-white control-label">Seconde pause après</label>
-                {{ form.second_break }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="second_break_duration" class="text-white control-label">Durée seconde pause</label>
-                {{ form.second_break_duration }}
-            </div>
-            <div class="mb-3 col-lg-4 col-sm-6">
-                <label for="nb" class="text-white control-label">Nombre de tranches</label>
-                {{ form.nb }}
-            </div>
-        </div>
-        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
-            <button class="btn btn-success" type="submit" data-with-spinner>
-                <i class="bi bi-save me-2 bg-transparent"></i>Sauvegarder</button>
-            <button class="btn btn-danger" type="reset">
-                <i class="bi bi-arrow-counterclockwise me-2 bg-transparent"></i>Annuler les changements</button>
-            <a class="btn btn-secondary" href="{% url 'index' %}">
-                <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
-        </div>
-    </form>
-    <div class="alert alert-info mt-3 py-2" role="alert">
-        <h6 class="alert-heading fw-bold bg-transparent">État des tranches horaires :</h6>
-        {% if state|length == 1 %}
-            <p class="mb-0">{{ state.0 }}</p>
-        {% else %}
-            <ul class="mb-0 bg-transparent">
-            {% for elt in state %}
-                <li class="bg-transparent">
-                    <i class="bi {% if elt.0 %} bi-clock {% else %} bi-cup-hot-fill {% endif %} text-secondary bg-transparent me-2"></i>{{ elt.1 }}</li>
-            {% endfor %}
-        {% endif %}
-        </ul>
+<style>
+  .form-card {
+    background: linear-gradient(145deg, #1b3a57, #172e45);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .form-card-header {
+    background: linear-gradient(135deg, #152f45, #1e4266);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 1rem 1.5rem;
+  }
+  .form-card input,
+  .form-card select {
+    background-color: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+  }
+  .form-card input:focus,
+  .form-card select:focus {
+    background-color: rgba(255,255,255,0.11) !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.2) !important;
+    color: #fff !important;
+  }
+  .form-card label { font-size: 0.82rem; margin-bottom: 4px; }
+  .form-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.35);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .state-panel {
+    background: rgba(13,110,253,0.08);
+    border: 1px solid rgba(13,110,253,0.2);
+    border-radius: 14px;
+  }
+  .state-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.85);
+  }
+  .state-item:last-child { border-bottom: none; }
+  .state-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+</style>
+
+<div class="container py-3" style="max-width: 640px;">
+  <div class="form-card">
+
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="bi bi-clock text-info fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Plages horaires</h6>
     </div>
+
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <p class="form-section-title">Configuration des cours</p>
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-sm-4">
+            <label class="text-white control-label">Début des cours</label>
+            {{ form.day_start }}
+          </div>
+          <div class="col-6 col-sm-4">
+            <label class="text-white control-label">Durée tranche</label>
+            {{ form.duration }}
+          </div>
+          <div class="col-6 col-sm-4">
+            <label class="text-white control-label">Nb de tranches</label>
+            {{ form.nb }}
+          </div>
+        </div>
+
+        <p class="form-section-title">Pauses</p>
+        <div class="row g-3 mb-4">
+          <div class="col-6">
+            <label class="text-white control-label">1ère pause après</label>
+            {{ form.first_break }}
+          </div>
+          <div class="col-6">
+            <label class="text-white control-label">Durée 1ère pause</label>
+            {{ form.first_break_duration }}
+          </div>
+          <div class="col-6">
+            <label class="text-white control-label">2ème pause après</label>
+            {{ form.second_break }}
+          </div>
+          <div class="col-6">
+            <label class="text-white control-label">Durée 2ème pause</label>
+            {{ form.second_break_duration }}
+          </div>
+        </div>
+
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-4">
+          <button class="btn btn-success fw-semibold" type="submit" data-with-spinner>
+            <i class="bi bi-save me-2"></i>Sauvegarder
+          </button>
+          <button class="btn btn-outline-danger" type="reset">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser
+          </button>
+          <a class="btn btn-outline-secondary" href="{% url 'index' %}">
+            <i class="bi bi-x-circle me-2"></i>Annuler
+          </a>
+        </div>
+      </form>
+
+      <!-- État des tranches -->
+      <div class="state-panel p-3">
+        <h6 class="text-info fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-list-check"></i> État des tranches horaires
+        </h6>
+        {% if state|length == 1 %}
+          <p class="text-white-50 small mb-0">{{ state.0 }}</p>
+        {% else %}
+          {% for elt in state %}
+          <div class="state-item">
+            <div class="state-icon {% if elt.0 %}bg-primary bg-opacity-25{% else %}bg-warning bg-opacity-15{% endif %}">
+              <i class="bi {% if elt.0 %}bi-clock text-primary{% else %}bi-cup-hot-fill text-warning{% endif %}"></i>
+            </div>
+            <span>{{ elt.1 }}</span>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
 </div>
 {% endblock %}

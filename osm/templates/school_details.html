@@ -1,96 +1,170 @@
 {% extends "base.html" %}
 
-{% load static %}
-
 {% block content %}
-    <div class="container w-md-75 w-lg-50 p-3">
-        <div class="row justify-content-center">
-            <div class="col">
-                <div class="card custom-shadow rounded-4">
-                    <div class="card-body text-center p-3">
-                    {% if object.logo %}
-                    <img src="{{ object.logo.url }}" alt="Logo" class="profile-img mb-3"
-                    data-bs-toggle="modal" data-bs-target="#photoModal">
-                    {% else %}
-                    <img src="{% static 'image/no_image.jpg' %}" alt="Logo" class="profile-img mb-3">
-                    {% endif %}
-                    <h5 class="card-title text-warning fw-bold">Code Établissement : {{ object.code }}</h5>
-                    <hr class="border border-secondary border-2">
-                    <div class="row text-start">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Nom : </span>
-                            <span class="text-warning fw-bold">{{ object.nom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Name : </span>
-                            <span class="text-warning fw-bold">{{ object.name }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Type d'établissement : </span>
-                            <span class="text-white fw-bold">{{ object.type_ets }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">N° Immatriculation : </span>
-                            <span class="text-white fw-bold">{{ object.immatriculation }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact : </span>
-                            <span class="text-white fw-bold">{{ object.contact }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact optionnel : </span>
-                            <span class="text-white fw-bold">{% if object.contact1 %} {{ object.contact1 }} {% else %} / {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Localité : </span>
-                            <span class="text-white fw-bold">{{ object.localite }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Boîte postale : </span>
-                            <span class="text-white fw-bold">{% if object.pobox %} {{ object.pobox }} {% else %} / {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Email : </span>
-                            <span class="text-white fw-bold">{% if object.email %} {{ object.email }} {% else %} / {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Devise : </span>
-                            <span class="text-white fw-bold">{% if object.motto %} {{ object.motto }} {% else %} / {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Licence jusqu'au : </span>
-                            <span class="text-white fw-bold">{{ object.licence }}</span>
-                        </div>
-                        <div class="col-12 mb-2">
-                            <span class="text-info">Inclure les compétences évaluées lors du remplissage des notes : </span>
-                            <span class="text-white fw-bold">{% if object.with_competences %} Oui {% else %} Non {% endif %}</span>
-                        </div>
-                        <div class="col-12 mb-2">
-                            <span class="text-info">Possibilité de programmer un enseignant pour plusieurs classes à la même heure : </span>
-                            <span class="text-white fw-bold">{% if object.mergedprogrammations %} Oui {% else %} Non {% endif %}</span>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                    <a class="btn btn-warning" title="Modifier" href="{% url 'school_infos_edit' %}">
-                        <i class="bi bi-pencil-square me-2 bg-transparent"></i>Modifier</a>
-                    <a class="btn btn-secondary" href="{% url 'index' %}">
-                        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-body p-0">
-                        <button type="button" class="btn-close position-absolute end-0 m-3" data-bs-dismiss="modal"
-                                aria-label="Fermer"></button>
-                        <img src="{% if object.logo %} {{ object.logo.url }} {% endif %}" alt="Photo de profil"
-                             class="img-fluid w-100 rounded">
-                    </div>
-                </div>
-            </div>
-        </div>
+<style>
+  .detail-card {
+    background: linear-gradient(145deg, #1b3a57, #172e45);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .detail-card-header {
+    background: linear-gradient(135deg, #152f45, #1e4266);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+  }
+  .info-value {
+    color: #ffc107;
+    font-weight: 600;
+    font-size: 0.95rem;
+    word-break: break-word;
+  }
+  .info-value.neutral { color: rgba(255,255,255,0.85); }
+  .badge-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+</style>
+
+<div class="container py-3" style="max-width: 680px;">
+  <div class="detail-card">
+
+    <!-- En-tête logo -->
+    <div class="detail-card-header">
+      {% if object.logo %}
+      <img src="{{ object.logo.url }}" alt="Logo" class="profile-img mb-3"
+           data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
+      {% else %}
+      <img src="{{ MEDIA_URL }}image/no_image.jpg" alt="Logo" class="profile-img mb-3">
+      {% endif %}
+      <div class="badge-pill bg-warning text-dark mb-1">Code : {{ object.code }}</div>
+      <h5 class="text-white fw-bold mb-0 mt-2">{{ object.nom }}</h5>
+      {% if object.name %}<p class="text-white-50 small mb-0">{{ object.name }}</p>{% endif %}
     </div>
+
+    <!-- Corps -->
+    <div class="px-3 px-sm-4 py-3">
+      <div class="row g-0">
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row">
+            <span class="info-label">Type d'établissement</span>
+            <span class="info-value neutral">{{ object.type_ets }}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">N° Immatriculation</span>
+            <span class="info-value neutral">{{ object.immatriculation }}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row">
+            <span class="info-label">Contact principal</span>
+            <span class="info-value">{{ object.contact }}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">Contact optionnel</span>
+            <span class="info-value neutral">{% if object.contact1 %}{{ object.contact1 }}{% else %}—{% endif %}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row">
+            <span class="info-label">Localité</span>
+            <span class="info-value neutral">{{ object.localite }}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">Boîte postale</span>
+            <span class="info-value neutral">{% if object.pobox %}{{ object.pobox }}{% else %}—{% endif %}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value neutral">{% if object.email %}{{ object.email }}{% else %}—{% endif %}</span>
+          </div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">Devise</span>
+            <span class="info-value neutral">{% if object.motto %}{{ object.motto }}{% else %}—{% endif %}</span>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="info-row">
+            <span class="info-label">Licence valide jusqu'au</span>
+            <span class="info-value">{{ object.licence }}</span>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="info-row">
+            <span class="info-label" style="color:rgba(23,162,184,0.7);">Compétences évaluées lors du remplissage</span>
+            {% if object.with_competences %}
+            <span class="badge-pill bg-success text-white">Activé</span>
+            {% else %}
+            <span class="badge-pill bg-secondary text-white">Désactivé</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="info-row">
+            <span class="info-label" style="color:rgba(23,162,184,0.7);">Programmation multi-classes à la même heure</span>
+            {% if object.mergedprogrammations %}
+            <span class="badge-pill bg-success text-white">Activé</span>
+            {% else %}
+            <span class="badge-pill bg-secondary text-white">Désactivé</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3 mt-2">
+        <a class="btn btn-warning fw-semibold" href="{% url 'school_infos_edit' %}">
+          <i class="bi bi-pencil-square me-2"></i>Modifier
+        </a>
+        <a class="btn btn-outline-secondary" href="{% url 'index' %}">
+          <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal photo -->
+  <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-transparent border-0">
+        <div class="modal-body p-0 position-relative">
+          <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2"
+                  data-bs-dismiss="modal" aria-label="Fermer" style="z-index:10;"></button>
+          {% if object.logo %}
+          <img src="{{ object.logo.url }}" alt="Logo établissement" class="img-fluid w-100 rounded-3">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

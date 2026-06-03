@@ -232,7 +232,11 @@ class ClassRoom(models.Model):
 
     def subject_color(self, subject):
         subjects = [matiere.sujet for matiere in self.subjects]
-        index = subjects.index(subject.sujet)
+        subjects = [matiere.sujet for matiere in self.subjects]
+        try:
+            index = subjects.index(subject.sujet)
+        except ValueError:
+            index = 15
         if index == 0:
             return "bg-blue text-white"
         elif index == 1:

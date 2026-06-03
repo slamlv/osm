@@ -4,43 +4,116 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-with, initial-scale=1">
-    <link rel="icon" type="image/png" href="{% static 'image/logo.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="{{ MEDIA_URL }}image/logo.png">
     <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'bootstrap-icons/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'choices.min.css' %}">
-    <link rel="stylesheet" href="{% static 'style.css' %}" style="text/css">
+    <link rel="stylesheet" href="{% static 'style.css' %}" type="text/css">
     <script src="{% static 'bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'choices.min.js' %}"></script>
     <title>{{ title }}</title>
+    <style>
+      .unauth-header {
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        padding: 0.75rem 1.25rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: #1a3a55;
+      }
+      .unauth-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+      }
+      .unauth-brand img {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+      }
+      .unauth-brand span {
+        font-weight: 700;
+        color: #ffc107;
+        font-size: 0.95rem;
+      }
+      .page-title-bar {
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding: 0.5rem 1.25rem;
+        background: rgba(255,255,255,0.02);
+      }
+      .unauth-footer {
+        border-top: 1px solid rgba(255,255,255,0.07);
+        padding: 1rem 1.25rem;
+        text-align: center;
+        color: rgba(255,255,255,0.3);
+        font-size: 0.78rem;
+        margin-top: 3rem;
+      }
+      .toast-container-unauth {
+        position: fixed;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 1080;
+        min-width: 260px;
+        max-width: 90vw;
+      }
+    </style>
 </head>
 <body>
-    <div class="container-fluid">
-    <div>
-        <h1 class="text-warning ctext fw-bold"><img src="{% static 'image/logo.png' %}" id="logo">Oméga School Manager</h1>
-    </div>
-    <header>
-        <h2 class="text-white ctext fw-bold">@{{ title }}</h2>
+
+    <!-- Header -->
+    <header class="unauth-header d-flex align-items-center justify-content-between">
+      <a class="unauth-brand" href="{% url 'offline_index' %}">
+        <img src="{{ MEDIA_URL }}image/logo.png" alt="OSM">
+        <span>OmegaSchoolManager</span>
+      </a>
+      {% if title %}
+      <span class="text-white-50 small d-none d-sm-block">{{ title }}</span>
+      {% endif %}
     </header>
-    <div class="w-md-75 w-lg-50 cblock">
-    {% if messages %}
-    <div class="container mt-2">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags}} alert-dismissible fade show" role="alert">{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
-        {% endfor %}
+
+    <!-- Titre de page -->
+    {% if title %}
+    <div class="page-title-bar">
+      <p class="text-white-50 small fw-semibold mb-0">
+        <i class="bi bi-chevron-right me-1 text-warning" style="font-size:0.7rem;"></i>{{ title }}
+      </p>
     </div>
     {% endif %}
-    </div>
-    {% block content %}{% endblock %}
-    <footer>
-        <div class="container mt-5 w-md-75 w-lg-50">
-          <div class="border-top border-secondary pt-2 my-2 text-center small text-white">
-            © {% now "Y" %} <strong>OmegaSchoolManager</strong>. Tous droits réservés.
+
+    <!-- Messages flash -->
+    {% if messages %}
+    <div class="toast-container-unauth">
+      {% for message in messages %}
+      <div class="toast align-items-center text-bg-{{ message.tags }} border-0 mb-2 show"
+           role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body small">
+            {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="bi bi-x-circle-fill me-2"></i>
+            {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
+            {{ message }}
           </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                  data-bs-dismiss="toast"></button>
         </div>
-    </footer>
+      </div>
+      {% endfor %}
     </div>
+    {% endif %}
+
+    <!-- Contenu — pas de contrainte de largeur ici, chaque page enfant gère la sienne -->
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="unauth-footer">
+      © {% now "Y" %} <strong class="text-warning">OmegaSchoolManager</strong>. Tous droits réservés.
+    </footer>
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const element = document.querySelector('.choices-multiple');
@@ -56,7 +129,6 @@
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  // Pour tous les formulaires
   document.querySelectorAll("form").forEach(form => {
     form.addEventListener("submit", function (e) {
       const btn = form.querySelector("[data-spinner]");
@@ -71,5 +143,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
+
 </body>
 </html>

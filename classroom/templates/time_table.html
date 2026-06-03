@@ -1,71 +1,86 @@
-<div class="alert alert-success py-1" role="alert">
-  <p class="ctext bg-transparent mb-0 fw-bold">{{ t_title }}</p>
+<style>
+  .tt-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+  .tt-wrap table { margin-bottom:0; }
+  .tt-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .tt-wrap thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
+  .tt-wrap thead th:first-child { text-align:left; min-width:80px; }
+  .tt-wrap tbody tr td, .tt-wrap tbody tr th { border-color:rgba(255,255,255,0.07)!important; padding:6px 8px; vertical-align:middle; font-size:0.82rem; }
+  .tt-wrap tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; }
+  .tt-wrap tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; }
+  .tt-wrap tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; }
+  .tt-wrap .slot { cursor:pointer; }
+  .tt-wrap .slot:hover { background-color:#1f4266!important; }
+  .recap-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
+  .download-bar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
+</style>
+
+<div class="alert alert-success py-2 small rounded-3 mb-3">
+  <i class="bi bi-calendar-week me-2"></i><strong>{{ t_title }}</strong>
 </div>
-<div class="table-responsive" hx-get="{% url 'time_table' %}" hx-trigger="refresh from:body once"
-     hx-target="#time_table" hx-headers='{"X-CSRFToken":"{{ csrf_token }}", "X-ClassroomId":"{{ classroom_id }}"}'>
-    <table class="table align-middle table-hover table-bordered">
-        <thead class="table-secondary">
-        <tr>
-            <th>Horaires</th>
-            {% for day in days %}
-            <th>{{ day }}</th>
-            {% endfor %}
-        </tr>
-        </thead>
-        <tbody class="time_table_body">
-        {% for line in time_table %}
-        <tr class="{% if not line.0.is_cours %} table-secondary {% endif %}">
-            {% if not line.0.is_cours %}
-            <th class="text-center" colspan="6">Pause : {{ line.0.start_end}}</th>
-            {% else %}
-            <th class="table-secondary border">{{ line.0.start_end }}</th>
-                {% for elt in line %}
-                    {% if elt and not forloop.first %}
-                    <td class="slot clickable border special-border" rowspan="{{ elt.rowspan }}" data-jour="{{ elt.jour }}"
-                        data-tranche="{{ elt.tranche }}" data-programmation-id="{{ elt.programmation_id }}"
-                        data-nb-tranches="{{ elt.rowspan }}" data-classroom-id="{{ classroom_id }}">
-                        {% if elt.matiere %}
-                        <div class="{{ elt.colors }} rounded {% if elt.enseignant %} py-1 {% else %} py-3 {% endif %} text-center fw-bold">
-                            {{ elt.matiere }}
-                            {% if elt.enseignant %} <div class="small {{ elt.colors }}">{{ elt.enseignant.short_firstname }}</div> {% endif %}
-                        </div>
-                        {% endif %}
-                    </td>
-                    {% endif %}
-                {% endfor %}
+
+<div class="tt-wrap table-responsive"
+     hx-get="{% url 'time_table' %}" hx-trigger="refresh from:body once"
+     hx-target="#time_table"
+     hx-headers='{"X-CSRFToken":"{{ csrf_token }}", "X-ClassroomId":"{{ classroom_id }}"}'>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Horaires</th>
+        {% for day in days %}<th>{{ day }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody class="time_table_body">
+      {% for line in time_table %}
+      <tr class="{% if not line.0.is_cours %}pause-row{% endif %}">
+        {% if not line.0.is_cours %}
+        <th colspan="6">☕ Pause — {{ line.0.start_end }}</th>
+        {% else %}
+        <th>{{ line.0.start_end }}</th>
+        {% for elt in line %}
+          {% if elt and not forloop.first %}
+          <td class="slot special-border" rowspan="{{ elt.rowspan }}"
+              data-jour="{{ elt.jour }}" data-tranche="{{ elt.tranche }}"
+              data-programmation-id="{{ elt.programmation_id }}"
+              data-nb-tranches="{{ elt.rowspan }}" data-classroom-id="{{ classroom_id }}">
+            {% if elt.matiere %}
+            <div class="{{ elt.colors }} rounded text-center fw-bold {% if elt.enseignant %}py-1{% else %}py-3{% endif %}">
+              <span style="font-size:0.8rem;">{{ elt.matiere }}</span>
+              {% if elt.enseignant %}<div class="small {{ elt.colors }}" style="font-size:0.72rem;">{{ elt.enseignant.short_firstname }}</div>{% endif %}
+            </div>
             {% endif %}
-        </tr>
+          </td>
+          {% endif %}
         {% endfor %}
-        </tbody>
-    </table>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 {% if recap %}
-<div class="alert alert-info py-1 mt-3" role="alert">
-    <span class="fw-bold">Récapitulatif</span>
-    <div class="d-flex flex-wrap gap-2">
-        {% for elt in recap %}
-        <span class="badge fs-6 {{ elt.color }}">{{ elt.matiere }} : {{ elt.nb_heures }}h</span>
-        {% endfor %}
-    </div>
+<div class="recap-panel">
+  <p class="text-white-50 small fw-bold mb-2"><i class="bi bi-list-check me-2"></i>Récapitulatif des heures</p>
+  <div class="d-flex flex-wrap gap-2">
+    {% for elt in recap %}<span class="badge fs-6 {{ elt.color }}">{{ elt.matiere }} : {{ elt.nb_heures }}h</span>{% endfor %}
+  </div>
 </div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}">
+<div class="download-bar">
+  <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}">
     {% csrf_token %}
     <input type="hidden" name="signed" value="{{ signed }}">
-    <div class="d-flex justify-content-center align-items-center gap-2 gap-sm-3 mt-3">
-        <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
-            title="Télécharger en pdf" data-bs-trigger="hover">
-            <span class="btn-text bg-transparent" id="btn-text">
-                <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
-            </span>
-            <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
-        </button>
-        <div>
-            <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
-            <label for="timetable_checkbox_id" class="text-white">Emploi du temps vierge</label>
-        </div>
-        <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+      <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+        <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+      </button>
+      <div class="d-flex align-items-center gap-2">
+        <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
+        <label for="timetable_checkbox_id" class="text-white-50 small mb-0">Emploi du temps vierge</label>
+      </div>
     </div>
-</form>
+    <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
+  </form>
+</div>

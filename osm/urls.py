@@ -22,7 +22,7 @@ from django.views.static import serve
 from .views import index, ajax_messages, SchoolDetails, TranchesHorairesEdit, SchoolInformations, offline_index
 
 urlpatterns = [
-    path("", offline_index, name="offline_home"),
+    path("", offline_index, name="offline_index"),
     path("index", index, name="index"),
     path("school_details", SchoolDetails.as_view(), name="school_details"),
     path("school_infos_edit", SchoolInformations.as_view(), name="school_infos_edit"),
