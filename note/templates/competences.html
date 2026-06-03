@@ -1,29 +1,33 @@
 {% if marks_form %}
 <div class="flex-grow-1">
-    <label for="competences" class="control-label text-white">Compétences Eval{{ marks_form.evalx.0 }}</label>
-    {{ marks_form.competences }}
+  <label class="control-label text-white" style="font-size:0.82rem;">Compétences Eval{{ marks_form.evalx.0 }}</label>
+  {{ marks_form.competences }}
 </div>
-<div class="d-flex flex-column align-item-center justify-content-center">
-    <a hx-post="{% url 'set_competences' evl %}" hx-include="select" hx-target="#bloc_competences" data-bs-placement="bottom"
-       class="btn btn-dark" title="Reconduire les compétences" data-bs-toggle="tooltip" data-with-spinner>
-        <i class="bi bi-arrow-left-right bg-transparent"></i></a>
+<div class="d-flex flex-column align-items-center justify-content-center">
+  <a hx-post="{% url 'set_competences' evl %}" hx-include="select" hx-target="#bloc_competences"
+     class="btn btn-outline-secondary btn-sm" title="Reconduire les compétences"
+     data-bs-toggle="tooltip" data-bs-placement="bottom" data-with-spinner>
+    <i class="bi bi-arrow-left-right"></i>
+  </a>
 </div>
 <div class="flex-grow-1">
-    <label for="competences" class="control-label text-white">Compétences Eval{{ marks_form.evalx.1 }}</label>
-    {{ marks_form.competences1 }}
+  <label class="control-label text-white" style="font-size:0.82rem;">Compétences Eval{{ marks_form.evalx.1 }}</label>
+  {{ marks_form.competences1 }}
 </div>
 {% else %}
 <div class="flex-grow-1">
-    <label for="competences" class="control-label text-white">Compétences Eval{{ level_marks_form.level_marks_form.0.evalx.0 }}</label>
-    {{ level_marks_form.level_marks_form.0.competences }}
+  <label class="control-label text-white" style="font-size:0.82rem;">Compétences Eval{{ level_marks_form.level_marks_form.0.evalx.0 }}</label>
+  {{ level_marks_form.level_marks_form.0.competences }}
 </div>
-<div class="d-flex flex-column align-item-center justify-content-center">
-    <a hx-post="{% url 'set_competences' evl %}" hx-include="select" hx-target="#bloc_competences" data-with-spinner
-       data-bs-placement="bottom" class="btn btn-dark" title="Reconduire les compétences" data-bs-toggle="tooltip">
-        <i class="bi bi-arrow-left-right bg-transparent"></i></a>
+<div class="d-flex flex-column align-items-center justify-content-center">
+  <a hx-post="{% url 'set_competences' evl %}" hx-include="select" hx-target="#bloc_competences"
+     class="btn btn-outline-secondary btn-sm" title="Reconduire les compétences"
+     data-bs-toggle="tooltip" data-bs-placement="bottom" data-with-spinner>
+    <i class="bi bi-arrow-left-right"></i>
+  </a>
 </div>
 <div class="flex-grow-1">
-    <label for="competences" class="control-label text-white">Compétences Eval{{ level_marks_form.level_marks_form.0.evalx.1 }}</label>
-    {{ level_marks_form.level_marks_form.0.competences1 }}
+  <label class="control-label text-white" style="font-size:0.82rem;">Compétences Eval{{ level_marks_form.level_marks_form.0.evalx.1 }}</label>
+  {{ level_marks_form.level_marks_form.0.competences1 }}
 </div>
 {% endif %}

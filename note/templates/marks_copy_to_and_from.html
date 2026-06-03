@@ -1,20 +1,24 @@
-<div class="mb-3 col w-lg-75 cblock">
-    <label for="classe" class="text-white control-label">Classe</label>
-    {{ marks_copy_form.classe }}
+<style>
+  .copy-fieldset { border:1px solid rgba(23,162,184,0.35); border-radius:14px; padding:1rem 1.25rem; }
+  .copy-fieldset legend { font-size:0.85rem; font-weight:700; color:#ffc107; padding:0 8px; width:auto; }
+  .copy-fieldset label { font-size:0.82rem; margin-bottom:4px; color:rgba(255,255,255,0.75); display:block; }
+  .copy-fieldset input,.copy-fieldset select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .copy-fieldset input:focus,.copy-fieldset select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; }
+</style>
+
+<div class="col-12">
+  <label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;">Classe</label>
+  {{ marks_copy_form.classe }}
 </div>
-<div class="mb-3 col-sm-6" id="marks_copy_form_from">
-    {% include 'marks_copy_form_from.html' %}
+
+<div class="col-sm-6" id="marks_copy_form_from">
+  {% include 'marks_copy_form_from.html' %}
 </div>
-<div class="mb-3 col-sm-6">
-    <fieldset class="border border-2 rounded border-info p-3">
-        <legend class="fs-5 text-warning">Vers</legend>
-            <div class="mb-3">
-                <label for="matiere_to" class="text-white control-label">Matière</label>
-                {{ marks_copy_form.matiere_to }}
-            </div>
-            <div class="mb-3">
-                <label for="eval_to" class="text-white control-label">Évaluation</label>
-                {{ marks_copy_form.eval_to }}
-            </div>
-    </fieldset>
+
+<div class="col-sm-6">
+  <fieldset class="copy-fieldset">
+    <legend>Vers</legend>
+    <div class="mb-3"><label>Matière</label>{{ marks_copy_form.matiere_to }}</div>
+    <div class="mb-0"><label>Évaluation</label>{{ marks_copy_form.eval_to }}</div>
+  </fieldset>
 </div>

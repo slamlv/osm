@@ -1,105 +1,99 @@
 {% extends "base.html" %}
 
-{% load static %}
-
 {% block content %}
-    <div class="container w-md-75 w-lg-50 p-3">
-        <div class="row justify-content-center">
-            <div class="col">
-                <div class="card custom-shadow rounded-4">
-                    <div class="card-body text-center p-3">
-                    {% if object.photo %}
-                    <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
-                        data-bs-toggle="modal" data-bs-target="#photoModal">
-                    {% else %}
-                    <img src="{% static 'image/student.jpg' %}" alt="Photo de profil" class="profile-img mb-3">
-                    {% endif %}
-                    <hr class="border border-secondary border-2">
-                    <div class="row text-start">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Identifiant unique : </span>
-                            <span class="text-white fw-bold">{{ object.unique_id }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Nom(s) : </span>
-                            <span class="text-white fw-bold">{{ object.nom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Prénom(s) : </span>
-                            <span class="text-white fw-bold">{{ object.prenom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Sexe : </span>
-                            <span class="text-white fw-bold">{{ object.sexe }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Classe : </span>
-                            <span class="text-white fw-bold"> {% if object.classe %}
-                                <a href="{% url 'classroom-students' id=object.classe.pk %}">
-                                {{ object.classe.code }}</a> {% else %} / {% endif %} </span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Statut : </span>
-                            <span class="text-white fw-bold">{{ object.statut }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Date de naissance : </span>
-                            <span class="text-white fw-bold">{{ object.date_naissance }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Lieu de naissance : </span>
-                            <span class="text-white fw-bold">{{ object.lieu_naissance }}</span>
-                        </div>
-                        {% if object.pere %}
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact père : </span>
-                            <span class="text-white fw-bold">{{ object.pere.contact }}</span>
-                        </div>
-                        {% endif %}
-                        {% if object.mere %}
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact mère : </span>
-                            <span class="text-white fw-bold">{{ object.mere.contact }}</span>
-                        </div>
-                        {% endif %}
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Père : </span>
-                            <span class="text-white fw-bold"> {% if object.pere %}
-                                <a href="{% url 'parent-details' id=object.pere.pk %}" class="link-info">{{ object.father }}</a>
-                                {% else %} / {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Mère : </span>
-                            <span class="text-white fw-bold"> {% if object.mere %}
-                                <a href="{% url 'parent-details' id=object.mere.pk %}" class="link-info">{{ object.mother }}</a>
-                                {% else %} / {% endif %}</span>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                    <a class="btn btn-warning" title="Modifier" href="{% url 'student-edit' id=object.id %}">
-                        <i class="bi bi-pencil-square me-2 bg-transparent"></i>Modifier</a>
-                    {% if object.user != user %}
-                    <a class="btn btn-danger" title="Supprimer" href="{% url 'student-delete' id=object.id %}">
-                        <i class="bi bi-trash me-2 bg-transparent"></i>Supprimer</a>
-                    {% endif %}
-                    <a class="btn btn-secondary" href="{% url 'students' %}">
-                        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-body p-0">
-                        <button type="button" class="btn-close position-absolute end-0 m-3" data-bs-dismiss="modal"
-                                aria-label="Fermer"></button>
-                        <img src="{% if object.photo %} {{ object.photo.url }} {% endif %}" alt="Photo de profil"
-                             class="img-fluid w-100 rounded">
-                    </div>
-                </div>
-            </div>
-        </div>
+<style>
+  .detail-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .detail-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1.5rem; text-align:center; }
+  .info-row { display:flex; flex-direction:column; gap:2px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .info-row:last-child { border-bottom:none; }
+  .info-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.4); font-weight:600; }
+  .info-value { color:rgba(255,255,255,0.85); font-weight:600; font-size:0.95rem; word-break:break-word; }
+  .info-value.accent { color:#ffc107; }
+  .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45)!important; border:1px solid rgba(255,255,255,0.1)!important; border-radius:16px!important; }
+</style>
+
+<div class="container py-3" style="max-width:680px;">
+  <div class="detail-card">
+
+    <div class="detail-card-header">
+      {% if object.photo %}
+      <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
+           data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
+      {% else %}
+      <img src="{{ MEDIA_URL }}image/student.jpg" alt="Photo de profil" class="profile-img mb-3">
+      {% endif %}
+      <h5 class="text-white fw-bold mb-0">{{ object.nom }} {{ object.prenom }}</h5>
+      {% if object.unique_id %}
+      <span class="badge bg-warning text-dark mt-1">{{ object.unique_id }}</span>
+      {% endif %}
     </div>
+
+    <div class="px-3 px-sm-4 py-3">
+      <div class="row g-0">
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Sexe</span><span class="info-value">{{ object.sexe }}</span></div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">Classe</span>
+            <span class="info-value accent">
+              {% if object.classe %}<a href="{% url 'classroom-students' id=object.classe.pk %}" class="text-warning text-decoration-none">{{ object.classe.code }}</a>{% else %}—{% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Statut</span><span class="info-value">{{ object.statut }}</span></div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row"><span class="info-label">Date de naissance</span><span class="info-value">{{ object.date_naissance }}</span></div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Lieu de naissance</span><span class="info-value">{{ object.lieu_naissance }}</span></div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row"><span class="info-label">Contact père</span><span class="info-value">{% if object.pere %}{{ object.pere.contact }}{% else %}—{% endif %}</span></div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Contact mère</span><span class="info-value">{% if object.mere %}{{ object.mere.contact }}{% else %}—{% endif %}</span></div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row">
+            <span class="info-label">Père</span>
+            <span class="info-value">
+              {% if object.pere %}<a href="{% url 'parent-details' id=object.pere.pk %}" class="text-info text-decoration-none">{{ object.father }}</a>{% else %}—{% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row">
+            <span class="info-label">Mère</span>
+            <span class="info-value">
+              {% if object.mere %}<a href="{% url 'parent-details' id=object.mere.pk %}" class="text-info text-decoration-none">{{ object.mother }}</a>{% else %}—{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3 mt-2">
+        <a class="btn btn-warning fw-semibold" href="{% url 'student-edit' id=object.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
+        {% if object.user != user %}
+        <a class="btn btn-outline-danger" href="{% url 'student-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
+        {% endif %}
+        <a class="btn btn-outline-secondary" href="{% url 'students' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal photo -->
+  <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 bg-transparent">
+        <div class="modal-body p-0 position-relative">
+          <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2" data-bs-dismiss="modal" style="z-index:10;"></button>
+          {% if object.photo %}<img src="{{ object.photo.url }}" alt="Photo" class="img-fluid w-100 rounded-3">{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

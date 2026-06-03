@@ -1,74 +1,60 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="container w-md-75 w-lg-50">
-        {% if nb %}
-        <div class="alert alert-danger mt-3 cblock py-2" role="alert">
-            <p class="bg-transparent ctext mb-0">{{ nb }}</p>
-        </div>
-        {% endif %}
-        <form method="post" enctype="multipart/form-data" class="client-image-form">
-            {% csrf_token %}
-            <div class="row">
-                <div class="mb-3 col-sm-6">
-                    <label for="nom" class="text-white control-label">Nom(s)</label>
-                    {{ form.nom }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="prenom" class="text-white">Prénom(s)</label>
-                    {{ form.prenom }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="date" class="text-white control-label">Date de naissance</label>
-                    {{ form.date_naissance }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="lieu" class="text-white control-label">Lieu de naissance</label>
-                    {{ form.lieu_naissance }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="sexe" class="text-white control-label">Sexe</label>
-                    {{ form.sexe }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="statut" class="text-white control-label">Statut</label>
-                    {{ form.statut }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="pere" class="text-white">Père</label>
-                    {{ form.pere }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="mere" class="text-white">Mère</label>
-                    {{ form.mere }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="classe" class="text-white">Classe</label>
-                    {{ form.classe }}
-                </div>
-                <div class="mb-3 col-sm-6">
-                    <label for="unique_id" class="text-white control-label">Identifiant unique</label>
-                    {{ form.unique_id }}
-                </div>
-                <div class="mb-3 col-12">
-                    <label for="photo" class="text-white">Photo</label>
-                    {{ form.photo }}
-                </div>
-            </div>
-            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
-                <button class="btn btn-success" type="submit" data-with-spinner>
-                    <i class="bi bi-save me-2 bg-transparent"></i>Sauvegarder</button>
-                <button class="btn btn-danger" type="reset">
-                    <i class="bi bi-arrow-counterclockwise me-2 bg-transparent"></i>Annuler les changements</button>
-                <a class="btn btn-secondary" href="{% url 'students' %}">
-                    <i class="bi bi-x-circle me-2 bg-transparent"></i>Annuler</a>
-            </div>
-            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                <a class="btn btn-warning" href="{% url 'parent-add' %}">
-                    <i class="bi bi-person-plus me-2 bg-transparent"></i>Ajouter un Parent</a>
-                <a class="btn btn-info" href="{% url 'classroom-add' %}">
-                    <i class="bi bi-people me-2 bg-transparent"></i>Ajouter une Classe</a>
-            </div>
-        </form>
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-section-title { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.35); font-weight:700; margin-bottom:0.75rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+</style>
+
+<div class="container py-3" style="max-width:720px;">
+  {% if nb %}
+  <div class="alert alert-danger py-2 small rounded-3 mb-3"><i class="bi bi-exclamation-triangle me-2"></i>{{ nb }}</div>
+  {% endif %}
+  <div class="form-card">
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="fas fa-user-graduate text-primary fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Informations de l'élève</h6>
     </div>
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <p class="form-section-title">Identité</p>
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6"><label class="text-white control-label">Nom(s)</label>{{ form.nom }}</div>
+          <div class="col-sm-6"><label class="text-white">Prénom(s)</label>{{ form.prenom }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Date de naissance</label>{{ form.date_naissance }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Lieu de naissance</label>{{ form.lieu_naissance }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Sexe</label>{{ form.sexe }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Statut</label>{{ form.statut }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">Identifiant unique</label>{{ form.unique_id }}</div>
+          <div class="col-sm-6"><label class="text-white">Classe</label>{{ form.classe }}</div>
+        </div>
+
+        <p class="form-section-title">Parents</p>
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6"><label class="text-white">Père</label>{{ form.pere }}</div>
+          <div class="col-sm-6"><label class="text-white">Mère</label>{{ form.mere }}</div>
+        </div>
+
+        <p class="form-section-title">Photo</p>
+        <div class="mb-4">{{ form.photo }}</div>
+
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
+          <button class="btn btn-success fw-semibold" type="submit" data-with-spinner><i class="bi bi-save me-2"></i>Sauvegarder</button>
+          <button class="btn btn-outline-danger" type="reset"><i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser</button>
+          <a class="btn btn-outline-secondary" href="{% url 'students' %}"><i class="bi bi-x-circle me-2"></i>Annuler</a>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+          <a class="btn btn-outline-warning btn-sm" href="{% url 'parent-add' %}"><i class="bi bi-person-plus me-2"></i>Ajouter un Parent</a>
+          <a class="btn btn-outline-info btn-sm" href="{% url 'classroom-add' %}"><i class="bi bi-people me-2"></i>Ajouter une Classe</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}

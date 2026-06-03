@@ -1,19 +1,19 @@
 <style>
-  .osm-table-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
-  .osm-table-wrap table { margin-bottom:0; }
-  .osm-table-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
-  .osm-table-wrap thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 12px; white-space:nowrap; text-align:center; vertical-align:middle; }
-  .osm-table-wrap thead th.col-label { text-align:left; }
-  .osm-table-wrap tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
-  .osm-table-wrap tbody tr:hover { background-color:#1f4266!important; }
-  .osm-table-wrap tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.84rem; border-color:rgba(255,255,255,0.06)!important; padding:9px 12px; vertical-align:middle; text-align:center; }
-  .osm-table-wrap tbody td.col-label { text-align:left; font-weight:600; }
-  .osm-table-wrap tbody tr.row-global { background:rgba(255,193,7,0.12)!important; }
-  .osm-table-wrap tbody tr.row-global td { color:#ffc107!important; font-weight:700; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:520px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 12px; white-space:nowrap; text-align:center; vertical-align:middle; }
+  .osm-table-outer thead th.col-left { text-align:left; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr.row-global { background:rgba(255,193,7,0.12)!important; }
+  .osm-table-outer tbody tr.row-global td { color:#ffc107!important; font-weight:700; }
+  .osm-table-outer tbody tr:not(.row-global):hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.84rem; border-color:rgba(255,255,255,0.06)!important; padding:9px 12px; vertical-align:middle; text-align:center; }
+  .osm-table-outer tbody td.col-left { text-align:left; font-weight:600; }
   .stat-fail { color:#ff6b6b!important; font-weight:700; }
   .stat-sub { font-size:0.72rem; color:rgba(255,255,255,0.45); display:block; }
   .info-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
-  .info-panel li { font-size:0.84rem; color:rgba(255,255,255,0.8); padding:3px 0; font-weight:600; }
+  .info-panel li { font-size:0.84rem; color:rgba(255,255,255,0.8); padding:3px 0; font-weight:600; list-style:none; }
 </style>
 
 {% if not status %}
@@ -25,11 +25,11 @@
 {% else %}
   {% if global_stats %}
   <div class="alert alert-success py-2 small rounded-3 mt-3"><i class="bi bi-bar-chart me-2"></i><strong>Statistiques {{ trim }}</strong></div>
-  <div class="osm-table-wrap table-responsive mt-2">
+  <div class="osm-table-outer mt-2">
     <table class="table table-hover align-middle">
       <thead>
         <tr>
-          <th rowspan="2" class="col-label align-middle">Classe</th>
+          <th rowspan="2" class="col-left align-middle">Classe</th>
           <th colspan="3">Pourcentage de réussite</th>
           <th rowspan="2" class="align-middle">[Min–Max]</th>
           <th rowspan="2" class="align-middle">Moy. générale</th>
@@ -39,7 +39,7 @@
       <tbody>
         {% for stat in data %}
         <tr class="{% if forloop.counter == 1 %}row-global{% endif %}">
-          <td class="col-label">{{ stat.label }}</td>
+          <td class="col-left">{{ stat.label }}</td>
           <td class="{% if stat.pcf < 50 %}stat-fail{% endif %}">{{ stat.pcf }}%<span class="stat-sub">{{ stat.nbfr }} / {{ stat.nbfe }}</span></td>
           <td class="{% if stat.pcg < 50 %}stat-fail{% endif %}">{{ stat.pcg }}%<span class="stat-sub">{{ stat.nbgr }} / {{ stat.nbge }}</span></td>
           <td class="{% if stat.taux < 50 %}stat-fail{% endif %}">{{ stat.taux }}%<span class="stat-sub">{{ stat.nbr }} / {{ stat.nbe }}</span></td>
@@ -52,7 +52,7 @@
   </div>
   <div class="info-panel">
     <p class="text-white-50 small fw-bold mb-2">Informations complémentaires</p>
-    <ul class="list-unstyled mb-0">
+    <ul class="mb-0 ps-0">
       <li><i class="bi bi-trophy text-warning me-2"></i>Premier : {{ data.0.max_std }} ({{ data.0.max }})</li>
       <li><i class="bi bi-arrow-down text-danger me-2"></i>Dernier : {{ data.0.min_std }} ({{ data.0.min }})</li>
       <li><i class="bi bi-graph-up text-success me-2"></i>Taux le plus élevé : {{ data.0.max_clst }}</li>
@@ -64,11 +64,11 @@
 
   {% else %}
   <div class="alert alert-success py-2 small rounded-3 mt-3"><i class="bi bi-bar-chart me-2"></i><strong>Statistiques {{ trim }} — {{ data.label }}</strong></div>
-  <div class="osm-table-wrap table-responsive mt-2">
+  <div class="osm-table-outer mt-2">
     <table class="table table-hover align-middle">
       <thead>
         <tr>
-          <th rowspan="2" class="col-label align-middle">Matière / Enseignant</th>
+          <th rowspan="2" class="col-left align-middle">Matière / Enseignant</th>
           <th colspan="3">Pourcentage de réussite</th>
           <th rowspan="2" class="align-middle">[Min–Max]</th>
           <th rowspan="2" class="align-middle">Moy. générale</th>
@@ -77,7 +77,7 @@
       </thead>
       <tbody>
         <tr class="row-global">
-          <td class="col-label">Global</td>
+          <td class="col-left">Global</td>
           <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{{ data.pcf }}%<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
           <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{{ data.pcg }}%<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
           <td class="{% if data.taux < 50 %}stat-fail{% endif %}">{{ data.taux }}%<span class="stat-sub">{{ data.nbr }} / {{ data.nbe }}</span></td>
@@ -86,7 +86,7 @@
         </tr>
         {% for matiere in data.matieres_data %}
         <tr>
-          <td class="col-label">{{ matiere.label }}<span class="stat-sub text-warning">{{ matiere.enseignant }}</span></td>
+          <td class="col-left">{{ matiere.label }}<span class="stat-sub text-warning">{{ matiere.enseignant }}</span></td>
           <td class="{% if matiere.pcf < 50 %}stat-fail{% endif %}">{{ matiere.pcf }}%<span class="stat-sub">{{ matiere.nbfr }} / {{ matiere.nbfe }}</span></td>
           <td class="{% if matiere.pcg < 50 %}stat-fail{% endif %}">{{ matiere.pcg }}%<span class="stat-sub">{{ matiere.nbgr }} / {{ matiere.nbge }}</span></td>
           <td class="{% if matiere.pct < 50 %}stat-fail{% endif %}">{{ matiere.pct }}%<span class="stat-sub">{{ matiere.nbtr }} / {{ matiere.nbte }}</span></td>
@@ -99,7 +99,7 @@
   </div>
   <div class="info-panel">
     <p class="text-white-50 small fw-bold mb-2">Informations complémentaires</p>
-    <ul class="list-unstyled mb-0">
+    <ul class="mb-0 ps-0">
       <li><i class="bi bi-trophy text-warning me-2"></i>Premier de la classe : {{ data.max_std }} ({{ data.max }})</li>
       <li><i class="bi bi-arrow-down text-danger me-2"></i>Dernier de la classe : {{ data.min_std }} ({{ data.min }})</li>
     </ul>

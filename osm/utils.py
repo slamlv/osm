@@ -231,7 +231,7 @@ class DeleteView(LoggedAdminView):
             if instance.user:
                 if instance.user == self.request.user:
                     return None
-                return instance.user
+                return instance
         elif self.model == User:
             if instance == self.request.user:
                 return None

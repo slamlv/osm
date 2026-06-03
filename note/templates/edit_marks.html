@@ -1,81 +1,77 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container w-md-75 mt-4">
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
 {% if msg %}
-    <div class="alert alert-info mt-3 py-2 fade show alert-dismissible" role="alert">
-        <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
-        <p class="bg-transparent mb-0 ctext">{{ msg }}</p>
-    </div>
+  <div class="alert alert-info py-2 small rounded-3 d-flex align-items-center justify-content-between">
+    <span>{{ msg }}</span>
+    <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="alert"></button>
+  </div>
 {% else %}
-    {% if progression %}
-    <form method="post" enctype="multipart/form-data" hx-get="{% url 'progression-form' %}" hx-target="#marks_form"
-          id="select">
-    {% elif cls_progression %}
-    <form method="post" enctype="multipart/form-data" hx-get="{% url 'classroom-progression' %}" hx-target="#marks_form"
-          id="select">
-    {% elif not marks_sheet %}
+  <div class="form-card mb-4" style="max-width:620px;margin-left:auto;margin-right:auto;">
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="bi bi-pencil-square text-primary fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Sélection</h6>
+    </div>
+    <div class="p-3 p-sm-4">
+      {% if progression %}
+      <form method="post" enctype="multipart/form-data" hx-get="{% url 'progression-form' %}" hx-target="#marks_form" id="select">
+      {% elif cls_progression %}
+      <form method="post" enctype="multipart/form-data" hx-get="{% url 'classroom-progression' %}" hx-target="#marks_form" id="select">
+      {% elif not marks_sheet %}
         {% if not trim %}
-        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'marks-edit' %}"
-              hx-target="#marks_form">
+        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'marks-edit' %}" hx-target="#marks_form">
         {% else %}
-        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'trimester-marks-edit' %}"
-              hx-target="#marks_form">
+        <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'trimester-marks-edit' %}" hx-target="#marks_form">
         {% endif %}
-    {% elif csi %}
-    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'students_id_cards' %}">
-    {% else %}
-    <form method="post" enctype="multipart/form-data" id="select">
-    {% endif %}
+      {% elif csi %}
+      <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'students_id_cards' %}">
+      {% else %}
+      <form method="post" enctype="multipart/form-data" id="select">
+      {% endif %}
         {% csrf_token %}
-        <div class="row row-cols-1 mt-2 w-lg-75 cblock" id="classroom_form">
-        {% if marks_sheet %}
-        <div class="mb-3 w-sm-75 cblock">
-            <label for="classe" class="text-white control-label">Classe</label>
-            {{ select_form.classroom }}
-        </div>
-        {% else %}
-            <div class="mb-3 {% if select_form.eval %} col-sm-4 {% else %} col-sm-6 {% endif %}">
-                <label for="matiere" class="text-white control-label">Matière</label>
-                {{ select_form.matiere }}
-            </div>
-            <div class="mb-3 {% if select_form.eval %} col-sm-4 {% else %} col-sm-6 {% endif %}" id="classrooms">
-                <label for="classe" class="text-white control-label">Classe</label>
-                {{ select_form.classroom }}
-            </div>
-            {% if select_form.eval %}
-            <div class="mb-3 col-sm-4">
-                <label for="eval" class="text-white control-label">{% if trim %} Trimestre {% else %} Évaluation {% endif %}</label>
-                {{ select_form.eval }}
-            </div>
-            {% endif %}
-        {% endif %}
+        <div class="row g-3 mb-4" id="classroom_form">
+          {% if marks_sheet %}
+          <div class="col-12"><label class="text-white control-label">Classe</label>{{ select_form.classroom }}</div>
+          {% else %}
+          <div class="col-sm-{% if select_form.eval %}4{% else %}6{% endif %}"><label class="text-white control-label">Matière</label>{{ select_form.matiere }}</div>
+          <div class="col-sm-{% if select_form.eval %}4{% else %}6{% endif %}" id="classrooms"><label class="text-white control-label">Classe</label>{{ select_form.classroom }}</div>
+          {% if select_form.eval %}
+          <div class="col-sm-4"><label class="text-white control-label">{% if trim %}Trimestre{% else %}Évaluation{% endif %}</label>{{ select_form.eval }}</div>
+          {% endif %}
+          {% endif %}
         </div>
         {% if csi %}
-        <div class="d-flex justify-content-center align-items-center gap-2 gap-sm-3">
-            <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
-                title="Télécharger en pdf" data-bs-trigger="hover">
-                <span class="btn-text bg-transparent" id="btn-text">
-                    <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
-                </span>
-                <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
-            </button>
-            <div>
-                <input type="checkbox" class="form-check-input" name="csi_checkbox" id="csi_checkbox_id">
-                <label for="csi_checkbox_id" class="text-white">Cartes scolaires vierges</label>
-            </div>
+        <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+          <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+            <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+          </button>
+          <div class="d-flex align-items-center gap-2">
+            <input type="checkbox" class="form-check-input" name="csi_checkbox" id="csi_checkbox_id">
+            <label for="csi_checkbox_id" class="text-white-50 small mb-0">Cartes scolaires vierges</label>
+          </div>
         </div>
-        <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+        <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
         {% else %}
         <div class="d-flex justify-content-center">
-            <button class="btn btn-primary" type="submit" hx-include="#select"
-                    {% if not marks_sheet %} data-with-spinner {% endif %}>
-                <i class="bi bi-save me-2 bg-transparent"></i>
-                {% if not marks_sheet or cls_progression %} Soumettre {% else %} Télécharger {% endif %}</button>
+          <button class="btn btn-primary fw-semibold px-5" type="submit" hx-include="#select" {% if not marks_sheet %}data-with-spinner{% endif %}>
+            <i class="bi bi-search me-2"></i>{% if not marks_sheet or cls_progression %}Soumettre{% else %}Télécharger{% endif %}
+          </button>
         </div>
         {% endif %}
-    </form>
-    <form method="post" enctype="multipart/form-data" id="marks_form"></form>
+      </form>
+    </div>
+  </div>
+  <form method="post" enctype="multipart/form-data" id="marks_form"></form>
 {% endif %}
 </div>
 {% endblock %}

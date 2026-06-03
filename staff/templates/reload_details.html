@@ -1,30 +1,29 @@
-<div class="row mx-auto px-0" id="reload">
-    <div class="col-sm-6 mb-2">
-        <span class="text-white">Administrateur : </span>
-        <span class="{% if m_user.is_admin %} text-warning {% else %} text-secondary {% endif %} fw-bold">
-            {% if m_user.is_admin %} Oui {% else %} Non {% endif %}</span>
+<div class="row mx-0 px-0" id="reload">
+  <p style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:rgba(255,255,255,0.35);font-weight:700;margin:0.5rem 0;padding-bottom:0.35rem;border-bottom:1px solid rgba(255,255,255,0.07);">Permissions</p>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <div>
+        <span style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.4);font-weight:600;display:block;">Administrateur</span>
+        <span class="fw-bold {% if m_user.is_admin %}text-warning{% else %}text-secondary{% endif %}">{% if m_user.is_admin %}Oui{% else %}Non{% endif %}</span>
+      </div>
+      <div>
+        <span style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.4);font-weight:600;display:block;">Utilisateur actif</span>
+        <span class="fw-bold {% if m_user.is_active %}text-success{% else %}text-danger{% endif %}" id="active">{% if m_user.is_active %}Oui{% else %}Non{% endif %}</span>
+      </div>
     </div>
-    <div class="col-sm-6 mb-2" id="active">
-        <span class="text-white">Utilisateur actif : </span>
-        <span class="{% if m_user.is_active %} text-warning {% else %} text-secondary {% endif %} fw-bold">
-            {% if m_user.is_active %} Oui {% else %} Non {% endif %}</span>
+    {% if user != m_user %}
+    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-2">
+      {% if m_user.is_admin %}
+      <a class="btn btn-outline-danger btn-sm fw-semibold" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload"><i class="bi bi-dash-circle me-1"></i>Enlever Administrateur</a>
+      {% else %}
+      <a class="btn btn-outline-success btn-sm fw-semibold" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload"><i class="bi bi-shield-check me-1"></i>Définir Administrateur</a>
+      {% endif %}
+      {% if not m_user.is_active %}
+      <a class="btn btn-outline-warning btn-sm fw-semibold" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload"><i class="bi bi-toggle-on me-1"></i>Activer</a>
+      {% else %}
+      <a class="btn btn-outline-secondary btn-sm fw-semibold" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload"><i class="bi bi-ban me-1"></i>Désactiver</a>
+      {% endif %}
     </div>
-{% if user != m_user %}
-    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center my-2">
-     {% if m_user.is_admin %}
-     <a class="btn btn-danger" title="Enlever Administrateur" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload">
-        <i class="bi bi-dash-circle me-2 bg-transparent"></i>Enlever Administrateur</a>
-     {% else %}
-     <a class="btn btn-success" title="Définir Administrateur" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload">
-        <i class="bi bi-shield-check me-2 bg-transparent"></i>Définir Administrateur</a>
     {% endif %}
-    {% if not m_user.is_active %}
-    <a class="btn btn-warning" title="Activer" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload">
-        <i class="bi bi-toggle-on me-2 bg-transparent"></i>Activer</a>
-    {% else %}
-    <a class="btn btn-secondary" title="Désactiver" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload">
-        <i class="bi bi-ban me-2 bg-transparent"></i>Désactiver</a>
-    {% endif %}
-    </div>
-{% endif %}
+  </div>
 </div>

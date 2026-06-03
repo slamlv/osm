@@ -1,25 +1,25 @@
 <style>
-  .osm-table-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
-  .osm-table-wrap table { margin-bottom:0; }
-  .osm-table-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
-  .osm-table-wrap thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 10px; white-space:nowrap; vertical-align:middle; text-align:center; }
-  .osm-table-wrap thead th.text-start-col { text-align:left; }
-  .osm-table-wrap tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
-  .osm-table-wrap tbody tr:hover { background-color:#1f4266!important; }
-  .osm-table-wrap tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.82rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 10px; vertical-align:middle; text-align:center; }
-  .osm-table-wrap tbody td:first-child { text-align:left; font-weight:600; white-space:nowrap; }
-  .sub-val { font-size:0.7rem; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:700px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 10px; white-space:nowrap; vertical-align:middle; text-align:center; }
+  .osm-table-outer thead th.col-left { text-align:left; min-width:130px; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.82rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 10px; vertical-align:middle; text-align:center; }
+  .osm-table-outer tbody td:first-child { text-align:left; font-weight:600; white-space:nowrap; }
+  .sub-val { font-size:0.7rem; display:block; }
 </style>
 
 <div class="alert alert-info py-2 rounded-3 mt-3 small">
   <i class="bi bi-info-circle me-2"></i>{{ titre }}
 </div>
 
-<div class="osm-table-wrap table-responsive mt-2">
+<div class="osm-table-outer mt-2">
   <table class="table table-hover align-middle">
     <thead>
       <tr>
-        <th rowspan="2" class="text-start-col align-middle">Matière</th>
+        <th rowspan="2" class="col-left align-middle">Matière</th>
         <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Leçons théoriques</th>
         <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Leçons pratiques</th>
         <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Total</th>

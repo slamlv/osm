@@ -1,82 +1,98 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container w-md-75 mt-4">
-    <div class="alert alert-success fs-5 py-1" role="alert">
-      <p class="ctext bg-transparent mb-0 fw-bold">{{ title }}</p>
-    </div>
-    <div class="table-responsive">
-        <table class="table align-middle table-hover table-bordered">
-            <thead class="table-secondary">
-            <tr>
-                <th>Horaires</th>
-                {% for day in days %}
-                <th>{{ day }}</th>
-                {% endfor %}
-            </tr>
-            </thead>
-            <tbody class="time_table_body">
-            {% for line in time_table %}
-            <tr class="{% if not line.0.is_cours %} table-secondary {% endif %}">
-                {% if not line.0.is_cours %}
-                <th class="text-center" colspan="6">Pause : {{ line.0.start_end}}</th>
-                {% else %}
-                <th class="table-secondary border">{{ line.0.start_end }}</th>
-                    {% for elt in line %}
-                        {% if elt and not forloop.first %}
-                        <td rowspan="{{ elt.rowspan }}">
-                            {% if elt.matiere %}
-                            <div class="{{ elt.colors }} rounded py-1 text-center fw-bold">
-                                {{ elt.matiere }}
-                                <div class="small {{ elt.colors }}">{{ elt.classes }}</div>
-                            </div>
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<style>
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:480px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
+  .osm-table-outer thead th:first-child { text-align:left; min-width:80px; }
+  .osm-table-outer tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .recap-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
+  .recap-sub { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:0.5rem 0.75rem; margin-top:0.5rem; }
+  .download-bar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
+</style>
 
-    {% if recap %}
-    <div class="alert alert-info py-1 mt-3" role="alert">
-        <span class="fw-bold">Récapitulatif ({{ total_heures }}h au total)</span>
-        {% for elt in recap %}
-        <div class="alert alert-primary py-1" role="alert">
-            <span class="fw-bold">{{ elt.matiere }} : {{ elt.nb_heures }}h</span>
-            <div class="d-flex flex-wrap gap-2">
-                {% for mrecap in elt.matiere_recap %}
-                <span class="badge fs-6 {{ mrecap.colors }}">{{ mrecap.classes }} : {{ mrecap.nb_heures }}h</span>
-                {% endfor %}
-            </div>
-        </div>
+<div class="px-3 px-md-4 py-3">
+
+  <div class="alert alert-success py-2 small rounded-3 mb-3">
+    <i class="bi bi-calendar-week me-2"></i><strong>{{ title }}</strong>
+  </div>
+
+  <div class="osm-table-outer">
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Horaires</th>
+          {% for day in days %}<th>{{ day }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="time_table_body">
+        {% for line in time_table %}
+        <tr class="{% if not line.0.is_cours %}pause-row{% endif %}">
+          {% if not line.0.is_cours %}
+          <th colspan="6">☕ Pause — {{ line.0.start_end }}</th>
+          {% else %}
+          <th>{{ line.0.start_end }}</th>
+          {% for elt in line %}
+            {% if elt and not forloop.first %}
+            <td rowspan="{{ elt.rowspan }}">
+              {% if elt.matiere %}
+              <div class="{{ elt.colors }} rounded py-1 text-center fw-bold">
+                <span style="font-size:0.8rem;">{{ elt.matiere }}</span>
+                <div class="small {{ elt.colors }}" style="font-size:0.72rem;">{{ elt.classes }}</div>
+              </div>
+              {% endif %}
+            </td>
+            {% endif %}
+          {% endfor %}
+          {% endif %}
+        </tr>
         {% endfor %}
-    </div>
-    {% endif %}
+      </tbody>
+    </table>
+  </div>
 
+  {% if recap %}
+  <div class="recap-panel">
+    <p class="text-white-50 small fw-bold mb-2">
+      <i class="bi bi-list-check me-2"></i>Récapitulatif — {{ total_heures }}h au total
+    </p>
+    {% for elt in recap %}
+    <div class="recap-sub">
+      <p class="text-white fw-bold small mb-1">{{ elt.matiere }} : {{ elt.nb_heures }}h</p>
+      <div class="d-flex flex-wrap gap-2">
+        {% for mrecap in elt.matiere_recap %}
+        <span class="badge {{ mrecap.colors }}">{{ mrecap.classes }} : {{ mrecap.nb_heures }}h</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="download-bar">
     {% if id %}
     <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'staff-timetable' id=id %}">
     {% else %}
     <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'user-timetable' %}">
     {% endif %}
-        {% csrf_token %}
-        <div class="d-flex justify-content-center align-items-center gap-2 gap-sm-3 mt-3">
-            <button class="btn btn-danger" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
-                title="Télécharger en pdf" data-bs-trigger="hover">
-                <span class="btn-text bg-transparent" id="btn-text">
-                    <i class="bi bi-file-earmark-pdf me-2 bg-transparent"></i>Télécharger
-                </span>
-                <span class="spinner-border spinner-border-sm d-none bg-transparent" role="status" aria-hidden="true" id="spinner"></span>
-            </button>
-            <div>
-                <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
-                <label for="timetable_checkbox_id" class="text-white">Emploi du temps vierge</label>
-            </div>
+      {% csrf_token %}
+      <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+        <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+          <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+        </button>
+        <div class="d-flex align-items-center gap-2">
+          <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
+          <label for="timetable_checkbox_id" class="text-white-50 small mb-0">Emploi du temps vierge</label>
         </div>
-        <div id="error-zone" class="alert alert-warning d-none mt-3 w-md-75 cblock py-2"></div>
+      </div>
+      <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
     </form>
+  </div>
+
 </div>
 {% endblock %}

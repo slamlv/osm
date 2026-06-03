@@ -1,15 +1,14 @@
 <style>
-  .tt-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
-  .tt-wrap table { margin-bottom:0; }
-  .tt-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
-  .tt-wrap thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
-  .tt-wrap thead th:first-child { text-align:left; min-width:80px; }
-  .tt-wrap tbody tr td, .tt-wrap tbody tr th { border-color:rgba(255,255,255,0.07)!important; padding:6px 8px; vertical-align:middle; font-size:0.82rem; }
-  .tt-wrap tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; }
-  .tt-wrap tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; }
-  .tt-wrap tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; }
-  .tt-wrap .slot { cursor:pointer; }
-  .tt-wrap .slot:hover { background-color:#1f4266!important; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:480px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
+  .osm-table-outer thead th:first-child { text-align:left; min-width:80px; }
+  .osm-table-outer tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .osm-table-outer .slot { cursor:pointer; }
+  .osm-table-outer .slot:hover { background-color:#1f4266!important; }
   .recap-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
   .download-bar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
 </style>
@@ -18,7 +17,7 @@
   <i class="bi bi-calendar-week me-2"></i><strong>{{ t_title }}</strong>
 </div>
 
-<div class="tt-wrap table-responsive"
+<div class="osm-table-outer"
      hx-get="{% url 'time_table' %}" hx-trigger="refresh from:body once"
      hx-target="#time_table"
      hx-headers='{"X-CSRFToken":"{{ csrf_token }}", "X-ClassroomId":"{{ classroom_id }}"}'>

@@ -2,18 +2,18 @@
 
 {% block content %}
 <style>
-  .osm-table-wrap { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
-  .osm-table-wrap table { margin-bottom:0; }
-  .osm-table-wrap thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
-  .osm-table-wrap thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
-  .osm-table-wrap tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
-  .osm-table-wrap tbody tr:hover { background-color:#1f4266!important; }
-  .osm-table-wrap tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:480px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
   .toolbar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:0.75rem 1rem; }
   .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
 </style>
 
-<div class="container-fluid px-3 px-md-4 py-3" style="max-width:1100px;">
+<div class="px-3 px-md-4 py-3">
 
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
     <span>{{ info }}</span>
@@ -30,10 +30,10 @@
     </div>
   </form>
 
-  <div class="osm-table-wrap table-responsive">
-    <table class="table table-hover align-middle text-nowrap">
+  <div class="osm-table-outer">
+    <table class="table table-hover align-middle">
       <thead><tr>
-        <th style="width:36px;color:rgba(255,255,255,0.3)!important;">#</th>
+        <th style="width:36px;">#</th>
         <th>Intitulé</th>
         <th class="d-none d-lg-table-cell">Discipline principale</th>
         <th>Domaine d'apprentissage</th>

@@ -1,36 +1,60 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container w-md-75">
-    <div class="alert alert-info mt-3 cblock py-2  w-lg-75" role="alert">
-    <p class="ctext bg-transparent mb-0">Une fois la recherche terminée, vous n'avez qu'à cliquer sur le résultat qui vous intéresse et retrouver le formulaire de remplissage en dessous des résultats.</p>
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+  .student-result { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; cursor:pointer; transition:background 0.12s; text-decoration:none; }
+  .student-result:hover { background:rgba(255,255,255,0.06); }
+</style>
+
+<div class="container py-3" style="max-width:720px;">
+
+  <div class="form-card mb-4">
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="bi bi-shield-exclamation text-danger fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Discipline</h6>
     </div>
-    <form method="post" enctype="multipart/form-data">
+    <div class="p-3 p-sm-4">
+      <div class="alert alert-info py-2 small rounded-3 mb-3">
+        <i class="bi bi-info-circle me-2"></i>Recherchez un élève puis cliquez sur son nom pour afficher le formulaire.
+      </div>
+      <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
-            <div>
-                <label for="trim" class="text-white">Trimestre</label>
-                {{ form.trimestre }}
-            </div>
-            <div class="d-flex align-items-end gap-2">
-                <div>
-                    <label for="search" class="text-white">Recherche</label>
-                    {{ form.search }}
-                </div>
-                <button class="w-auto btn btn-info" type="submit"><i class="bi bi-search me-2 bg-transparent"></i>
-                    <span class="d-none d-md-inline bg-transparent">Rechercher</span></button>
-            </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-end mb-3">
+          <div>
+            <label class="text-white" style="font-size:0.82rem;margin-bottom:4px;display:block;">Trimestre</label>
+            {{ form.trimestre }}
+          </div>
+          <div class="flex-grow-1">
+            <label class="text-white" style="font-size:0.82rem;margin-bottom:4px;display:block;">Recherche</label>
+            {{ form.search }}
+          </div>
+          <button class="btn btn-info fw-semibold" type="submit">
+            <i class="bi bi-search me-1"></i><span class="d-none d-sm-inline">Rechercher</span>
+          </button>
         </div>
-        <p class="ctext text-white">{{ info }}</p>
-    </form>
-    <div class="d-flex justify-content-center mb-3">
-        <div>
+        {% if info %}<p class="text-white-50 small text-center mb-0">{{ info }}</p>{% endif %}
+      </form>
+
+      {% if students %}
+      <div class="mt-3">
         {% for student in students %}
-            <a class="text-info" href="" hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
-                <i class='bi bi-mortarboard text-white me-2'></i>{{ student.nom }}</a><br>
+        <a class="student-result" href=""
+           hx-get="{% url 'discipline-edit' id=student.id trim=trim %}" hx-target="#edit">
+          <i class="bi bi-mortarboard text-info"></i>
+          <span class="text-white fw-semibold">{{ student.nom }}</span>
+        </a>
         {% endfor %}
-        </div>
+      </div>
+      {% endif %}
     </div>
-    <div id="edit"></div>
+  </div>
+
+  <div id="edit"></div>
+
 </div>
 {% endblock %}

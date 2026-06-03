@@ -1,140 +1,130 @@
 {% extends "base.html" %}
 
-{% load static %}
-
 {% block content %}
-    <div class="container w-md-75 w-lg-50 p-3" id="info_card">
-        <div class="row justify-content-center">
-            <div class="col">
-                <div class="card custom-shadow rounded-4">
-                    <div class="card-body text-center p-3">
-                    {% if object.photo %}
-                    <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
-                        data-bs-toggle="modal" data-bs-target="#photoModal">
-                    {% else %}
-                    <img src="{% static 'image/no_pp.png' %}" alt="Photo de profil" class="profile-img mb-3">
-                    {% endif %}
-                    <h4 class="card-title text-white fw-bold">{{ m_user.username }}</h4>
-                    <hr class="border border-secondary border-2">
-                    <div class="row text-start">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Civilité : </span>
-                            <span class="text-white fw-bold">{{ object.civilite }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Poste : </span>
-                            <span class="text-white fw-bold">{% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Nom(s) : </span>
-                            <span class="text-white fw-bold">{{ object.nom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Prénom(s) : </span>
-                            <span class="text-white fw-bold">{% if object.prenom %}{{ object.prenom }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Grade : </span>
-                            <span class="text-white fw-bold">{% if object.grade %}{{ object.grade }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Email : </span>
-                            <span class="text-white fw-bold">{{ object.email }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact : </span>
-                            <span class="text-white fw-bold">{{ object.contact }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Ancienneté : </span>
-                            <span class="text-white fw-bold">{% if object.since %}{{ object.since }} an(s){% else %}/{% endif %}</span>
-                        </div>
-                <div class="row mx-auto px-0" id="reload">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Administrateur : </span>
-                            <span class="{% if m_user.is_admin %} text-warning {% else %} text-secondary {% endif %} fw-bold">
-                                {% if m_user.is_admin %} Oui {% else %} Non {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2" id="active">
-                            <span class="text-white">Utilisateur actif : </span>
-                            <span class="{% if m_user.is_active %} text-warning {% else %} text-secondary {% endif %} fw-bold">
-                                {% if m_user.is_active %} Oui {% else %} Non {% endif %}</span>
-                        </div>
-                    {% if user != m_user %}
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center my-2">
-                    {% if m_user.is_admin %}
-                        <a class="btn btn-danger" title="Enlever Administrateur" hx-get="{% url 'admin' pk=m_user.pk %}"
-                           hx-target="#reload"><i class="bi bi-dash-circle me-2 bg-transparent"></i>
-                            Enlever Administrateur</a>
-                    {% else %}
-                        <a class="btn btn-success" title="Définir Administrateur" hx-get="{% url 'admin' pk=m_user.pk %}"
-                           hx-target="#reload"><i class="bi bi-shield-check me-2 bg-transparent"></i>
-                            Définir Administrateur</a>
-                    {% endif %}
-                    {% if not m_user.is_active %}
-                        <a class="btn btn-warning" title="Activer" hx-get="{% url 'active' pk=m_user.pk %}"
-                           hx-target="#reload"><i class="bi bi-toggle-on me-2 bg-transparent"></i>Activer</a>
-                    {% else %}
-                        <a class="btn btn-secondary" title="Désactiver" hx-get="{% url 'active' pk=m_user.pk %}"
-                           hx-target="#reload"><i class="bi bi-ban me-2 bg-transparent"></i>Désactiver</a>
-                    {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-                {% if dpc %}
-                <div class="container mt-2">
-                    <div class="alert alert-info py-1" role="alert">
-                        <p class="ctext bg-transparent mb-0">Disciplines enseignées</p>
-                    </div>
-                    <table class="table table-striped">
-                        <tr class="table-light">
-                            <th>Discipline</th>
-                            <th>Classes</th>
-                        </tr>
-                    {% for d in dpc %}
-                        <tr class="table-dark">
-                            <td>{{ d.matiere }}</td>
-                            {% if d.classes %}
-                            <td>
-                                {% for classe in d.classes %}
-                                <a href="{% url 'classroom-teachers' id=classe.id %}" class="text-primary bg-transparent">
-                                    {{ classe.code }}</a>{% if not forloop.last %} * {% endif %}
-                                {% endfor %}
-                            </td>
-                            {% else %}
-                            <td>/</td>
-                            {% endif %}
-                        </tr>
-                    {% endfor %}
-                    </table>
-                </div>
-                {% endif %}
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                    <a class="btn btn-warning" title="Modifier" href="{% url 'staff-edit' id=m_user.staff_member.all.0.id %}">
-                        <i class="bi bi-pencil-square me-2 bg-transparent"></i>Modifier</a>
-                    {% if user != m_user %}
-                    <a class="btn btn-danger" title="Supprimer" href="{% url 'user_delete' id=m_user.pk%}">
-                        <i class="bi bi-trash me-2 bg-transparent"></i>Supprimer</a>
-                    {% endif %}
-                    <a class="btn btn-secondary" href="{% url 'users' %}">
-                        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-        <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-body p-0">
-                        <button type="button" class="btn-close position-absolute end-0 m-3" data-bs-dismiss="modal"
-                                aria-label="Fermer"></button>
-                        <img src="{% if object.photo %} {{ object.photo.url }} {% endif %}" alt="Photo de profil"
-                             class="img-fluid w-100 rounded">
-                    </div>
-                </div>
-            </div>
-        </div>
+<style>
+  .detail-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .detail-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1.5rem; text-align:center; }
+  .info-row { display:flex; flex-direction:column; gap:2px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .info-row:last-child { border-bottom:none; }
+  .info-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.4); font-weight:600; }
+  .info-value { color:rgba(255,255,255,0.85); font-weight:600; font-size:0.95rem; word-break:break-word; }
+  .section-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:rgba(255,255,255,0.35); font-weight:700; margin:1rem 0 0.5rem; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .status-block { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:1rem; }
+  .osm-table-outer table { margin-bottom:0; min-width:280px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.73rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 12px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.85rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+  .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45)!important; border:1px solid rgba(255,255,255,0.1)!important; border-radius:16px!important; }
+</style>
+
+<div class="container py-3" style="max-width:680px;" id="info_card">
+  <div class="detail-card">
+
+    <div class="detail-card-header">
+      {% if object.photo %}
+      <img src="{{ object.photo.url }}" alt="Photo" class="profile-img mb-3"
+           data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
+      {% else %}
+      <img src="{{ MEDIA_URL }}image/no_pp.png" alt="Photo" class="profile-img mb-3">
+      {% endif %}
+      <h5 class="text-white fw-bold mb-0">{{ m_user.username }}</h5>
     </div>
+
+    <div class="px-3 px-sm-4 py-3">
+      <div class="row g-0">
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Civilité</span><span class="info-value">{{ object.civilite }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Poste</span><span class="info-value">{% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Nom(s)</span><span class="info-value">{{ object.nom }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Prénom(s)</span><span class="info-value">{% if object.prenom %}{{ object.prenom }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Grade</span><span class="info-value">{% if object.grade %}{{ object.grade }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ object.email }}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Contact</span><span class="info-value">{{ object.contact }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Ancienneté</span><span class="info-value">{% if object.since %}{{ object.since }} an(s){% else %}—{% endif %}</span></div></div>
+      </div>
+
+      <!-- Zone rechargeable HTMX -->
+      <div class="row mx-0 px-0" id="reload">
+        <p class="section-title mt-3">Permissions</p>
+        <div class="status-block mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div>
+              <span class="info-label d-block">Administrateur</span>
+              <span class="fw-bold {% if m_user.is_admin %}text-warning{% else %}text-secondary{% endif %}">
+                {% if m_user.is_admin %}Oui{% else %}Non{% endif %}
+              </span>
+            </div>
+            <div>
+              <span class="info-label d-block">Utilisateur actif</span>
+              <span class="fw-bold {% if m_user.is_active %}text-success{% else %}text-danger{% endif %}" id="active">
+                {% if m_user.is_active %}Oui{% else %}Non{% endif %}
+              </span>
+            </div>
+          </div>
+          {% if user != m_user %}
+          <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-2">
+            {% if m_user.is_admin %}
+            <a class="btn btn-outline-danger btn-sm fw-semibold" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload">
+              <i class="bi bi-dash-circle me-1"></i>Enlever Administrateur</a>
+            {% else %}
+            <a class="btn btn-outline-success btn-sm fw-semibold" hx-get="{% url 'admin' pk=m_user.pk %}" hx-target="#reload">
+              <i class="bi bi-shield-check me-1"></i>Définir Administrateur</a>
+            {% endif %}
+            {% if not m_user.is_active %}
+            <a class="btn btn-outline-warning btn-sm fw-semibold" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload">
+              <i class="bi bi-toggle-on me-1"></i>Activer</a>
+            {% else %}
+            <a class="btn btn-outline-secondary btn-sm fw-semibold" hx-get="{% url 'active' pk=m_user.pk %}" hx-target="#reload">
+              <i class="bi bi-ban me-1"></i>Désactiver</a>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if dpc %}
+      <p class="section-title">Disciplines enseignées</p>
+      <div class="osm-table-outer">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Discipline</th><th>Classes</th></tr></thead>
+          <tbody>
+            {% for d in dpc %}
+            <tr>
+              <td class="fw-semibold">{{ d.matiere }}</td>
+              <td>
+                {% for classe in d.classes %}
+                {% if d.classes %}
+                <a href="{% url 'classroom-teachers' id=classe.id %}" class="text-info text-decoration-none me-1">{{ classe.code }}</a>
+                {% endif %}
+                {% endfor %}
+                {% if not d.classes %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-2">
+        <a class="btn btn-warning fw-semibold" href="{% url 'staff-edit' id=m_user.staff_member.all.0.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
+        {% if user != m_user %}<a class="btn btn-outline-danger" href="{% url 'user_delete' id=m_user.pk %}"><i class="bi bi-trash me-2"></i>Supprimer</a>{% endif %}
+        <a class="btn btn-outline-secondary" href="{% url 'users' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 bg-transparent">
+        <div class="modal-body p-0 position-relative">
+          <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2" data-bs-dismiss="modal" style="z-index:10;"></button>
+          {% if object.photo %}<img src="{{ object.photo.url }}" alt="Photo" class="img-fluid w-100 rounded-3">{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

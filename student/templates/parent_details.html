@@ -1,73 +1,74 @@
 {% extends "base.html" %}
 
-{% load static %}
-
 {% block content %}
-    <div class="container w-md-75 w-lg-50 p-3" id="info_card">
-        <div class="row justify-content-center">
-            <div class="col">
-                <div class="card custom-shadow rounded-4">
-                    <div class="card-body text-center p-3">
-                    <img src="{% static 'image/parent.png' %}" alt="Photo de profil" class="profile-img mb-3">
-                    <hr class="border border-secondary border-2">
-                    <div class="row text-start">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Civilité : </span>
-                            <span class="text-white fw-bold">{{ object.civilite }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Nom(s) : </span>
-                            <span class="text-white fw-bold">{{ object.nom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Prénom(s) : </span>
-                            <span class="text-white fw-bold">{% if object.prenom %}{{ object.prenom }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact : </span>
-                            <span class="text-white fw-bold">{{ object.contact }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Email : </span>
-                            <span class="text-white fw-bold">{{ object.courriel }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Profession : </span>
-                            <span class="text-white fw-bold">{{ object.boulot }}</span>
-                        </div>
-                {% if enfants %}
-                <div class="container mt-2">
-                <h4 class="text-warning fw-bold ctext">Enfants</h4>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover text-nowrap align-middle border">
-                        <tr class="table-light">
-                            <th>Enfant</th>
-                            <th>Classe</th>
-                        </tr>
-                    {% for enfant in enfants %}
-                        <tr class="table-dark border-primary">
-                            <td>{{ enfant }}</td>
-                            <td>{{ enfant.classroom }}</td>
-                        </tr>
-                    {% endfor %}
-                    </table>
-                </div>
-                </div>
-                {% endif %}
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                    <a class="btn btn-warning" title="Modifier" href="{% url 'parent-edit' id=object.id %}">
-                        <i class="bi bi-pencil-square me-2 bg-transparent"></i>Modifier</a>
-                    {% if user != m_user %}
-                    <a class="btn btn-danger" title="Supprimer" href="{% url 'parent-delete' id=object.id %}">
-                        <i class="bi bi-trash me-2 bg-transparent"></i>Supprimer</a>
-                    {% endif %}
-                    <a class="btn btn-secondary" href="{% url 'parents' %}">
-                        <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
+<style>
+  .detail-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .detail-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1.5rem; text-align:center; }
+  .info-row { display:flex; flex-direction:column; gap:2px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .info-row:last-child { border-bottom:none; }
+  .info-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.4); font-weight:600; }
+  .info-value { color:rgba(255,255,255,0.85); font-weight:600; font-size:0.95rem; word-break:break-word; }
+  .section-title { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.07em; color:rgba(255,255,255,0.35); font-weight:700; margin:1rem 0 0.5rem; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  /* Tableau enfants */
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:12px; }
+  .osm-table-outer table { margin-bottom:0; min-width:280px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.73rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 12px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.85rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+</style>
+
+<div class="container py-3" style="max-width:680px;" id="info_card">
+  <div class="detail-card">
+
+    <div class="detail-card-header">
+      <img src="{{ MEDIA_URL }}image/parent.png" alt="Parent" class="profile-img mb-3">
+      <h5 class="text-white fw-bold mb-0">{{ object.nom }} {% if object.prenom %}{{ object.prenom }}{% endif %}</h5>
+      <p class="text-white-50 small mb-0">{{ object.civilite }}</p>
     </div>
+
+    <div class="px-3 px-sm-4 py-3">
+      <div class="row g-0">
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Contact</span><span class="info-value">{{ object.contact }}</span></div>
+        </div>
+        <div class="col-sm-6 ps-sm-3">
+          <div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ object.courriel }}</span></div>
+        </div>
+        <div class="col-sm-6 pe-sm-3">
+          <div class="info-row"><span class="info-label">Profession</span><span class="info-value">{{ object.boulot }}</span></div>
+        </div>
+      </div>
+
+      {% if enfants %}
+      <p class="section-title">Enfants</p>
+      <div class="osm-table-outer mb-3">
+        <table class="table table-hover align-middle">
+          <thead><tr>
+            <th>Enfant</th>
+            <th>Classe</th>
+          </tr></thead>
+          <tbody>
+            {% for enfant in enfants %}
+            <tr>
+              <td class="fw-semibold">{{ enfant }}</td>
+              <td>{{ enfant.classroom }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-2">
+        <a class="btn btn-warning fw-semibold" href="{% url 'parent-edit' id=object.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
+        {% if user != m_user %}
+        <a class="btn btn-outline-danger" href="{% url 'parent-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
+        {% endif %}
+        <a class="btn btn-outline-secondary" href="{% url 'parents' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

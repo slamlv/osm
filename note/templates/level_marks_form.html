@@ -1,93 +1,100 @@
+<style>
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:420px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 12px; white-space:nowrap; vertical-align:middle; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr.row-class-sep { background:rgba(255,193,7,0.1)!important; }
+  .osm-table-outer tbody tr.row-class-sep td { color:#ffc107!important; font-weight:700; text-align:center; }
+  .osm-table-outer tbody tr:not(.row-class-sep):hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.85rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+  .comp-wrap textarea,.comp-wrap input { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .uid-cell { color:rgba(255,255,255,0.45)!important; font-size:0.78rem; }
+</style>
+
 {% if error %}
-<div class="alert alert-warning mt-3 fade show alert-dismissible w-md-75 cblock py-1" role="alert">
-    <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
-    <p class="mb-1 bg-transparent ctext">{{ info }}{% if admin %}
-    <br><a class="btn btn-warning ctext" href="{% url 'set_periods' %}"><i class="bi bi-gear bg-transparent me-2"></i>
-        Éditer les périodes</a>
-    {% endif %}</p>
+<div class="alert alert-warning py-2 small rounded-3 mt-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <span>{{ info }}</span>
+  {% if admin %}<a class="btn btn-warning btn-sm fw-semibold" href="{% url 'set_periods' %}"><i class="bi bi-gear me-1"></i>Éditer les périodes</a>{% endif %}
 </div>
 {% else %}
-    {% if level_marks_form.level_marks_form|length %}
-        <form method="post" enctype="multipart/form-data" id="marks_form">
-            {% csrf_token %}
-            {% if trim %}
-            <div class="alert alert-info mt-3 py-1" role="alert">
-                <p class="ctext bg-transparent mb-0">Évaluations n° {{ evalx.0 }} et {{ evalx.1}} {{ matiere }} en {{ niveau }}</p>
-            </div>
-                {% if level_marks_form.level_marks_form.0.competences %}
-                <div class="d-flex align-items-end gap-2 gap-md-3 mb-3 w-100" id="bloc_competences">
-                    {% include 'competences.html' with evaluation=evl %}
-                </div>
-                {% endif %}
-            {% else %}
-            <div class="alert alert-info mt-3 py-1" role="alert">
-                <p class="ctext bg-transparent mb-0">Évaluation n° {{ eval }} {{ matiere }} en {{ niveau }}</p>
-            </div>
-                {% if level_marks_form.level_marks_form.0.competences %}
-                <div class="mt-3 mb-3 w-lg-75 cblock">
-                    <label for="competences" class="text-white control-label"><i>Compétences évaluées</i></label>
-                    {{ level_marks_form.level_marks_form.0.competences }}
-                </div>
-                {% endif %}
-            {% endif %}
-            <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead class="table-light">
-                {% if trim %}
-                <tr>
-                    <th class="align-middle py-1" rowspan="2">#</th>
-                    <th class="align-middle py-1 d-none d-md-table-cell" rowspan="2">Identifiant unique</th>
-                    <th class="align-middle py-1" rowspan="2">Nom(s) et Prénoms(s)</th>
-                    <th class="py-1" colspan="2">Note/20</th>
-                </tr>
-                <tr>
-                    <th class="py-1">Eval{{ evalx.0 }}</th>
-                    <th class="py-1">Eval{{ evalx.1 }}</th>
-                </tr>
-                {% else %}
-                <tr>
-                    <th class="py-1">#</th>
-                    <th class="py-1 d-none d-md-table-cell">Identifiant unique</th>
-                    <th class="py-1">Nom(s) et Prénoms(s)</th>
-                    <th class="py-1">Note/20</th>
-                </tr>
-                {% endif %}
-                </thead>
-                <tbody>
-                {% for level_marks_form in level_marks_form.level_marks_form %}
-                <tr class="table-danger border-primary">
-                    <td class="py-1 text-center fw-bold" colspan="{% if trim %} 5 {% else %} 4 {% endif %}">
-                        {{ level_marks_form.classroom.code }} {% if level_marks_form.lv2 %} : {{ level_marks_form.classroom.lv2 }}
-                        {% elif level_marks_form.lv3 %} : {{ level_marks_form.classroom.lv3 }} {% endif %}</td>
-                </tr>
-                    {% for mark_form in level_marks_form.marks_form %}
-                    <tr class="table-dark border-primary">
-                        <td class="py-1">{{ forloop.counter }}</td>
-                        <td class="py-1 d-none d-md-table-cell">{{ mark_form.unique_id }}</td>
-                        <td class="py-1">{{ mark_form.label }}</td>
-                        <td class="py-1">{{ mark_form.note }}</td>
-                        {% if mark_form.note1 %}
-                        <td class="py-1">{{ mark_form.note1 }}</td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
-            <div class="d-flex justify-content-center">
-            {% if trim %}
-            <button class="btn btn-success" type="submit" hx-post="{% url 'tlevel-marks-edit' %}" hx-include="select"
-                    hx-target="#marks_form" data-with-spinner><i class="bi bi-save bg-transparent me-2"></i>Sauvegarder</button>
-            {% else %}
-            <button class="btn btn-success" type="submit" hx-post="{% url 'level-marks-edit' %}" hx-include="select"
-                    hx-target="#marks_form" data-with-spinner><i class="bi bi-save bg-transparent me-2"></i>Sauvegarder</button>
-            {% endif %}
-            </div>
-        </form>
-    {% else %}
-    <div class="alert alert-info mt-3 py-2" role="alert">
-        <p class="ctext mb-0 bg-transparent">Aucun élève pour ce niveau.</p>
+  {% if level_marks_form.level_marks_form|length %}
+  <form method="post" enctype="multipart/form-data" id="marks_form">
+    {% csrf_token %}
+
+    <div class="alert alert-info py-2 small rounded-3 mt-3">
+      <i class="bi bi-info-circle me-2"></i>
+      {% if trim %}Évaluations n° {{ evalx.0 }} et {{ evalx.1 }} — {{ matiere }} en {{ niveau }}
+      {% else %}Évaluation n° {{ eval }} — {{ matiere }} en {{ niveau }}{% endif %}
+    </div>
+
+    {% if trim and level_marks_form.level_marks_form.0.competences %}
+    <div class="d-flex align-items-end gap-2 gap-md-3 mb-3 comp-wrap" id="bloc_competences">
+      {% include 'competences.html' with evaluation=evl %}
+    </div>
+    {% elif level_marks_form.level_marks_form.0.competences %}
+    <div class="mb-3 comp-wrap">
+      <label class="text-white control-label small"><i>Compétences évaluées</i></label>
+      {{ level_marks_form.level_marks_form.0.competences }}
     </div>
     {% endif %}
+
+    <div class="osm-table-outer mt-3">
+      <table class="table table-hover align-middle">
+        <thead>
+          {% if trim %}
+          <tr>
+            <th rowspan="2" style="width:36px;">#</th>
+            <th rowspan="2" class="d-none d-md-table-cell uid-cell">Identifiant</th>
+            <th rowspan="2">Nom(s) et Prénom(s)</th>
+            <th colspan="2" class="text-center">Note /20</th>
+          </tr>
+          <tr><th>Eval{{ evalx.0 }}</th><th>Eval{{ evalx.1 }}</th></tr>
+          {% else %}
+          <tr>
+            <th style="width:36px;">#</th>
+            <th class="d-none d-md-table-cell uid-cell">Identifiant</th>
+            <th>Nom(s) et Prénom(s)</th>
+            <th>Note /20</th>
+          </tr>
+          {% endif %}
+        </thead>
+        <tbody>
+          {% for lmf in level_marks_form.level_marks_form %}
+          <tr class="row-class-sep">
+            <td colspan="{% if trim %}5{% else %}4{% endif %}">
+              {{ lmf.classroom.code }}{% if lmf.lv2 %} : {{ lmf.classroom.lv2 }}{% elif lmf.lv3 %} : {{ lmf.classroom.lv3 }}{% endif %}
+            </td>
+          </tr>
+          {% for mark_form in lmf.marks_form %}
+          <tr>
+            <td style="color:rgba(255,255,255,0.3);font-size:0.78rem;">{{ forloop.counter }}</td>
+            <td class="d-none d-md-table-cell uid-cell">{{ mark_form.unique_id }}</td>
+            <td>{{ mark_form.label }}</td>
+            <td>{{ mark_form.note }}</td>
+            {% if mark_form.note1 %}<td>{{ mark_form.note1 }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-center mt-3">
+      {% if trim %}
+      <button class="btn btn-success fw-semibold px-5" type="submit" hx-post="{% url 'tlevel-marks-edit' %}" hx-include="select" hx-target="#marks_form" data-with-spinner>
+        <i class="bi bi-save me-2"></i>Sauvegarder
+      </button>
+      {% else %}
+      <button class="btn btn-success fw-semibold px-5" type="submit" hx-post="{% url 'level-marks-edit' %}" hx-include="select" hx-target="#marks_form" data-with-spinner>
+        <i class="bi bi-save me-2"></i>Sauvegarder
+      </button>
+      {% endif %}
+    </div>
+  </form>
+  {% else %}
+  <div class="alert alert-info py-2 small rounded-3 mt-3">
+    <i class="bi bi-people me-2"></i>Aucun élève pour ce niveau.
+  </div>
+  {% endif %}
 {% endif %}

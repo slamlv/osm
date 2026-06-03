@@ -1,67 +1,77 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container w-md-75 mt-4">
-{% if msg %}
-    <div class="alert alert-info mt-3 py-3 fade show alert-dismissible w-md-75 cblock" role="alert">
-        <button type="button" class="btn-close position absolute" data-bs-dismiss="alert" aria-label="Close"></button>
-        <p class="bg-transparent mb-0 ctext">{{ msg }}</p>
-    </div>
-{% else %}
-    <div class="alert alert-info py-1 mt-3" role="alert">
-        <p class="ctext bg-transparent mb-0">{{ titre }}</p>
-    </div>
-    <div class="table-responsive">
-    <table class="table table-striped table-hover table-bordered align-middle text-center">
-        <thead class="table-light">
+<style>
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:700px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 10px; white-space:nowrap; vertical-align:middle; text-align:center; }
+  .osm-table-outer thead th.col-left { text-align:left; min-width:120px; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.82rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 10px; vertical-align:middle; text-align:center; }
+  .osm-table-outer tbody td:first-child { text-align:left; font-weight:600; white-space:nowrap; }
+  .sub-val { font-size:0.7rem; display:block; }
+</style>
+
+<div class="px-3 px-md-4 py-3">
+
+  {% if msg %}
+  <div class="alert alert-info py-2 small rounded-3 d-flex align-items-center justify-content-between">
+    <span>{{ msg }}</span>
+    <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="alert"></button>
+  </div>
+  {% else %}
+
+  <div class="alert alert-info py-2 small rounded-3 mb-3">
+    <i class="bi bi-graph-up me-2"></i>{{ titre }}
+  </div>
+
+  <div class="osm-table-outer mb-3">
+    <table class="table table-hover align-middle">
+      <thead>
         <tr>
-            <th rowspan="2" class="border">Matière</th>
-            <th colspan="4" class="border">Leçons théoriques</th>
-            <th colspan="4" class="border">Leçons pratiques</th>
-            <th colspan="4" class="border">Total</th>
+          <th rowspan="2" class="col-left align-middle">Matière</th>
+          <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Leçons théoriques</th>
+          <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Leçons pratiques</th>
+          <th colspan="4" style="border-left:1px solid rgba(255,255,255,0.12);">Total</th>
         </tr>
         <tr>
-            <th>Trim1</th>
-            <th>Trim2</th>
-            <th>Trim3</th>
-            <th>Annuel</th>
-            <th>Trim1</th>
-            <th>Trim2</th>
-            <th>Trim3</th>
-            <th>Annuel</th>
-            <th>Trim1</th>
-            <th>Trim2</th>
-            <th>Trim3</th>
-            <th>Annuel</th>
+          <th>T1</th><th>T2</th><th>T3</th><th>An.</th>
+          <th style="border-left:1px solid rgba(255,255,255,0.12);">T1</th><th>T2</th><th>T3</th><th>An.</th>
+          <th style="border-left:1px solid rgba(255,255,255,0.12);">T1</th><th>T2</th><th>T3</th><th>An.</th>
         </tr>
-        </thead>
-        <tbody>
+      </thead>
+      <tbody>
         {% for prog in progression %}
-        <tr class="table-dark border-primary">
-            <td>{{ prog.label }}</td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt1 }}</span><br><span class="text-warning">{{ prog.plt1 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt2 }}</span><br><span class="text-warning">{{ prog.plt2 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt3 }}</span><br><span class="text-warning">{{ prog.plt3 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlt }}</span><br><span class="text-warning">{{ prog.plt }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr1 }}</span><br><span class="text-warning">{{ prog.plp1 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr2 }}</span><br><span class="text-warning">{{ prog.plp2 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr3 }}</span><br><span class="text-warning">{{ prog.plp3 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nlpr }}</span><br><span class="text-warning">{{ prog.plp }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl1 }}</span><br><span class="text-warning">{{ prog.pl1 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl2 }}</span><br><span class="text-warning">{{ prog.pl2 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl3 }}</span><br><span class="text-warning">{{ prog.pl3 }}</span></td>
-            <td><span class="d-inline-block text-nowrap text-info">{{ prog.nl }}</span><br><span class="text-warning">{{ prog.pl }}</span></td>
+        <tr>
+          <td>{{ prog.label }}</td>
+          <td><span class="text-info">{{ prog.nlt1 }}</span><br><span class="text-warning sub-val">{{ prog.plt1 }}</span></td>
+          <td><span class="text-info">{{ prog.nlt2 }}</span><br><span class="text-warning sub-val">{{ prog.plt2 }}</span></td>
+          <td><span class="text-info">{{ prog.nlt3 }}</span><br><span class="text-warning sub-val">{{ prog.plt3 }}</span></td>
+          <td><span class="text-info">{{ prog.nlt }}</span><br><span class="text-warning sub-val">{{ prog.plt }}</span></td>
+          <td><span class="text-info">{{ prog.nlpr1 }}</span><br><span class="text-warning sub-val">{{ prog.plp1 }}</span></td>
+          <td><span class="text-info">{{ prog.nlpr2 }}</span><br><span class="text-warning sub-val">{{ prog.plp2 }}</span></td>
+          <td><span class="text-info">{{ prog.nlpr3 }}</span><br><span class="text-warning sub-val">{{ prog.plp3 }}</span></td>
+          <td><span class="text-info">{{ prog.nlpr }}</span><br><span class="text-warning sub-val">{{ prog.plp }}</span></td>
+          <td><span class="text-info">{{ prog.nl1 }}</span><br><span class="text-warning sub-val">{{ prog.pl1 }}</span></td>
+          <td><span class="text-info">{{ prog.nl2 }}</span><br><span class="text-warning sub-val">{{ prog.pl2 }}</span></td>
+          <td><span class="text-info">{{ prog.nl3 }}</span><br><span class="text-warning sub-val">{{ prog.pl3 }}</span></td>
+          <td><span class="text-info">{{ prog.nl }}</span><br><span class="text-warning sub-val">{{ prog.pl }}</span></td>
         </tr>
         {% endfor %}
-        </tbody>
+      </tbody>
     </table>
-    </div>
-    {% if is_user %}
-    <div class="d-flex justify-content-center">
-        <a class="btn btn-warning" href="{% url 'progression-edit' %}">
-            <i class="bi bi-pencil me-2 bg-transparent"></i>Mettre à jour</a>
-    </div>
-    {% endif %}
-{% endif %}
+  </div>
+
+  {% if is_user %}
+  <div class="d-flex justify-content-center">
+    <a class="btn btn-warning fw-semibold" href="{% url 'progression-edit' %}">
+      <i class="bi bi-pencil me-2"></i>Mettre à jour
+    </a>
+  </div>
+  {% endif %}
+
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,95 +1,105 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="container w-md-75 w-lg-50">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {% if not livret %}
-            <div class="alert alert-info mt-3 cblock py-2" role="alert">
-            <p class="mb-0 bg-transparent">
-                NB : - Le fichier doit être au format .xls, .xlsx, ou .odt<br>
-                - Le fichier doit contenir les champs obligatoires : matricule, noms, prénoms (qui peut être vide),
-                date de naissance, lieu de naissance, sexe<br>
-                - Le fichier peut contenir les champs facultatifs : classe, statut (si non mentionné ou incorrect,
-                l'élève sera enregistré comme Nouveau)
-            </p>
-            </div>
-            <div class="row mt-3 w-sm-75 cblock">
-                <label for="file" class="text-white control-label">Fichier Excel ou LibreOffice</label>
-                <input class="form-control bg-dark text-white" type="file" id="file" name="file" accept=".xls,.xlsx,.ods">
-            </div>
-            <div class="d-flex gap-2 justify-content-center mt-3">
-                <a class="btn btn-secondary" type="submit" data-bs-toggle="tooltip" data-bs-placement="left"
-                    title="Télécharger le fichier Modèle" href="{{ MEDIA_URL }}/Modèle Liste des Élèves.xlsx">
-                        <i class="bi bi-file-earmark-spreadsheet me-2 bg-transparent"></i>Modèle</a>
-                <button class="btn btn-success" type="submit" data-bs-toggle="tooltip" data-bs-placement="right"
-                    title="Fichier Excel ou LibreOffice" data-with-spinner>
-                        <i class="bi bi-file-earmark-spreadsheet me-2 bg-transparent"></i>Importer
-                </button>
-            </div>
-            {% if rapport %}
-            <div class="alert alert-warning mt-3 fade show alert-dismissible" role="alert">
-                <button type="button" class="btn-close position absolute"
-                        data-bs-dismiss="alert" aria-label="Close"></button>
-                <h6 class="alert-heading fw-bold bg-transparent">Rapport :</h6>
-                <ul class="mb-0 bg-transparent">
-                {% for elt in rapport %}
-                    <li class="bg-transparent">
-                        <span class="{% if elt.0 %} text-success {% else %} text-danger {% endif %} bg-transparent">
-                            {% if elt.0 %} &#x2714 {% else %} &#x2718 {% endif %}</span>{{ elt.1 }}</li>
-                {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            {% else %}
-            <div class="alert alert-info mt-3 cblock py-2" role="alert">
-            <p class="mb-0 bg-transparent">
-                NB : - Rassurez-vous que les noms, prénoms, date et lieu de naissance enregistrés sur la plateforme
-                soient les mêmes que ceux envoyées à la DECC<br>
-                - Ne vous souciez pas du fait que les lieux de naissance et les prénoms
-                affichéés sur la plateforme ne soient pas tout en majuscule tel que dans le fichier Excel du livret<br>
-            </p>
-            </div>
-            <div class="row mt-3 w-sm-75 cblock">
-                <label for="file" class="text-white control-label">Livret SPIDER (fichier excel)</label>
-                <input class="form-control bg-dark text-white" type="file" id="file" name="file" accept=".xlsx">
-            </div>
-            <div class="d-flex gap-2 justify-content-center mt-3">
-                <button class="btn btn-success" type="submit" data-bs-toggle="tooltip" data-bs-placement="right"
-                    title="Remplir le Livret SPIDER" data-with-spinner>
-                        <i class="bi bi-file-earmark-spreadsheet me-2 bg-transparent"></i>Remplir
-                </button>
-            </div>
-            {% endif %}
-        </form>
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input[type=file] { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .rapport-item { display:flex; align-items:flex-start; gap:8px; padding:5px 0; font-size:0.85rem; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .rapport-item:last-child { border-bottom:none; }
+</style>
+
+<div class="container py-3" style="max-width:640px;">
+  <div class="form-card">
+    <div class="form-card-header d-flex align-items-center gap-2">
+      <i class="bi bi-file-earmark-spreadsheet text-success fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">{% if livret %}Livret SPIDER{% else %}Importation d'élèves{% endif %}</h6>
     </div>
-    <script>
-    document.querySelector('form').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
 
-        const btn = this.querySelector('[data-with-spinner]');
+        {% if not livret %}
+        <div class="alert alert-info py-2 small rounded-3 mb-4">
+          <i class="bi bi-info-circle me-2"></i>
+          Formats acceptés : <strong>.xls, .xlsx, .ods</strong><br>
+          Champs obligatoires : matricule, noms, prénoms, date de naissance, lieu de naissance, sexe.<br>
+          Champs facultatifs : classe, statut.
+        </div>
+        <div class="mb-4">
+          <label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Fichier Excel ou LibreOffice</label>
+          <input class="form-control" type="file" id="file" name="file" accept=".xls,.xlsx,.ods">
+        </div>
+        <div class="d-flex gap-2 justify-content-center mb-4">
+          <a class="btn btn-outline-secondary fw-semibold" href="{{ MEDIA_URL }}/Modèle Liste des Élèves.xlsx"
+             data-bs-toggle="tooltip" title="Télécharger le fichier Modèle">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Modèle
+          </a>
+          <button class="btn btn-success fw-semibold" type="submit"
+                  data-bs-toggle="tooltip" title="Fichier Excel ou LibreOffice" data-with-spinner>
+            <i class="bi bi-upload me-2"></i>Importer
+          </button>
+        </div>
 
-        const response = await fetch(this.action, {
-            method: 'POST',
-            body: new FormData(this),
-            headers: {'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value}
-        });
+        {% if rapport %}
+        <div class="alert alert-warning py-2 small rounded-3">
+          <p class="fw-bold mb-2"><i class="bi bi-clipboard-check me-2"></i>Rapport d'importation</p>
+          <div>
+            {% for elt in rapport %}
+            <div class="rapport-item">
+              <span class="{% if elt.0 %}text-success{% else %}text-danger{% endif %} fw-bold flex-shrink-0">
+                {% if elt.0 %}✔{% else %}✘{% endif %}
+              </span>
+              <span class="{% if elt.0 %}text-white{% else %}text-danger{% endif %}">{{ elt.1 }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
 
-        // Restaurer le bouton
-        btn.innerHTML = btn.dataset.originalHtml;
-        btn.disabled = false;
-        delete btn.dataset.originalHtml;
-        delete btn.dataset.spinnerActive;
+        {% else %}
+        <div class="alert alert-info py-2 small rounded-3 mb-4">
+          <i class="bi bi-info-circle me-2"></i>
+          Vérifiez que les noms, prénoms, date et lieu de naissance sur la plateforme correspondent à ceux envoyés à la DECC.
+        </div>
+        <div class="mb-4">
+          <label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Livret SPIDER (fichier Excel)</label>
+          <input class="form-control" type="file" id="file" name="file" accept=".xlsx">
+        </div>
+        <div class="d-flex justify-content-center">
+          <button class="btn btn-success fw-semibold px-5" type="submit"
+                  data-bs-toggle="tooltip" title="Remplir le Livret SPIDER" data-with-spinner>
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Remplir
+          </button>
+        </div>
+        {% endif %}
 
-        // Téléchargement
-        const filename = response.headers.get('Content-Disposition').split('filename=')[1];
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('[data-with-spinner]');
+    const response = await fetch(this.action, {
+        method: 'POST',
+        body: new FormData(this),
+        headers: {'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value}
     });
-    </script>
+    btn.innerHTML = btn.dataset.originalHtml;
+    btn.disabled = false;
+    delete btn.dataset.originalHtml;
+    delete btn.dataset.spinnerActive;
+    const filename = response.headers.get('Content-Disposition').split('filename=')[1];
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+</script>
 {% endblock %}

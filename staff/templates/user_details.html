@@ -1,111 +1,98 @@
 {% extends "base.html" %}
 
-{% load static %}
-
 {% block content %}
-    <div class="container w-md-75 w-lg-50 p-3">
-        <div class="row justify-content-center">
-            <div class="col">
-                <div class="card custom-shadow rounded-4">
-                    <div class="card-body text-center p-3">
-                    {% if object.photo %}
-                    <img src="{{ object.photo.url }}" alt="Photo de profil" class="profile-img mb-3"
-                    data-bs-toggle="modal" data-bs-target="#photoModal">
-                    {% else %}
-                    <img src="{% static 'image/no_pp.png' %}" alt="Photo de profil" class="profile-img mb-3">
-                    {% endif %}
-                    <h4 class="card-title text-white fw-bold">{{ user.username }}</h4>
-                    <hr class="border border-secondary border-2">
-                    <div class="row text-start">
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Civilité : </span>
-                            <span class="text-white fw-bold">{{ object.civilite }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Poste : </span>
-                            <span class="text-white fw-bold">{% if object.poste != "Autre" %} {{ object.post }} {% else %} Non défini {% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Nom(s) : </span>
-                            <span class="text-white fw-bold">{{ object.nom }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Prénom(s) : </span>
-                            <span class="text-white fw-bold">{% if object.prenom %}{{ object.prenom }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Grade : </span>
-                            <span class="text-white fw-bold">{% if object.grade %}{{ object.grade }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Email : </span>
-                            <span class="text-white fw-bold">{{ object.email }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact : </span>
-                            <span class="text-white fw-bold">{{ object.contact }}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Contact optionnel : </span>
-                            <span class="text-white fw-bold">{% if object.contact1 %}{{ object.contact1 }}{% else %}/{% endif %}</span>
-                        </div>
-                        <div class="col-sm-6 mb-2">
-                            <span class="text-white">Ancienneté : </span>
-                            <span class="text-white fw-bold">{% if object.since %}{{ object.since }}an(s){% else %}/{% endif %}</span>
-                        </div>
-                    </div>
-                    {% if dpc %}
-                    <div class="alert alert-info py-1" role="alert">
-                        <p class="ctext bg-transparent mb-0">Disciplines enseignées</p>
-                    </div>
-                    <table class="table table-striped">
-                        <tr class="table-light">
-                            <th>Discipline</th>
-                            <th>Classes</th>
-                        </tr>
-                    {% for d in dpc %}
-                        <tr class="table-dark">
-                            <td>{{ d.matiere }}</td>
-                            <td>
-                                {% for classe in d.classes %}
-                                {% if user.is_admin %}
-                                <a href="{% url 'classroom-teachers' id=classe.id %}" class="text-primary bg-transparent">
-                                    {{ classe.code }}</a>{% if not forloop.last %} * {% endif %}
-                                {% else %} {{ classe.code }} {% if not forloop.last %} * {% endif %}
-                                {% endif %}
-                                {% endfor %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </table>
-                    {% endif %}
-                    <div class="d-flex justify-content-center mb-3">
-                        <a class="btn text-bg-info" title="Emploi du temps" href="{% url 'user-timetable' %}">
-                            <i class="bi bi-clock me-2 bg-transparent"></i>Mon emploi du temps</a>
-                    </div>
-                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                        <a class="btn btn-warning" title="Modifier" href="{% url 'user-edit' %}">
-                            <i class="bi bi-pencil-square me-2 bg-transparent"></i>Modifier</a>
-                        <a class="btn btn-danger" title="Supprimer" href="{% url 'change_password' %}">
-                            <i class="bi bi-key me-2 bg-transparent"></i>Changer de mot de passe</a>
-                        <a class="btn btn-secondary" href="{% url 'index' %}">
-                            <i class="bi bi-arrow-left me-2 bg-transparent"></i>Retour</a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-body p-0">
-                        <button type="button" class="btn-close position-absolute end-0 m-3" data-bs-dismiss="modal"
-                                aria-label="Fermer"></button>
-                        <img src="{% if object.photo %} {{ object.photo.url }} {% endif %}" alt="Photo de profil"
-                             class="img-fluid w-100 rounded">
-                    </div>
-                </div>
-            </div>
-        </div>
+<style>
+  .detail-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .detail-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1.5rem; text-align:center; }
+  .info-row { display:flex; flex-direction:column; gap:2px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .info-row:last-child { border-bottom:none; }
+  .info-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.4); font-weight:600; }
+  .info-value { color:rgba(255,255,255,0.85); font-weight:600; font-size:0.95rem; word-break:break-word; }
+  .section-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:rgba(255,255,255,0.35); font-weight:700; margin:1rem 0 0.5rem; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:1rem; }
+  .osm-table-outer table { margin-bottom:0; min-width:280px; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.73rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 12px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.85rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+  .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45)!important; border:1px solid rgba(255,255,255,0.1)!important; border-radius:16px!important; }
+</style>
+
+<div class="container py-3" style="max-width:680px;">
+  <div class="detail-card">
+
+    <div class="detail-card-header">
+      {% if object.photo %}
+      <img src="{{ object.photo.url }}" alt="Photo" class="profile-img mb-3"
+           data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
+      {% else %}
+      <img src="{{ MEDIA_URL }}image/no_pp.png" alt="Photo" class="profile-img mb-3">
+      {% endif %}
+      <h5 class="text-white fw-bold mb-0">{{ user.username }}</h5>
     </div>
+
+    <div class="px-3 px-sm-4 py-3">
+      <div class="row g-0">
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Civilité</span><span class="info-value">{{ object.civilite }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Poste</span><span class="info-value">{% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Nom(s)</span><span class="info-value">{{ object.nom }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Prénom(s)</span><span class="info-value">{% if object.prenom %}{{ object.prenom }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Grade</span><span class="info-value">{% if object.grade %}{{ object.grade }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ object.email }}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Contact</span><span class="info-value">{{ object.contact }}</span></div></div>
+        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Contact optionnel</span><span class="info-value">{% if object.contact1 %}{{ object.contact1 }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Ancienneté</span><span class="info-value">{% if object.since %}{{ object.since }} an(s){% else %}—{% endif %}</span></div></div>
+      </div>
+
+      {% if dpc %}
+      <p class="section-title">Disciplines enseignées</p>
+      <div class="osm-table-outer">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Discipline</th><th>Classes</th></tr></thead>
+          <tbody>
+            {% for d in dpc %}
+            <tr>
+              <td class="fw-semibold">{{ d.matiere }}</td>
+              <td>
+                {% for classe in d.classes %}
+                {% if user.is_admin %}
+                <a href="{% url 'classroom-teachers' id=classe.id %}" class="text-info text-decoration-none me-1">{{ classe.code }}</a>
+                {% else %}
+                <span class="me-1">{{ classe.code }}</span>
+                {% endif %}
+                {% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-center mb-3">
+        <a class="btn btn-outline-info fw-semibold" href="{% url 'user-timetable' %}">
+          <i class="bi bi-clock me-2"></i>Mon emploi du temps
+        </a>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+        <a class="btn btn-warning fw-semibold" href="{% url 'user-edit' %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
+        <a class="btn btn-outline-danger" href="{% url 'change_password' %}"><i class="bi bi-key me-2"></i>Changer le mot de passe</a>
+        <a class="btn btn-outline-secondary" href="{% url 'index' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 bg-transparent">
+        <div class="modal-body p-0 position-relative">
+          <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2" data-bs-dismiss="modal" style="z-index:10;"></button>
+          {% if object.photo %}<img src="{{ object.photo.url }}" alt="Photo" class="img-fluid w-100 rounded-3">{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
