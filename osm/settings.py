@@ -16,6 +16,7 @@ from pathlib import Path
 from decouple import config
 from pathlib import Path
 import dj_database_url
+import cloudinary
 
 from django.conf.global_settings import STATICFILES_DIRS, CSRF_COOKIE_SECURE
 
@@ -45,6 +46,8 @@ ALLOWED_HOSTS = [
 
 SHARED_APPS = (
     'django_tenants',
+    'cloudinary',
+    'cloudinary_storage',
     'authentification.apps.AuthentificationConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -148,6 +151,18 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Configuration Cloudinary (via .env)
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+}
+
+# Remplacer le backend media
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 # Fichiers
 MEDIA_URL = '/media/'
