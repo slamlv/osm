@@ -46,8 +46,6 @@ ALLOWED_HOSTS = [
 
 SHARED_APPS = (
     'django_tenants',
-    'cloudinary',
-    'cloudinary_storage',
     'authentification.apps.AuthentificationConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,6 +53,8 @@ SHARED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
+    'cloudinary_storage',
     'mail'
 )
 
@@ -158,15 +158,15 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': config('CLOUDINARY_API_KEY'),
     'API_SECRET': config('CLOUDINARY_API_SECRET'),
+    'STATICFILES_MANIFEST_ROOT': os.path.join(BASE_DIR, 'manifest'),  # optionnel
 }
 
-# Remplacer le backend media
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",  # médias → Cloudinary
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  # tu utilises déjà whitenoise
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  # statiques → whitenoise
     },
 }
 
