@@ -64,20 +64,15 @@ class Command(BaseCommand):
         ))
 
     def migrate_model_images(self, model_path, field_name, label):
-        """
-        Migre les images d'un champ ImageField vers Cloudinary.
-        model_path: ex "student.Student", "staff.Personnel"
-        field_name: nom du champ ImageField
-        """
         from django.apps import apps
+        from django.conf import settings
 
         app_label, model_name = model_path.split(".")
         Model = apps.get_model(app_label, model_name)
 
-        # Filtrer les instances qui ont une image
         filter_kwargs = {
             f"{field_name}__isnull": False,
-            f"{field_name}__gt": "",  # exclure les chaînes vides
+            f"{field_name}__gt": "",
         }
         queryset = Model.objects.filter(**filter_kwargs)
         count = queryset.count()
@@ -91,13 +86,14 @@ class Command(BaseCommand):
 
         for instance in queryset:
             field = getattr(instance, field_name)
-            try:
-                photo_path = field.path
-            except Exception:
-                # Le fichier n'a pas de chemin local (déjà sur Cloudinary ?)
-                self.stdout.write(self.style.WARNING(
-                    f"    ⚠ {instance} — pas de chemin local, déjà migré ?"
-                ))
+
+            # Construire le chemin local manuellement
+            photo_path = os.path.join(settings.MEDIA_ROOT, field.name)
+
+            # Vérifier si le fichier est déjà sur Cloudinary
+            # (les URLs Cloudinary contiennent 'cloudinary' ou 'res.cloudinary.com')
+            if 'cloudinary' in field.name:
+                self.stdout.write(f"    ↩ {instance} — déjà sur Cloudinary, ignoré.")
                 continue
 
             if not os.path.exists(photo_path):
@@ -112,7 +108,6 @@ class Command(BaseCommand):
                 with open(photo_path, "rb") as f:
                     content = ContentFile(f.read())
 
-                # .save() déclenche l'upload vers Cloudinary via le storage backend
                 field.save(filename, content, save=True)
                 migrated += 1
                 self.stdout.write(self.style.SUCCESS(
