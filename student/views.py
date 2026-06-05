@@ -333,7 +333,7 @@ class ParentEdit(LoggedAdminView):
             parent = model_to_dict(parent)
             if parent != default:
                 message(self.request, "Informations du parent modifiées avec succès !")
-            return redirect("parents")
+            return redirect("parent-details", id=instance.pk)
         return render(self.request, self.template_name, {"form": form, "title": self.title,
                                                          "reset": "Annuler les changements"})
 
@@ -378,7 +378,7 @@ class StudentEdit(LoggedAdminView):
                 message(self.request, "Élève modifié avec succès.")
             else:
                 message(self.request, "Aucune modification effectuée.", msg_type="warning")
-            return redirect("students")
+            return redirect("student-details", id=default.pk)
         return render(self.request, self.template_name, {"form": form, "title": self.title, "reset": "Par défaut",
                                                          "nb": self.nb})
 

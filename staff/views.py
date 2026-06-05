@@ -259,7 +259,7 @@ class StaffMemberEdit(LoggedAdminView):
                                                                   contact=member.contact, email=member.email,
                                                                   civilite=member.civilite, poste=member.poste)
                 message(self.request, "Informations du membre du personnel modifiées avec succès !")
-            return redirect("staff")
+            return redirect("staff", id=default.pk)
         context = {"form": form, "title": self.title, 'reset': "Annuler les changements", 'back': reverse("staff")}
         return render(self.request, self.template_name, context)
 
