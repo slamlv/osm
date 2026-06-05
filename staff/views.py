@@ -330,6 +330,7 @@ class UserEdit(LoggedUserView):
         return get_object_or_404(members, user_id=self.request.user.pk)
 
     def post(self, *args, **kwargs):
+        from osm.utils import delete_image
         old_image = self.get_object().photo
         form_context = {'request': self.request, 'user': True, 'pp': True}
         form = MemberForm(self.request.POST, self.request.FILES, instance=self.get_object(), context=form_context)
@@ -343,8 +344,7 @@ class UserEdit(LoggedUserView):
                 member = form.save()
                 image = form.cleaned_data["photo"]
                 if old_image and old_image != image:
-                    if os.path.exists(old_image.path):
-                        os.remove(old_image.path)
+                    delete_image(old_image)
                 Personnel.update_disciplines(member, form.cleaned_data.get("discipline"))
                 message(self.request, "Vos informations ont étés modifiées avec succès.")
             return redirect("user-details")

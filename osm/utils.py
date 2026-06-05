@@ -34,6 +34,25 @@ from authentification.models import User, School
 from student.models import Student
 
 
+def delete_image(image):
+    """Supprime une image selon le backend : Cloudinary en prod, fichier local en dev."""
+    if not image:
+        return
+    try:
+        public_id = getattr(image, 'public_id', None)
+        if public_id:
+            import cloudinary.uploader
+            cloudinary.uploader.destroy(public_id)
+            return
+    except Exception:
+        pass
+    try:
+        if os.path.exists(image.path):
+            os.remove(image.path)
+    except Exception:
+        pass
+
+
 def with_users_school_schema(view_func):
     @wraps(view_func)
     def _wrapped_vied(request, *args, **kwargs):

@@ -25,7 +25,7 @@ from osm.forms import SearchForm
 from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
-    with_users_school_schema, school_year, generate_temp_file, resize_image
+    with_users_school_schema, school_year, generate_temp_file, resize_image, delete_image
 from pandas import DataFrame, read_excel, ExcelWriter
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Font
@@ -345,6 +345,7 @@ class ParentEdit(LoggedAdminView):
 
 
 class StudentEdit(LoggedAdminView):
+    from osm.utils import delete_image
     template_name = "add_student.html"
     title = "Modification des informations"
     nb = "NB : Si vous modifiez la salle de classe d'un élève, toutes ses notes préalablement enregistrées " \
@@ -371,8 +372,7 @@ class StudentEdit(LoggedAdminView):
             student = form.save()
             image = form.cleaned_data["photo"]
             if old_image and old_image != image:
-                if os.path.exists(old_image.path):
-                    os.remove(old_image.path)
+                delete_image(old_image)
             """
             TODO
             """

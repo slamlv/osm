@@ -128,7 +128,7 @@ class SchoolInformations(LoggedAdminView):
         return  render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
-        from osm.utils import message
+        from .utils import message, delete_image
         old_logo = self.request.user.school.logo
         school_form = SchoolForm(self.request.POST, self.request.FILES, instance=self.request.user.school,
                                  context={'request': self.request})
@@ -136,8 +136,7 @@ class SchoolInformations(LoggedAdminView):
             school_form.save()
             logo = school_form.cleaned_data["logo"]
             if old_logo and old_logo != logo:
-                if os.path.exists(old_logo.path):
-                    os.remove(old_logo.path)
+                delete_image(old_logo)
             message(self.request, 'Informations sauvegardées avec succès')
             return redirect("school_details")
         context = {'form': school_form, 'title': self.title}
