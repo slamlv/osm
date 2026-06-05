@@ -357,6 +357,7 @@ class StudentEdit(LoggedAdminView):
     def post(self, *args, **kwargs):
         from osm.utils import delete_image
         default = self.get_object()
+        default_pk = default.pk
         old_image = default.photo
         form = StudentForm(self.request.POST, self.request.FILES, context={'request': self.request},
                            instance=default)
@@ -378,7 +379,7 @@ class StudentEdit(LoggedAdminView):
                 message(self.request, "Élève modifié avec succès.")
             else:
                 message(self.request, "Aucune modification effectuée.", msg_type="warning")
-            return redirect("student-details", id=default.pk)
+            return redirect("student-details", id=default_pk)
         return render(self.request, self.template_name, {"form": form, "title": self.title, "reset": "Par défaut",
                                                          "nb": self.nb})
 
