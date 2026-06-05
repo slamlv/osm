@@ -150,6 +150,18 @@
     }
   }
 
+  // Trouve la checkbox Django "clear" associée à un file input.
+  // Django génère : id="<field>-clear_id" name="<field>-clear"
+  function getClearCheckbox(input) {
+    const id = input.id;
+    const name = input.name;
+    return (
+      (id   && document.querySelector(`input[type="checkbox"][id="${id}-clear_id"]`))   ||
+      (name && document.querySelector(`input[type="checkbox"][name="${name}-clear"]`))  ||
+      null
+    );
+  }
+
   // Init
   function init() {
     const forms = document.querySelectorAll(`form.${FORM_CLASS}`);
@@ -165,10 +177,47 @@
 
     fileInputs.forEach(input => {
       const preview = document.createElement('img');
-      preview.style = 'max-width:200px; display:none; margin-top:6px; border:1px solid #ddd; padding:4px;';
+      preview.style = 'max-width:200px; margin-top:6px; border:1px solid #ddd; padding:4px; border-radius:4px;';
+      preview.style.display = 'none';
       input.insertAdjacentElement('afterend', preview);
 
+      // --- Aperçu de l'image existante (déjà enregistrée, ex. Cloudinary) ---
+      // On cherche un data-current-url sur l'input, sinon on remonte au widget Django
+      // qui affiche un <a> ou <img> avec l'URL courante.
+      const currentUrl = input.dataset.currentUrl || (() => {
+        // Django ClearableFileInput rend un lien "Actuellement : <a href="...">..."
+        // juste avant le widget ; on le cherche dans le parent proche.
+        const parent = input.closest('.mb-3, .form-group, p, div') || input.parentElement;
+        const link = parent && parent.querySelector('a[href]');
+        if (link) {
+          const href = link.getAttribute('href');
+          if (/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(href) || href.includes('cloudinary')) return href;
+        }
+        return null;
+      })();
+
+      if (currentUrl) {
+        preview.src = currentUrl;
+        preview.style.display = '';
+      }
+
       let info = null;
+
+      // --- Checkbox Django "Effacer" ---
+      const clearCb = getClearCheckbox(input);
+      if (clearCb) {
+        clearCb.addEventListener('change', function () {
+          if (clearCb.checked) {
+            // L'utilisateur veut supprimer l'image : vide la sélection et masque l'aperçu
+            input.value = '';
+            compressedMap.delete(input);
+            if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (e) {} preview._url = null; }
+            preview.src = '';
+            preview.style.display = 'none';
+            if (info) info.textContent = '';
+          }
+        });
+      }
 
       input.addEventListener('change', async (e) => {
         // support only first file (keeps parity with your original)
@@ -178,10 +227,19 @@
 
         if (!f) {
           compressedMap.delete(input);
-          preview.style.display = 'none';
+          // Si pas de nouveau fichier, réafficher l'image existante si elle existe
+          if (currentUrl) {
+            preview.src = currentUrl;
+            preview.style.display = '';
+          } else {
+            preview.style.display = 'none';
+          }
           if (info) info.textContent = '';
           return;
         }
+
+        // Un nouveau fichier est sélectionné : décocher la checkbox "clear" si présente
+        if (clearCb) clearCb.checked = false;
 
         preview._url = URL.createObjectURL(f);
         preview.src = preview._url;
