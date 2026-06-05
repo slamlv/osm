@@ -51,12 +51,6 @@
           <div class="info-row"><span class="info-label">Lieu de naissance</span><span class="info-value">{{ object.lieu_naissance }}</span></div>
         </div>
         <div class="col-sm-6 ps-sm-3">
-          <div class="info-row"><span class="info-label">Contact père</span><span class="info-value">{% if object.pere %}{{ object.pere.contact }}{% else %}—{% endif %}</span></div>
-        </div>
-        <div class="col-sm-6 pe-sm-3">
-          <div class="info-row"><span class="info-label">Contact mère</span><span class="info-value">{% if object.mere %}{{ object.mere.contact }}{% else %}—{% endif %}</span></div>
-        </div>
-        <div class="col-sm-6 ps-sm-3">
           <div class="info-row">
             <span class="info-label">Père</span>
             <span class="info-value">
@@ -71,6 +65,12 @@
               {% if object.mere %}<a href="{% url 'parent-details' id=object.mere.pk %}" class="text-info text-decoration-none">{{ object.mother }}</a>{% else %}—{% endif %}
             </span>
           </div>
+        </div>
+        <div class="col-sm-6 ps-sm-3 {% if not object.pere %}d-none d-sm-block invisible{% endif %}">
+          <div class="info-row"><span class="info-label">Contact père</span><span class="info-value">{% if object.pere %}{{ object.pere.contact }}{% endif %}</span></div>
+        </div>
+        <div class="col-sm-6 pe-sm-3 {% if not object.mere %}d-none d-sm-block invisible{% endif %}">
+          <div class="info-row"><span class="info-label">Contact mère</span><span class="info-value">{% if object.mere %}{{ object.mere.contact }}{% endif %}</span></div>
         </div>
       </div>
 

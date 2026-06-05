@@ -64,7 +64,8 @@
         {% else %}
         <div class="d-flex justify-content-center">
           <button class="btn btn-primary fw-semibold px-5" type="submit" hx-include="#select" {% if not marks_sheet %}data-with-spinner{% endif %}>
-            <i class="bi bi-search me-2"></i>{% if not marks_sheet or cls_progression %}Soumettre{% else %}Télécharger{% endif %}
+            <i class="{% if not marks_sheet or cls_progression %} bi bi-send {% else %} bi bi-file-earmark-pdf {% endif %} me-2"></i>
+              {% if not marks_sheet or cls_progression %}Soumettre{% else %}Télécharger{% endif %}
           </button>
         </div>
         {% endif %}

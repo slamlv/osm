@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 <style>
@@ -23,7 +24,7 @@
   <div class="detail-card">
 
     <div class="detail-card-header">
-      <img src="{{ MEDIA_URL }}image/parent.png" alt="Parent" class="profile-img mb-3">
+      <img src="{% static 'image/parent.png' %}" alt="Parent" class="profile-img mb-3">
       <h5 class="text-white fw-bold mb-0">{{ object.nom }} {% if object.prenom %}{{ object.prenom }}{% endif %}</h5>
       <p class="text-white-50 small mb-0">{{ object.civilite }}</p>
     </div>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 <style>
@@ -27,7 +28,7 @@
       <img src="{{ object.photo.url }}" alt="Photo" class="profile-img mb-3"
            data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
       {% else %}
-      <img src="{{ MEDIA_URL }}image/no_pp.png" alt="Photo" class="profile-img mb-3">
+      <img src="{% static 'image/no_image.jpg' %}" alt="Photo" class="profile-img mb-3">
       {% endif %}
       <h5 class="text-white fw-bold mb-0">{{ user.username }}</h5>
     </div>
