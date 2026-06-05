@@ -39,13 +39,17 @@ def delete_image(image):
     if not image:
         return
     try:
-        public_id = getattr(image, 'public_id', None)
+        public_id = getattr(image, 'public_id', None) or getattr(image, 'name', None)
         if public_id:
             import cloudinary.uploader
+            # Retirer l'extension si présente (.png, .jpg, etc.)
+            import os as _os
+            public_id = _os.path.splitext(public_id)[0]
             cloudinary.uploader.destroy(public_id)
             return
-    except Exception:
-        pass
+    except Exception as e:
+        print(">>> Cloudinary destroy error:", e)
+    # Fallback local (dev)
     try:
         if os.path.exists(image.path):
             os.remove(image.path)
@@ -56,6 +60,8 @@ def delete_image(image):
 def with_users_school_schema(view_func):
     @wraps(view_func)
     def _wrapped_vied(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
         if not request.user.is_superuser:
             with schema_context(request.user.school.schema_name):
                 return view_func(request, *args, **kwargs)
@@ -67,6 +73,8 @@ def with_users_school_schema(view_func):
 def admin_required(view_func):
     @wraps(view_func)
     def _wrapped_vied(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
         if not request.user.is_superuser and request.user.is_admin:
             return view_func(request, *args, **kwargs)
         elif request.user.is_superuser:
@@ -78,6 +86,8 @@ def admin_required(view_func):
 
 class WithUsersSchoolSchema:
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
         if not request.user.is_superuser:
             with schema_context(request.user.school.schema_name):
                 return super().dispatch(request, *args, **kwargs)
@@ -90,6 +100,8 @@ class LoginRequired(LoginRequiredMixin):
 
 class AdminRequired:
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
         if not request.user.is_superuser and request.user.is_admin:
             return super().dispatch(request, *args, **kwargs)
         elif request.user.is_superuser:
@@ -299,13 +311,7 @@ class BaseStaffMemberTimetable(View):
             data['time_table'], data['infos'], data['school'], data['recap_and_total'] = (
                 staffmember.timetable(mp, school_id, download=True)
             )
-        temp_filename, final_filename = generate_temp_file(f"{data['filename']}.pdf", StaffMemberTimeTable(data=data))
-        url = reverse("download_and_delete", args=[temp_filename])
-        return JsonResponse({
-            'success': True,
-            'url': url,
-            'display': final_filename
-        })
+        return pdf_response(StaffMemberTimeTable(data=data), f"{data['filename']}.pdf")
 
 
 class BaseDetailView(View):
@@ -350,7 +356,7 @@ class DetailView(LoginRequired, WithUsersSchoolSchema, BaseDetailView):
     pass
 
 
-class ADetailView(AdminRequired, WithUsersSchoolSchema, BaseDetailView):
+class ADetailView(LoginRequired, AdminRequired, WithUsersSchoolSchema, BaseDetailView):
     pass
 
 
@@ -440,9 +446,9 @@ def one_escape(string):
 def greet():
     date_time = datetime.now()
     hour = date_time.hour
-    if 0 <= hour < 12:
+    if 0 <= hour <= 12:
         salutation = "Bonjour"
-    elif 12 <= hour < 18:
+    elif 12 < hour < 18:
         salutation = "Bon après-midi"
     else:
         salutation = "Bonsoir"
@@ -552,17 +558,18 @@ def truncate_str(pdf, str_value: str, max_with: float):
             return truncate_value
 
 
-def generate_temp_file(final_filename, fpdf_object):
-    temp_filename = f"{uuid.uuid4().hex}.pdf"
-    filepath = os.path.join(settings.MEDIA_ROOT, "temp", temp_filename)
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-
+def pdf_response(fpdf_object, final_filename):
+    """Retourne directement un FileResponse en mémoire — aucun fichier temp."""
     buffer = BytesIO()
     fpdf_object.output(buffer)
     buffer.seek(0)
-    with open(filepath, 'wb') as file:
-        file.write(buffer.read())
-    return temp_filename, final_filename
+    filename_ascii = final_filename.encode('ascii', 'ignore').decode('ascii')
+    quoted = quote(final_filename)
+    response = FileResponse(buffer, as_attachment=True, filename=filename_ascii)
+    response['Content-Disposition'] = (
+        f"attachment; filename='{filename_ascii}'; filename*=UTF-8''{quoted}"
+    )
+    return response
 
 
 def add_minutes(my_time: time, minutes: int):
@@ -577,37 +584,6 @@ def add_minutes(my_time: time, minutes: int):
         new_minutes -= 60
         hour += 1
     return time(hour=hour, minute=new_minutes)
-
-
-@logged_admin_view
-def download_and_delete(request, filename):
-    filepath = os.path.join(settings.MEDIA_ROOT, "temp", filename)
-    if not os.path.exists(filepath):
-        return render(request, "404.html")
-    final_filename = request.GET.get('display', filename)
-    final_filename_ascii = final_filename.encode('ascii', "ignore").decode('ascii')
-    response = FileResponse(open(filepath, 'rb'), as_attachment=True)
-    quoted_filename = quote(final_filename)
-    try:
-        open(filepath, 'rb')
-    except:
-        return request(request, "404.html")
-    response['Content-Disposition'] = (
-        f"attachement; filename=\'{final_filename_ascii}\'; filename*=UTF-8''{quoted_filename}"
-    )
-
-    # Delete
-    def delete_after_15s(path):
-        def target():
-            import time as time_module
-            time_module.sleep(15)
-            try:
-                os.remove(path)
-            except:
-                pass
-        threading.Thread(target=target).start()
-    delete_after_15s(filepath)
-    return response
 
 
 def default_competences(level, matiere, evalx):

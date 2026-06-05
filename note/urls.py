@@ -2,7 +2,7 @@ from django.urls import path
 from .views import Marks, MarksEdit, classrooms_set, SetPeriods, MarksCheck, check, Bulletin, TrimesterMarks,\
     TrimesterMarksEdit, competences, LevelMarks, LevelMarksEdit, levels_set, TLevelMarksEdit,\
     TLevelMarks, MarksReport, reload_period, MarksCopy, ReloadCopyForm, ReloadCopyFormEvals, ExamReport,\
-    download_and_delete, TableauHonneur, LivretBEPC
+    TableauHonneur, LivretBEPC
 
 urlpatterns = [
     path("marks", Marks.as_view(), name="marks"),
@@ -21,7 +21,6 @@ urlpatterns = [
     path("tlevel-marks-edit", TLevelMarksEdit.as_view(), name="tlevel-marks-edit"),
     path("trimester-marks-edit", TrimesterMarksEdit.as_view(), name="trimester-marks-edit"),
     path("bulletin", Bulletin.as_view(), name="bulletin"),
-    path("download_and_delete-<str:filename>", download_and_delete, name="download_and_delete"),
     path("marks_report", MarksReport.as_view(), name="marks_report"),
     path("exam_report", ExamReport.as_view(), name="exam_report"),
     path("tableau_honneur", TableauHonneur.as_view(), name="tableau_honneur"),

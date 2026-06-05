@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
-{% get_media_prefix as MEDIA_URL %}
+
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -766,112 +766,90 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 </script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const form = document.getElementById("download-form");
-  if (!form) return;
-  const spinner = document.getElementById("spinner");
-  const btnText = document.getElementById("btn-text");
-  const erreurZone = document.getElementById("error-zone");
+(function () {
+  function bindDownloadForm(form) {
+    if (!form || form.dataset.downloadBound) return;
+    form.dataset.downloadBound = 'true';
 
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
+    const spinner   = form.querySelector('#spinner');
+    const btnText   = form.querySelector('#btn-text');
+    const errZone   = form.querySelector('#error-zone');
 
-    erreurZone.classList.add("d-none");
-    erreurZone.innerText = "";
+    function showSpinner()  { if (spinner) spinner.classList.remove('d-none'); if (btnText) btnText.classList.add('d-none'); }
+    function hideSpinner()  { if (spinner) spinner.classList.add('d-none');    if (btnText) btnText.classList.remove('d-none'); }
+    function showError(msg) { if (!errZone) return; errZone.innerText = msg; errZone.classList.remove('d-none'); }
+    function clearError()   { if (!errZone) return; errZone.innerText = ''; errZone.classList.add('d-none'); }
 
-    spinner.classList.remove("d-none");
-    btnText.classList.add("d-none");
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearError();
+      showSpinner();
 
-    const formData = new FormData(form);
-
-    fetch(form.action, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": form.querySelector('[name=csrfmiddlewaretoken]').value,
-      },
-      body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const url = data.url + "?display=" + encodeURIComponent(data.display);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        erreurZone.innerText = data.message || "Une erreur inconnue est survenue.";
-        erreurZone.classList.remove("d-none");
-      }
-    })
-    .catch(error => {
-      erreurZone.innerText = "Erreur lors de la communication avec le serveur.";
-      erreurZone.classList.remove("d-none");
-      console.error(error);
-    })
-    .finally(() => {
-      spinner.classList.add("d-none");
-      btnText.classList.remove("d-none");
-    });
-  });
-});
-</script>
-
-<script>
-document.addEventListener("htmx:afterSwap", function (e) {
-    const form = e.target.querySelector("#download-form");
-    if (!form) return; // aucun formulaire dans ce fragment
-
-    const spinner = form.querySelector("#spinner");
-    const btnText = form.querySelector("#btn-text");
-    const erreurZone = form.querySelector("#error-zone");
-
-    form.addEventListener("submit", function (evt) {
-        evt.preventDefault();
-
-        erreurZone.classList.add("d-none");
-        erreurZone.innerText = "";
-
-        spinner.classList.remove("d-none");
-        btnText.classList.add("d-none");
-
-        const formData = new FormData(form);
-
-        fetch(form.action, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value,
-            },
-            body: formData,
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const url = data.url + "?display=" + encodeURIComponent(data.display);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = "";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } else {
-                erreurZone.innerText = data.message || "Une erreur inconnue est survenue.";
-                erreurZone.classList.remove("d-none");
-            }
-        })
-        .catch(error => {
-            erreurZone.innerText = "Erreur lors de la communication avec le serveur.";
-            erreurZone.classList.remove("d-none");
-            console.error(error);
-        })
-        .finally(() => {
-            spinner.classList.add("d-none");
-            btnText.classList.remove("d-none");
+      fetch(form.action || window.location.href, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value },
+        body: new FormData(form),
+      })
+      .then(function (response) {
+        // La vue retourne directement un PDF (Content-Disposition: attachment)
+        const ct = response.headers.get('Content-Type') || '';
+        if (!response.ok) {
+          return response.text().then(function (t) { throw new Error(t || ('Erreur ' + response.status)); });
+        }
+        if (ct.includes('application/pdf') || ct.includes('application/octet-stream')) {
+          // Déclencher le téléchargement depuis le blob reçu
+          const disposition = response.headers.get('Content-Disposition') || '';
+          let filename = 'document.pdf';
+          const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+          const asciiMatch = disposition.match(/filename=['"]?([^;'"]+)['"]?/i);
+          if (utf8Match)  filename = decodeURIComponent(utf8Match[1]);
+          else if (asciiMatch) filename = asciiMatch[1].trim();
+          return response.blob().then(function (blob) {
+            const url  = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href     = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+          });
+        }
+        // Fallback : réponse JSON (ancien format — rétrocompatibilité)
+        return response.json().then(function (data) {
+          if (data.success) {
+            const url  = data.url + '?display=' + encodeURIComponent(data.display);
+            const link = document.createElement('a');
+            link.href     = url;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            showError(data.message || 'Une erreur inconnue est survenue.');
+          }
         });
+      })
+      .catch(function (err) {
+        showError('Erreur lors de la communication avec le serveur.');
+        console.error(err);
+      })
+      .finally(hideSpinner);
     });
-});
+  }
+
+  // Chargement initial
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('download-form');
+    if (form) bindDownloadForm(form);
+  });
+
+  // Après injection HTMX
+  document.addEventListener('htmx:afterSwap', function (e) {
+    const form = e.target.querySelector ? e.target.querySelector('#download-form') : null;
+    if (form) bindDownloadForm(form);
+  });
+})();
 </script>
 
 <script>

@@ -25,7 +25,7 @@ from osm.forms import SearchForm
 from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
-    with_users_school_schema, school_year, generate_temp_file, resize_image, delete_image
+    with_users_school_schema, school_year, pdf_response, resize_image
 from pandas import DataFrame, read_excel, ExcelWriter
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Font
@@ -61,13 +61,7 @@ class StudentsIdCards(LoggedAdminView):
                     'success': False,
                     'message': "Aucun élève dans cette salle de classe"
                 })
-        temp_filename, final_filename = generate_temp_file(f"{filename}.pdf", StudentsIdentityCards(data=data))
-        url = reverse("download_and_delete", args=[temp_filename])
-        return JsonResponse({
-            'success': True,
-            'url': url,
-            'display': final_filename
-        })
+        return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")
 
 
 # Exportation de la liste des élèves dans un fichier Excel
@@ -345,7 +339,6 @@ class ParentEdit(LoggedAdminView):
 
 
 class StudentEdit(LoggedAdminView):
-    from osm.utils import delete_image
     template_name = "add_student.html"
     title = "Modification des informations"
     nb = "NB : Si vous modifiez la salle de classe d'un élève, toutes ses notes préalablement enregistrées " \
@@ -362,6 +355,7 @@ class StudentEdit(LoggedAdminView):
         return get_object_or_404(students, pk=student_id)
 
     def post(self, *args, **kwargs):
+        from osm.utils import delete_image
         default = self.get_object()
         old_image = default.photo
         form = StudentForm(self.request.POST, self.request.FILES, context={'request': self.request},

@@ -12,8 +12,7 @@ from urllib.parse import quote
 from django.db.models.expressions import result
 
 from osm.utils import formated_float, resized_image, school_year, message, LoggedUserView, LoggedAdminView, \
-    logged_user_view, logged_admin_view, resize_image, truncate_str, generate_temp_file, download_and_delete, \
-    base_infos, base_header
+    logged_user_view, logged_admin_view, resize_image, truncate_str, base_infos, base_header, pdf_response
 from django.db.models import Sum
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -865,13 +864,7 @@ class Bulletin(LoggedAdminView):
             user = User.objects.select_related('school').get(id=self.request.user.id)
             data['school_data'] = user.school.school_to_dict()
             data['trimestre'], data['annee'], data['filename'], data['seuil'] = trimestre, school_year(), filename, seuil
-            temp_filename, final_filename = generate_temp_file(filename, ReportCard(data=data))
-            url = reverse("download_and_delete", args=[temp_filename])
-            return JsonResponse({
-                'success': True,
-                'url': url,
-                'display': final_filename
-            })
+            return pdf_response(ReportCard(data=data), filename)
 
 
 class MarksReport(LoggedAdminView):
@@ -917,13 +910,7 @@ class MarksReport(LoggedAdminView):
             data['school_data'] = user.school
             data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, school_year(), filename, \
                 (f"E{evl_in[0]}", f"E{evl_in[1]}")
-            temp_filename, final_filename = generate_temp_file(filename, TMarksReport(data=data))
-            url = reverse("download_and_delete", args=[temp_filename])
-            return JsonResponse({
-                'success': True,
-                'url': url,
-                'display': final_filename
-            })
+            return pdf_response(TMarksReport(data=data), filename)
 
 
 class ExamReport(LoggedAdminView):
@@ -971,13 +958,7 @@ class ExamReport(LoggedAdminView):
             user = User.objects.select_related('school').get(id=self.request.user.id)
             data['school_data'] = user.school
             data['trimestre'], data['annee'], data['filename'], data['seuil'] = trimestre, school_year(), filename, seuil
-            temp_filename, final_filename = generate_temp_file(filename, ExamRecord(data=data))
-            url = reverse("download_and_delete", args=[temp_filename])
-            return JsonResponse({
-                'success': True,
-                'url': url,
-                'display': final_filename
-            })
+            return pdf_response(ExamRecord(data=data), filename)
 
 
 class TableauHonneur(LoggedAdminView):
@@ -1041,13 +1022,7 @@ class TableauHonneur(LoggedAdminView):
                 user = User.objects.select_related('school').get(id=self.request.user.id)
                 datas['school_data'], datas['classe'] = user.school, classroom.code
                 datas['trimestre'], datas['annee'], datas['filename'] = trimestre.lower(), school_year(), filename
-                temp_filename, final_filename = generate_temp_file(filename, TableaudHonneur(data=datas))
-                url = reverse("download_and_delete", args=[temp_filename])
-                return JsonResponse({
-                    'success': True,
-                    'url': url,
-                    'display': final_filename
-                })
+                return pdf_response(TableaudHonneur(data=datas), filename)
 
 
 class TableaudHonneur(FPDF):

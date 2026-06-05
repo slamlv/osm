@@ -6,7 +6,7 @@ from fpdf.enums import TableHeadingsDisplay
 
 from authentification.models import TrancheHoraire, School
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
-    logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, generate_temp_file, truncate_str, \
+    logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
     base_header, base_infos
 from django.db.models import Q
 from django.forms import model_to_dict
@@ -328,13 +328,7 @@ class TimeTable(LoggedAdminView):
                     self.get_time_table(classroom_id, download=True)
                 )
                 data['filename'] += f" {data['classroom']}"
-            temp_filename, final_filename = generate_temp_file(f"{data['filename']}.pdf", ClassroomTimeTable(data=data))
-            url = reverse("download_and_delete", args=[temp_filename])
-            return JsonResponse({
-                'success': True,
-                'url': url,
-                'display': final_filename
-            })
+            return pdf_response(ClassroomTimeTable(data=data), f"{data['filename']}.pdf")
         except signing.BadSignature:
             return JsonResponse({
                 'success': False,

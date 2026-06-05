@@ -2,14 +2,18 @@
 
 {% block content %}
 <style>
-  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
-  .osm-table-outer table { margin-bottom:0; min-width:480px; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; width:100%; }
+  .osm-table-outer table { margin-bottom:0; min-width:480px; width:100%; }
   .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
   .osm-table-outer thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
   .osm-table-outer thead th:first-child { text-align:left; min-width:80px; }
   .osm-table-outer tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; border-color:rgba(255,255,255,0.06)!important; }
   .osm-table-outer tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
-  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:5px 7px; vertical-align:middle; }
+  /* Hauteur de ligne fixe (sauf les lignes de pause) */
+  .osm-table-outer tbody tr:not(.pause-row) { height:50px; }
+  /* Le bloc de cours occupe toute la hauteur de la cellule */
+  .osm-table-outer td .osm-slot-block { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2px 4px; }
   .recap-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
   .recap-sub { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:0.5rem 0.75rem; margin-top:0.5rem; }
   .download-bar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
@@ -40,7 +44,7 @@
             {% if elt and not forloop.first %}
             <td rowspan="{{ elt.rowspan }}">
               {% if elt.matiere %}
-              <div class="{{ elt.colors }} rounded py-1 text-center fw-bold">
+              <div class="{{ elt.colors }} rounded text-center fw-bold osm-slot-block">
                 <span style="font-size:0.8rem;">{{ elt.matiere }}</span>
                 <div class="small {{ elt.colors }}" style="font-size:0.72rem;">{{ elt.classes }}</div>
               </div>
