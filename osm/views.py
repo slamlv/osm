@@ -130,12 +130,6 @@ class SchoolInformations(LoggedAdminView):
     def post(self, *args, **kwargs):
         from .utils import message, delete_image
         old_logo = self.request.user.school.logo
-        import cloudinary.uploader
-        import os as _os
-        public_id = _os.path.splitext(old_logo.name)[0]
-        print(">>> public_id envoyé à Cloudinary:", public_id)
-        result = cloudinary.uploader.destroy(public_id)
-        print(">>> résultat Cloudinary:", result)
         school_form = SchoolForm(self.request.POST, self.request.FILES, instance=self.request.user.school,
                                  context={'request': self.request})
         if school_form.is_valid():

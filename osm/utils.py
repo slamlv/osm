@@ -39,22 +39,16 @@ def delete_image(image):
     if not image:
         return
     try:
-        public_id = getattr(image, 'public_id', None) or getattr(image, 'name', None)
-        if public_id:
-            import cloudinary.uploader
-            # Retirer l'extension si présente (.png, .jpg, etc.)
-            import os as _os
-            public_id = _os.path.splitext(public_id)[0]
-            cloudinary.uploader.destroy(public_id)
-            return
-    except Exception as e:
-        print(">>> Cloudinary destroy error:", e)
-    # Fallback local (dev)
-    try:
-        if os.path.exists(image.path):
-            os.remove(image.path)
+        import os as _os
+        public_id = _os.path.splitext(image.name)[0]
+        import cloudinary.uploader
+        cloudinary.uploader.destroy(public_id)
     except Exception:
-        pass
+        try:
+            if os.path.exists(image.path):
+                os.remove(image.path)
+        except Exception:
+            pass
 
 
 def with_users_school_schema(view_func):
