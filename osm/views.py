@@ -27,8 +27,6 @@ def offline_index(request):
 @login_required(login_url="signin")
 @with_users_school_schema
 def index(request):
-    from student.models import StudentEnrollment
-    print(StudentEnrollment.objects.all())
     activities = []
     exists = False
     if Activities.objects.exists():
