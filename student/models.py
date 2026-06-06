@@ -3,7 +3,7 @@ import django.db.models
 from django.db import models
 from django.db.models import UniqueConstraint
 from classroom.models import ClassRoom
-from authentification.models import Civilite
+from authentification.models import Civilite, SchoolYear
 from django.db.models import Q
 from django.db.models import When, Case, Value, IntegerField, F
 from collections import defaultdict
@@ -483,3 +483,100 @@ class StudentDiscipline(models.Model):
 
     class Meta:
         db_table = "StudentDiscipline"
+
+
+class EnrollmentStatus(models.TextChoices):
+    """
+    Décision prise pour l'élève à la fin de l'année.
+
+    - EN_COURS  : valeur par défaut tant que l'année n'est pas clôturée.
+    - PROMU     : passe en classe supérieure (next_classroom rempli).
+    - REDOUBLE  : refait la même classe (next_classroom = même niveau).
+    - TRANSFERE : quitte pour un autre établissement.
+    - SORTI     : a quitté l'établissement (ex: après le bac) ou est exclu.
+    """
+    EN_COURS = "En cours", "Année en cours"
+    PROMU = "Promu", "Promu (classe supérieure)"
+    REDOUBLE = "Redoublant", "Redoublant"
+    TRANSFERE = "Transféré", "Transféré (autre établissement)"
+    SORTI = "Sorti", "A terminé son cursus ou est exclu"
+
+
+class StudentEnrollment(models.Model):
+    """
+    Trace le passage d'un élève dans une classe pour une année scolaire donnée.
+
+    C'est l'historique du parcours : un élève a un enrollment par année passée
+    dans l'établissement. On peut ainsi reconstituer tout son cursus, et après
+    la clôture (qui nettoie les notes), l'essentiel reste consultable ici
+    (classe, moyenne figée, décision).
+    """
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="enrollments"
+    )
+
+    school_year = models.ForeignKey(
+        # PROTECT : on interdit la suppression d'une année tant qu'il existe des
+        # inscriptions rattachées -> on ne perd jamais l'historique par accident.
+        SchoolYear,
+        on_delete=models.PROTECT,
+        related_name="enrollments"
+    )
+
+    # Classe occupée par l'élève PENDANT cette année.
+    classroom = models.ForeignKey(
+        ClassRoom,
+        on_delete=models.SET_NULL,
+        related_name="enrollments",
+        null=True
+    )
+
+    # Classe prévue pour l'année SUIVANTE, saisie par le prof principal en fin
+    # d'année AVANT la clôture. Reste vide si l'élève est transféré/sorti.
+    next_classroom = models.ForeignKey(
+        ClassRoom,
+        on_delete=models.SET_NULL,
+        related_name="future_enrollments",
+        null=True,
+        blank=True
+    )
+
+    # Décision de fin d'année (saisie par le prof principal, appliquée à la clôture).
+    decision = models.CharField(
+        choices=EnrollmentStatus.choices,
+        max_length=15,
+        default=EnrollmentStatus.EN_COURS
+    )
+
+    # Moyennes et tangs FIGÉESau moment de la clôture. On la stocke ici pour
+    # garder une trace consultable même après le nettoyage des notes en base.
+    moyenne_t1 = models.FloatField(null=True, blank=True)
+    rang_t1 = models.IntegerField(null=True, blank=True)
+    moyenne_t2 = models.FloatField(null=True, blank=True)
+    rang_t2 = models.IntegerField(null=True, blank=True)
+    moyenne_t3 = models.FloatField(null=True, blank=True)
+    rang_t3 = models.IntegerField(null=True, blank=True)
+    moyenne_annuelle = models.FloatField(null=True, blank=True)
+    rang_annuel = models.IntegerField(null=True, blank=True)
+
+    # Traçabilité de la décision : qui l'a prise et quand.
+    decided_by = models.CharField(max_length=80, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = '"StudentEnrollment"'
+        ordering = ['-school_year__annee_debut']
+        constraints = [
+            # Un élève ne peut avoir qu'UNE inscription par année scolaire.
+            models.UniqueConstraint(
+                fields=["student", "school_year"],
+                name="unique_enrollment_per_year"
+            )
+        ]
+
+    def __str__(self):
+        classe = self.classroom.code if self.classroom else "—"
+        return f"{self.student} — {classe} ({self.school_year})"

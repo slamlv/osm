@@ -2,10 +2,66 @@ from django_tenants.models import TenantMixin, DomainMixin
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from datetime import time
-from django.conf import settings
-from os.path import join
 
 # Create your models here.
+
+
+class SchoolYear(models.Model):
+    """
+    Représente une année scolaire (ex: "2024/2025").
+
+    Remplace l'ancienne fonction qui calculait l'année à la volée : une table
+    permet de porter un ÉTAT (année courante, dates d'ouverture/clôture) et de
+    servir de point d'ancrage pour les clés étrangères (enrollments, archives).
+    """
+
+    # Libellé d'affichage, généré automatiquement dans save() (ex: "2024/2025").
+    libelle = models.CharField(max_length=9, unique=True, blank=True)
+
+    # Année de début sous forme d'entier (ex: 2024).
+    # Sert de clé de tri FIABLE (tri numérique), plus solide qu'un tri sur la
+    # chaîne "2024/2025". C'est ce champ qu'on remplit ; le libellé en découle.
+    annee_debut = models.IntegerField(unique=True)
+
+    # Indique l'année en cours. Une SEULE année peut avoir is_current=True
+    # (voir la contrainte partielle dans Meta plus bas).
+    is_current = models.BooleanField(default=False)
+
+    # Dates de cycle de vie de l'année (utiles pour l'archivage / la clôture).
+    date_ouverture = models.DateField(null=True, blank=True)
+    date_cloture = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = '"SchoolYear"'
+        ordering = ['-annee_debut']  # la plus récente en premier
+        verbose_name = "Année Scolaire"
+        verbose_name_plural = "Années Scolaires"
+        constraints = [
+            # Garde-fou au niveau BASE DE DONNÉES : impossible d'avoir deux
+            # années marquées "courantes" simultanément, même en cas de bug
+            # applicatif. (Même pattern que ta contrainte partielle sur l'email
+            # du Parent.)
+            models.UniqueConstraint(
+                fields=['is_current'],
+                condition=models.Q(is_current=True),
+                name='unique_current_school_year'
+            )
+        ]
+
+    def __str__(self):
+        return self.libelle
+
+    def save(self, *args, **kwargs):
+        # Génère le libellé automatiquement à partir de annee_debut
+        # si on ne l'a pas fourni manuellement (ex: 2024 -> "2024/2025").
+        if not self.libelle and self.annee_debut:
+            self.libelle = f"{self.annee_debut}/{self.annee_debut + 1}"
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def current(cls):
+        """Retourne l'année scolaire courante (ou None s'il n'y en a pas)."""
+        return cls.objects.filter(is_current=True).first()
 
 
 class Poste(models.TextChoices):
@@ -42,7 +98,7 @@ class School(TenantMixin):
 
     nom = models.CharField(verbose_name="Nom", max_length=50)
     name = models.CharField(verbose_name="Name", max_length=50)
-    type_ets = models.CharField(choices=Type.choices, verbose_name="Type", default=Type.GSS, max_length=20)
+    type_ets = models.CharField(choices=Type.choices, verbose_name="Type", default=Type.GSS)
     region = models.CharField(verbose_name="Délégation régionale", max_length=50, default="DÉLÉGATION RÉGIONALE")
     departement = models.CharField(verbose_name="Délégation départementale", max_length=50, default="DÉLÉGATION DÉPARTEMENTALE")
     rgn = models.CharField(verbose_name="Regional delegation", max_length=50, default="REGIONAL DELEGATION")
@@ -89,7 +145,7 @@ class School(TenantMixin):
         return {
             'nom': self.nom,
             'name': self.name,
-            'logo': self.logo if self.logo else join(settings.STATIC_ROOT, "image", "no_image.jpg"),
+            'logo': self.logo if self.logo else "static/image/no_image.jpg",
             'motto': self.motto if self.motto else "",
             'immatriculation': self.immatriculation,
             'region': self.region,

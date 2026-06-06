@@ -1,7 +1,7 @@
 # Register your models here.
 
 from django.contrib import admin
-from .models import User, School
+from .models import User, School, SchoolYear
 
 
 class UserAdmin(admin.ModelAdmin):
@@ -21,5 +21,10 @@ class SchoolAdmin(admin.ModelAdmin):
     list_display = ("nom", "name", "type_ets", "contact", "contact1", "code")
 
 
+class SchoolYearAdmin(admin.ModelAdmin):
+    list_display = ("libelle", "annee_debut", "is_current", "date_ouverture", "date_cloture")
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(School, SchoolAdmin)
+admin.site.register(SchoolYear, SchoolYearAdmin)
