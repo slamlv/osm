@@ -30,7 +30,7 @@ from staff.models import Personnel, Discipline, Activities
 from student.models import Parent
 from dynamic_forms import DynamicFormMixin
 from classroom.models import ClassRoom, Matieres
-from authentification.models import User, School
+from authentification.models import User, School, SchoolYear
 from student.models import Student
 
 
@@ -485,13 +485,7 @@ def resized_image(url):
 
 
 def school_year():
-    date_time = datetime.now()
-    year = date_time.year
-    month = date_time.month
-    if month < 8:
-        return f"{year - 1}/{year}"
-    else:
-        return f"{year}/{year + 1}"
+    return SchoolYear.current().libelle
 
 
 def message(request, msg: str, msg_type="success"):
