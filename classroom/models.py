@@ -159,7 +159,7 @@ class ClassRoom(models.Model):
     lv2 = models.CharField(choices=LVII.choices, null=True, max_length=15)
     lv3 = models.CharField(choices=LVIII.choices, null=True, max_length=15)
     matieres = models.ManyToManyField(Matieres, through="Enseignements")
-    titulaire = models.ForeignKey(Personnel, on_delete=models.SET_NULL, null=True)
+    titulaire = models.ForeignKey(Personnel, on_delete=models.SET_NULL, null=True, related_name="titulaire")
 
     objects = ClassRoomQuerySet.as_manager()
 
