@@ -314,13 +314,16 @@
                 <li><a class="dropdown-item" href="{% url 'parent-add' %}"><i class="bi bi-person-plus-fill me-2 text-warning"></i>Ajouter un Parent</a></li>
               </ul>
             </li>
+            {% endif%}
 
+            {% if user.is_admin or user.is_titulaire %}
             <!-- Classes -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fa fa-chalkboard-teacher me-2 d-xxl-none"></i>Classes
               </a>
               <ul class="dropdown-menu">
+                {% if user.is_admin %}
                 <li><a class="dropdown-item" href="{% url 'classrooms' %}"><i class="bi bi-grid me-2 text-info"></i>Liste des Classes</a></li>
                 <li><a class="dropdown-item" href="{% url 'classroom-add' %}"><i class="bi bi-plus-square me-2 text-info"></i>Ajouter une Classe</a></li>
                 <li><hr class="dropdown-divider"></li>
@@ -330,9 +333,16 @@
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'subjects' %}"><i class="bi bi-book me-2 text-warning"></i>Liste des Matières</a></li>
                 <li><a class="dropdown-item" href="{% url 'subject-add' %}"><i class="bi bi-book-fill me-2 text-warning"></i>Ajouter une Matière</a></li>
-              </ul>
+                <li><hr class="dropdown-divider"></li>
+                {% endif %}
+                {% if user.is_admin or user.is_titulaire %}
+                <li><a class="dropdown-item" href="{% url 'end_year_assignment' %}"><i class="bi bi-signpost-2 me-2 text-info"></i>Décisions de fin d'année</a></li>
+                {% endif %}
+                </ul>
             </li>
+            {% endif %}
 
+            {% if user.is_admin %}
             <!-- Résultats -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">

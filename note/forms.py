@@ -37,6 +37,7 @@ class SelectForm(DynamicFormMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         self.trim = kwargs['context']['trim']
         self.level = kwargs['context']['level'] if "level" in kwargs['context'].keys() else False
+        self.end_year_assignment = kwargs['context']['end_year_assignment'] if "end_year_assignment" in kwargs['context'].keys() else False
         self.marks_sheet = kwargs['context']['marks_sheet'] if "marks_sheet" in kwargs['context'].keys() else False
         self.pg = self.progression = kwargs['context']['progression'] if "progression" in kwargs['context'].keys() else False
         if 'pg' in kwargs['context'].keys():
@@ -104,6 +105,13 @@ class SelectForm(DynamicFormMixin, forms.Form):
             except:
                 return None
 
+        if self.end_year_assignment:
+            user = self.context['request'].user
+            if user.is_admin:
+                classrooms =  ClassRoom.objects.all().order_by_niveau()
+            else:
+                classrooms =  user.staff_member.first().titulaire.all()
+            return [(classroom.pk, classroom.code) for classroom in classrooms]
         if self.progression or self.pg:
             label = matiere()
             enseignements = (

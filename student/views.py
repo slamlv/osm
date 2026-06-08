@@ -5,6 +5,7 @@ from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import condition
 from django.views.generic import DeleteView, DetailView
@@ -16,16 +17,17 @@ from fpdf.enums import VAlign, TableCellFillMode
 from fpdf.table import Table
 from babel.dates import format_date
 
+from authentification.models import SchoolYear
 from note.models import Note, Enseignements
 from classroom.models import ClassRoom
 from note.views import ReportCard
-from .forms import StudentForm, ParentForm, DForm
+from .forms import StudentForm, ParentForm, DForm, BulkDecisionForm
 from osm.forms import SearchForm
 from osm.forms import SearchForm
 from note.forms import CheckForm, MarksForm, SelectForm
-from .models import Parent, Student, StudentDiscipline
+from .models import Parent, Student, StudentDiscipline, EnrollmentStatus
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
-    with_users_school_schema, school_year, pdf_response, resize_image
+    with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView
 from pandas import DataFrame, read_excel, ExcelWriter
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Font
@@ -33,6 +35,235 @@ from openpyxl import load_workbook
 from io import BytesIO
 from datetime import datetime
 from os import path
+
+
+"""
+=============================================================================
+ VIEW — Parcours scolaire d'un élève au sein de l'établissement
+=============================================================================
+"""
+
+
+class StudentJourney(LoggedAdminView):
+    template_name = "student_journey.html"
+
+    def get(self, *args, **kwargs):
+        # Élève + relations affichées dans l'en-tête (classe actuelle, parents).
+        student = get_object_or_404(
+            Student.objects.select_related("classe", "pere", "mere"),
+            pk=self.kwargs["id"]
+        )
+
+        # Historique : un enrollment par année, le plus récent en premier.
+        # select_related évite tout N+1 dans le tableau (année, classe, classe
+        # de destination sont lus pour chaque ligne).
+        enrollments = (
+            student.enrollments
+            .select_related("school_year", "classroom", "next_classroom")
+            .order_by("-school_year__annee_debut")
+        )
+
+        context = {
+            "title": f"Parcours — {student}",
+            "student": student,
+            "enrollments": enrollments,
+            "nb_annees": enrollments.count(),
+        }
+        return render(self.request, self.template_name, context)
+
+
+# -----------------------------------------------------------------------------
+# Tableau formulaire d'attribution des décisions de fin d'année
+# -----------------------------------------------------------------------------
+class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
+    template_name = "end_year_assignment.html"
+
+    # --- Helpers ---------------------------------------------------------------
+    def get_classroom(self, method="GET"):
+        """Charge la classe ciblée (+ relations utiles)."""
+        return get_object_or_404(
+            ClassRoom.objects.select_related("classe", "titulaire"),
+            pk=int(self.request.GET['classroom'] if method == "GET" else self.request.POST['classroom'])
+        )
+
+    def build_bulk_form(self, classroom):
+        """
+        Instancie le BulkDecisionForm UNE fois. Il porte promote_qs / repeat_qs
+        (les deux listes de classes générées une seule fois côté form).
+        """
+        return BulkDecisionForm(context={
+            "request": self.request,
+            "classroom": classroom,
+        })
+
+    def get_context(self, classroom, bulk_form):
+        current_year = SchoolYear.current()
+
+        # Élèves de la classe, ordonnés.
+        students = classroom.students.all().order_by("nom", "prenom")
+
+        # Enrollments de l'année courante chargés en UNE requête, indexés par
+        # student_id (évite tout N+1 dans la boucle ci-dessous).
+        enrollments = {}
+        if current_year:
+            qs = StudentEnrollment.objects.filter(
+                school_year=current_year, student__in=students
+            ).select_related("next_classroom")
+            enrollments = {e.student_id: e for e in qs}
+
+        # Lignes du tableau : valeurs déjà saisies pré-sélectionnées.
+        rows = []
+        for student in students:
+            enr = enrollments.get(student.id)
+            rows.append({
+                "student": student,
+                "enrollment": enr,
+                "decision": enr.decision if enr else EnrollmentStatus.EN_COURS,
+                "next_classroom_id": enr.next_classroom_id if enr else None,
+            })
+
+        # Décisions proposées (on retire "En cours").
+        decision_choices = [
+            (value, label) for value, label in EnrollmentStatus.choices
+            if value != EnrollmentStatus.EN_COURS
+        ]
+
+        return {
+            "title": f"Décisions de fin d'année — {classroom.code}",
+            "classroom": classroom,
+            "rows": rows,
+            "decision_choices": decision_choices,
+            "current_year": current_year,
+            "bulk_form": bulk_form,                  # porte promote_qs / repeat_qs
+            # Valeurs injectées au JS pour choisir la bonne liste de classes :
+            "promote_value": EnrollmentStatus.PROMU,
+            "repeat_value": EnrollmentStatus.REDOUBLE,
+        }
+
+    def get(self, *args, **kwargs):
+        classroom = self.get_classroom()
+        bulk_form = self.build_bulk_form(classroom)
+        context = self.get_context(classroom, bulk_form)
+        return render(self.request, self.template_name, context)
+
+    def post(self, *args, **kwargs):
+        classroom = self.get_classroom(method="POST")
+        current_year = SchoolYear.current()
+
+        if current_year is None:
+            message(self.request,
+                    "Aucune année scolaire courante définie. Impossible d'enregistrer.",
+                    msg_type="error")
+            return redirect("classrooms")
+
+        students = list(classroom.students.all())
+
+        # Enrollments existants pour cette classe/année, indexés par student_id.
+        existing = {
+            e.student_id: e
+            for e in StudentEnrollment.objects.filter(
+                school_year=current_year, student__in=students
+            )
+        }
+
+        # Sécurité serveur : n'accepter une classe cible que si elle
+        # appartient à la bonne liste selon la décision. On réutilise le MÊME
+        # bulk_form (donc les listes déjà générées, pas de requête en plus).
+        bulk_form = self.build_bulk_form(classroom)
+        promote_ids = {c.id for c in bulk_form.promote_qs}
+        repeat_ids = {c.id for c in bulk_form.repeat_qs}
+
+        decided_by = self.request.user.staff_member.first().short_name or self.request.user.username
+        now = timezone.now()
+
+        to_update, to_create, nb = [], [], 0
+
+        for student in students:
+            decision = self.request.POST.get(f"decision_{student.id}")
+            next_id = self.request.POST.get(f"next_classroom_{student.id}") or None
+
+            # Ligne non renseignée -> ignorée.
+            if not decision:
+                continue
+
+            # Décisions sans classe cible -> on neutralise next_id.
+            if decision in (EnrollmentStatus.TRANSFERE, EnrollmentStatus.SORTI):
+                next_id = None
+            # Décisions avec classe cible -> on vérifie la cohérence de la liste.
+            elif decision == EnrollmentStatus.PROMU:
+                if next_id and int(next_id) not in promote_ids:
+                    next_id = None
+            elif decision == EnrollmentStatus.REDOUBLE:
+                if next_id and int(next_id) not in repeat_ids:
+                    next_id = None
+
+            next_pk = int(next_id) if next_id else None
+
+            enr = existing.get(student.id)
+            if enr:
+                changed = (
+                    enr.decision != decision
+                    or (enr.next_classroom_id or None) != next_pk
+                )
+                if changed:
+                    enr.decision = decision
+                    enr.next_classroom_id = next_pk
+                    enr.decided_by = decided_by
+                    enr.decided_at = now
+                    to_update.append(enr)
+                    nb += 1
+            else:
+                # Cas rare : élève sans enrollment courant.
+                to_create.append(StudentEnrollment(
+                    student=student,
+                    school_year=current_year,
+                    classroom=classroom,
+                    decision=decision,
+                    next_classroom_id=next_pk,
+                    decided_by=decided_by,
+                    decided_at=now,
+                ))
+                nb += 1
+
+        if to_update:
+            StudentEnrollment.objects.bulk_update(
+                to_update,
+                ["decision", "next_classroom_id", "decided_by", "decided_at"]
+            )
+        if to_create:
+            StudentEnrollment.objects.bulk_create(to_create)
+
+        if nb:
+            message(self.request,
+                    f"Décisions de fin d'année enregistrées pour {nb} élève(s) en {classroom.code}.")
+        else:
+            message(self.request, "Aucune modification effectuée.", msg_type="warning")
+
+        response = render(
+            self.request,
+            self.template_name,
+            self.get_context(classroom,
+                             self.build_bulk_form(classroom))
+        )
+        response['HX-Trigger'] = 'AJAXMessages'
+        return response
+
+
+class EndYearAssignment(LoggedAdminOrTitulaireView):
+    template_name = "edit_marks.html"
+    title = "Attribution des classe pour l'année prochaine"
+
+    def get(self, *args, **kwargs):
+        select_form = SelectForm(context={"request": self.request, 'trim': False, 'marks_sheet': True,
+                                          'enseignements': None, 'end_year_assignment': True})
+        context = {'end_year_assignment': True, 'title': self.title, 'select_form': select_form}
+        return render(self.request, self.template_name, context)
+
+    def post(self, *args, **kwargs):
+        select_form = SelectForm(context={"request": self.request, 'trim': False, 'marks_sheet': True,
+                                          'enseignements': None, 'end_year_assignment': True})
+        context = {'end_year_assignment': True, 'title': self.title, 'select_form': select_form}
+        return render(self.request, self.template_name, context)
 
 
 class StudentsIdCards(LoggedAdminView):

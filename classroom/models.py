@@ -133,6 +133,28 @@ class Matieres(models.Model):
 
 
 class ClassRoomQuerySet(models.QuerySet):
+    def priorite_par_serie(self, serie, lv2, lv3):
+        from collections import OrderedDict
+        queryset = self.annotate(
+            serie=Case(
+                When(classe__serie=serie, lv2__isnull=False, lv2=lv2, lv3__isnull=False, lv3=lv3, then=Value(0)),
+                When(lv2__isnull=False, lv2=lv2, lv3__isnull=False, lv3=lv3, then=Value(1)),
+                When(Q(classe__serie=serie) & (Q(lv2__isnull=False, lv2=lv2) | Q(lv3__isnull=False, lv3=lv3)), then=Value(2)),
+                When(Q(lv2__isnull=False, lv2=lv2) | Q(lv3__isnull=False, lv3=lv3), then=Value(3)),
+                When(classe__serie=serie, then=Value(4)),
+                default=Value(999),
+                output_field=IntegerField()
+            )
+        ).order_by('serie')
+
+        ids = list(queryset.values_list('id', flat=True))
+        ids = list(OrderedDict.fromkeys((ids)))
+        preserved = Case(
+            *[When(pk=pk, then=pos) for pos, pk in enumerate(ids)],
+            output_field=IntegerField()
+        )
+        return self.filter(pk__in=ids).order_by(preserved)
+
     def order_by_niveau(self):
         order = {
             'Sixième': 1,
@@ -165,6 +187,15 @@ class ClassRoom(models.Model):
 
     class Meta:
         db_table = '"ClassRoom"'
+
+    @property
+    def next_level(self):
+        levels = ["Sixième", "Cinquième", "Quatrième", "Troisième", "Seconde", "Première", "Terminale"]
+        index = levels.index(self.classe.niveau)
+        if index == 6:
+            return ""
+        else:
+            return levels[index + 1]
 
     @property
     def progression(self):
@@ -231,7 +262,6 @@ class ClassRoom(models.Model):
         return recap if recap else None
 
     def subject_color(self, subject):
-        subjects = [matiere.sujet for matiere in self.subjects]
         subjects = [matiere.sujet for matiere in self.subjects]
         try:
             index = subjects.index(subject.sujet)

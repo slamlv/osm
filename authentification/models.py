@@ -189,6 +189,14 @@ class User(AbstractUser):
     theme = models.CharField(default="blue")
 
     @property
+    def is_titulaire(self):
+        staff_member = self.staff_member.first()
+        if staff_member.titulaire.exists():
+            return True
+        else:
+            return False
+
+    @property
     def post(self):
         if self.poste == "Chef d'Établissement":
             return self.school.chef

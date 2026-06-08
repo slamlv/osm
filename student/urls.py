@@ -1,7 +1,7 @@
 from django.urls import path
 from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, StudentEdit, StudentDelete,\
     Students, StudentDetails, ParentDetails, Parents, discipline, Discipline, StudentsImport, students_export,\
-    StudentsIdCards
+    StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
@@ -18,5 +18,8 @@ urlpatterns = [
     path("parent-details-<int:id>", ParentDetails.as_view(), name="parent-details"),
     path("parent-delete-<int:id>", ParentDelete.as_view(), name="parent-delete"),
     path("discipline", discipline, name="discipline"),
-    path("discipline-edit-<int:id>-<int:trim>", Discipline.as_view(), name="discipline-edit")
+    path("discipline-edit-<int:id>-<int:trim>", Discipline.as_view(), name="discipline-edit"),
+    path("end_year_assignment", EndYearAssignment.as_view(), name="end_year_assignment"),
+    path("end_year_assignment_form", EndYearAssignmentForm.as_view(), name="end_year_assignment_form"),
+    path("student_journey-<int:id>", StudentJourney.as_view(), name="student_journey"),
 ]

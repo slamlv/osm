@@ -37,6 +37,7 @@
         <th>Intitulé</th>
         <th>Niveau</th>
         <th>Effectif</th>
+        <th>Titulaire</th>
         <th>Actions</th>
       </tr></thead>
       <tbody>
@@ -54,6 +55,10 @@
           <td>
             {{ classroom.effectif }}
             {% if classroom.effectif %}<span class="d-none d-lg-inline" style="color:rgba(255,255,255,0.45);font-size:0.8rem;"> — {{ classroom.kind_numbers }}</span>{% endif %}
+          </td>
+          <td>
+            <span class="d-none d-md-inline">{% if classroom.titulaire %} {{ classroom.titulaire.short_name }} {% else %} / {% endif %}</span>
+            <span class="d-md-none">{% if classroom.titulaire %} {{ classroom.titulaire.short_firstname }} {% else %} / {% endif %}</span>
           </td>
           <td>
             <div class="d-flex gap-2">

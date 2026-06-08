@@ -26,6 +26,8 @@
       <form method="post" enctype="multipart/form-data" hx-get="{% url 'progression-form' %}" hx-target="#marks_form" id="select">
       {% elif cls_progression %}
       <form method="post" enctype="multipart/form-data" hx-get="{% url 'classroom-progression' %}" hx-target="#marks_form" id="select">
+      {% elif end_year_assignment %}
+      <form method="post" enctype="multipart/form-data" hx-get="{% url 'end_year_assignment_form' %}" hx-target="#marks_form" id="select">
       {% elif not marks_sheet %}
         {% if not trim %}
         <form method="post" enctype="multipart/form-data" id="select" hx-get="{% url 'marks-edit' %}" hx-target="#marks_form">
@@ -39,7 +41,7 @@
       {% endif %}
         {% csrf_token %}
         <div class="row g-3 mb-4" id="classroom_form">
-          {% if marks_sheet %}
+          {% if marks_sheet or end_year_assignment %}
           <div class="col-12"><label class="text-white control-label">Classe</label>{{ select_form.classroom }}</div>
           {% else %}
           <div class="col-sm-{% if select_form.eval %}4{% else %}6{% endif %}"><label class="text-white control-label">Matière</label>{{ select_form.matiere }}</div>

@@ -77,9 +77,8 @@
 
       <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3 mt-2">
         <a class="btn btn-warning fw-semibold" href="{% url 'student-edit' id=object.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
-        {% if object.user != user %}
         <a class="btn btn-outline-danger" href="{% url 'student-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
-        {% endif %}
+        <a class="btn btn-info fw-semibold" href="{% url 'student_journey' id=object.id %}"><i class="bi bi-signpost-2 me-1"></i>Parcours</a>
         <a class="btn btn-outline-secondary" href="{% url 'students' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
       </div>
     </div>

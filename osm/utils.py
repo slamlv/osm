@@ -111,6 +111,30 @@ class LoggedUserView(LoginRequired, WithUsersSchoolSchema, View):
     pass
 
 
+# -----------------------------------------------------------------------------
+# Mixin de permission : admin OU titulaire (prof principal) de la classe ciblée
+# -----------------------------------------------------------------------------
+class AdminOrTitulaireRequired:
+    """
+    Autorise l'accès si l'utilisateur est admin, OU s'il est le titulaire d'une classe
+    """
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse("signin"))
+
+        with schema_context(request.user.school.schema_name):
+            if not request.user.is_superuser:
+                if request.user.is_admin or request.user.is_titulaire:
+                    return super().dispatch(request, *args, **kwargs)
+
+        return render(request, "404.html")
+
+
+class LoggedAdminOrTitulaireView(LoginRequired, AdminOrTitulaireRequired, View):
+    """Vue de base : connexion + schéma tenant + permission admin/titulaire."""
+    pass
+
+
 class BaseListView(View):
     template_name: str
     title: str

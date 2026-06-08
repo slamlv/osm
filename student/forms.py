@@ -5,7 +5,7 @@ from authentification.forms import valid_name, valid_contact, valid_email
 from authentification.models import Civilite
 from classroom.models import ClassRoom
 from osm.utils import one_escape, message
-from .models import Student, Parent, Sexe, Statut, StudentDiscipline
+from .models import Student, Parent, Sexe, Statut, StudentDiscipline, EnrollmentStatus
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -99,7 +99,6 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
             self.cleaned_data["profession"] = self.cleaned_data.get("profession").title()
         self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
         self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
-        self.cleaned_data['email'] = self.cleaned_data.get('email') or None
 
 
 class StudentForm(DynamicFormMixin, forms.ModelForm):
@@ -175,3 +174,77 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
         self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
         self.cleaned_data["lieu_naissance"] = one_escape(self.cleaned_data.get("lieu_naissance")).title()
+
+
+"""
+=============================================================================
+ FORMS — Attribution des décisions de fin d'année
+=============================================================================
+  - DEUX listes de classes, communes à toute la classe (pas par élève) :
+        * promote_qs : classes du niveau directement SUPÉRIEUR (promus)
+        * repeat_qs  : classes du MÊME niveau (redoublants)
+  - Elles sont ÉVALUÉES UNE SEULE FOIS dans __init__ (list(...)), donc un
+    seul accès base partagé par tout le tableau + la barre d'application en masse.
+
+  Plus de classe 'woption' sur les selects de ce formulaire : dans le tableau
+  on utilise des selects NATIFS (stylés en CSS comme .form-card) pour pouvoir
+  échanger leurs options en JS selon la décision.
+=============================================================================
+"""
+
+
+class BulkDecisionForm(DynamicFormMixin, forms.Form):
+    """
+    Barre d'EN-TÊTE : applique en un clic une même décision + une même classe
+    de destination à tous les élèves. Sert aussi de PORTEUR des deux listes
+    de classes (promote_qs / repeat_qs) consommées par le template.
+
+    Contexte attendu : {'request': request, 'classroom': <ClassRoom>}
+    """
+
+    def __init__(self, *args, **kwargs):
+        context = kwargs["context"]
+        self.request = context["request"]
+        self.classroom = context["classroom"]
+        super().__init__(*args, **kwargs)
+
+        # === Générés UNE SEULE FOIS, partagés par toutes les lignes ===
+        # list(...) force l'évaluation immédiate -> 1 requête chacune, réutilisée
+        # ensuite dans le template sans nouvel accès base.
+        self.promote_qs = list(self._build_promote_classrooms())
+        self.repeat_qs = list(self._build_repeat_classrooms())
+
+    # Décision à appliquer en masse (on exclut "En cours").
+    decision = forms.ChoiceField(
+        required=False,
+        choices=[("", "— Décision pour toute la classe —")] + [
+            (value, label) for value, label in EnrollmentStatus.choices
+            if value != EnrollmentStatus.EN_COURS
+        ],
+        widget=forms.Select(attrs={
+            "class": "form-select fw-bold",
+            "id": "bulk_decision",
+        })
+    )
+
+    # -------------------------------------------------------------------------
+    # >>> Les deux querysets de destination <<<
+    #     self.classroom est disponible pour déterminer le niveau courant.
+    # -------------------------------------------------------------------------
+    def _build_promote_classrooms(self):
+        """
+        Classes du niveau directement SUPÉRIEUR (cible des élèves PROMUS).
+        """
+        return (
+            ClassRoom.objects.filter(classe__niveau=self.classroom.next_level).
+            priorite_par_serie(self.classroom.classe.serie, self.classroom.lv2, self.classroom.lv3)
+        )
+
+    def _build_repeat_classrooms(self):
+        """
+        Classes du MÊME niveau (cible des élèves REDOUBLANTS).
+        """
+        return (
+            ClassRoom.objects.filter(classe__niveau=self.classroom.classe.niveau).
+            priorite_par_serie(self.classroom.classe.serie, self.classroom.lv2, self.classroom.lv3)
+        )
