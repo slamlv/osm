@@ -120,6 +120,8 @@
               <span class="badge text-bg-info">Transféré</span>
             {% elif enr.decision == "Sorti" %}
               <span class="badge text-bg-secondary">Sorti</span>
+            {% elif enr.decision == "Non statué" %}
+                <span class="badge text-bg-secondary">Décision non saisie</span>
             {% else %}
               <span class="badge text-bg-light text-dark">En cours</span>
             {% endif %}

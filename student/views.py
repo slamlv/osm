@@ -125,7 +125,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
         # Décisions proposées (on retire "En cours").
         decision_choices = [
             (value, label) for value, label in EnrollmentStatus.choices
-            if value != EnrollmentStatus.EN_COURS
+            if value not in [EnrollmentStatus.EN_COURS, EnrollmentStatus.NON_STATUE]
         ]
 
         return {

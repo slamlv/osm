@@ -500,6 +500,7 @@ class EnrollmentStatus(models.TextChoices):
     REDOUBLE = "Redoublant", "Redoublant"
     TRANSFERE = "Transféré", "Transféré (autre établissement)"
     SORTI = "Sorti", "A terminé son cursus ou est exclu"
+    NON_STATUE = "Non statué", "Décision non saisie"
 
 
 class StudentEnrollment(models.Model):

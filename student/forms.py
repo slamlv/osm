@@ -219,7 +219,7 @@ class BulkDecisionForm(DynamicFormMixin, forms.Form):
         required=False,
         choices=[("", "— Décision pour toute la classe —")] + [
             (value, label) for value, label in EnrollmentStatus.choices
-            if value != EnrollmentStatus.EN_COURS
+            if value not in [EnrollmentStatus.EN_COURS, EnrollmentStatus.NON_STATUE]
         ],
         widget=forms.Select(attrs={
             "class": "form-select fw-bold",
