@@ -1,0 +1,256 @@
+{% comment %}
+===========================================================================
+ FRAGMENT HTMX — Tableau d'assignation de fin d'année
+ Fichier : end_year_assignment.html
+
+ Chargé via HTMX dans une cible (ex. #marks_form). PAS de extends base.html :
+ c'est un partiel injecté dans une page déjà rendue.
+
+ Style des selects CALQUÉ sur .form-card de edit_marks.html (fond translucide,
+ texte blanc, bord clair, focus bleu), scopé au wrapper .eya pour ne pas fuir.
+ Selects NATIFS (pas woption) pour pouvoir échanger leurs options en JS.
+
+ Deux listes de classes communes (rendues UNE fois en sources cachées) :
+   #promote-src (niveau supérieur) et #repeat-src (même niveau).
+ Le JS clone le bon jeu d'options dans le select de chaque élève selon sa
+ décision. Transféré/Sorti -> select vidé + désactivé.
+===========================================================================
+{% endcomment %}
+
+<style>
+  /* ---- Pleine largeur : le fragment s'étend jusqu'aux bords du viewport,
+         même injecté dans un conteneur étroit (technique full-bleed).
+         Les marges négatives repoussent les bords ; le padding garde une
+         respiration propre sur les côtés. ---- */
+  .eya {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding-left: clamp(0.75rem, 3vw, 2rem);
+    padding-right: clamp(0.75rem, 3vw, 2rem);
+  }
+  /* La table remplit toute la largeur disponible du wrapper. */
+  .eya .osm-table-outer table { width: 100%; }
+
+  /* ---- Selects façon .form-card (repris de edit_marks.html), scopés à .eya ---- */
+  .eya select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; font-size:0.84rem; }
+  .eya select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  /* Options : fond sombre explicite (évite blanc-sur-blanc dans certains navigateurs) */
+  .eya select option { background-color:#1b3a57; color:#fff; }
+  /* État désactivé (Transféré/Sorti) : distinct, sans conflit (la pseudo-classe prime) */
+  .eya select:disabled { opacity:0.4!important; background-color:rgba(255,255,255,0.03)!important; cursor:not-allowed; }
+
+  /* ---- Tableau sombre (identique à students_list.html) ---- */
+  .eya .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .eya .osm-table-outer table { margin-bottom:0; min-width:680px; }
+  .eya .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .eya .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .eya .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .eya .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .eya .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .eya .toolbar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:0.75rem 1rem; }
+  .eya .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+
+  /* ---- Compactage sur petit écran (< md) : moins de colonnes, donc plus
+         besoin de min-width ; on resserre padding, polices et selects pour
+         que tout tienne sans scroll horizontal et reste lisible au doigt. ---- */
+  @media (max-width: 767.98px) {
+    .eya .osm-table-outer table { min-width: 0; }
+    .eya .osm-table-outer thead th { padding:8px 8px; font-size:0.68rem; }
+    .eya .osm-table-outer tbody td { padding:8px 8px; font-size:0.8rem; }
+    .eya select { font-size:0.8rem; }
+    .eya .toolbar { padding:0.6rem 0.75rem; }
+  }
+</style>
+
+<div class="eya">
+
+  {# Ruban : rappelle la classe effectivement sélectionnée (objet du contexte) #}
+  {% if classroom %}
+  <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>
+      <i class="bi bi-mortarboard-fill me-1"></i>
+      Classe sélectionnée : <strong>{{ classroom.code }}</strong>
+      {% if classroom.level %}· {{ classroom.level }}{% endif %}
+      · Effectif : <strong>{{ classroom.effectif }}</strong>
+      {% if current_year %}· Année <strong>{{ current_year.libelle }}</strong>{% endif %}
+      {% if classroom.titulaire %}· Titulaire : <strong>{{ classroom.titulaire }}</strong>{% endif %}
+    </span>
+  </div>
+  {% endif %}
+
+  {% if not current_year %}
+    <div class="empty-state">
+      <i class="bi bi-exclamation-triangle fs-2 mb-2 d-block text-warning"></i>
+      <p class="mb-0">Aucune année scolaire courante n'est définie.</p>
+    </div>
+
+  {% elif rows %}
+
+    {% comment %} Sources d'options cachees - rendues UNE SEULE FOIS {% endcomment %}
+    <select id="promote-src" class="d-none" aria-hidden="true" tabindex="-1">
+      <option value="">— Choisir —</option>
+      {% for cls in bulk_form.promote_qs %}<option value="{{ cls.id }}">{{ cls.code }}</option>{% endfor %}
+    </select>
+    <select id="repeat-src" class="d-none" aria-hidden="true" tabindex="-1">
+      <option value="">— Choisir —</option>
+      {% for cls in bulk_form.repeat_qs %}<option value="{{ cls.id }}">{{ cls.code }}</option>{% endfor %}
+    </select>
+
+    <!-- Barre d'application en masse -->
+    <div class="toolbar d-flex flex-column flex-md-row gap-2 mb-3 align-items-stretch align-items-md-end">
+
+      <div class="flex-grow-1">
+        <label class="form-label small fw-semibold text-white-50 mb-1">Décision pour toute la classe</label>
+        {{ bulk_form.decision }}
+      </div>
+      <div class="flex-grow-1">
+        <label class="form-label small fw-semibold text-white-50 mb-1">Classe de destination</label>
+        <select id="bulk_next_classroom" class="form-select fw-bold" disabled>
+          <option value="">— Choisir une décision —</option>
+        </select>
+      </div>
+      <button type="button" id="apply-bulk" class="btn btn-info btn-sm fw-semibold">
+        <i class="bi bi-magic me-1"></i>Appliquer à tous
+      </button>
+    </div>
+
+    <!-- Tableau principal -->
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="osm-table-outer">
+        <table class="table table-hover align-middle">
+          <thead><tr>
+            <th class="d-none d-sm-table-cell" style="width:36px;">#</th>
+            <th class="d-none d-md-table-cell">Identifiant</th>
+            <th>Nom(s) et Prénom(s)</th>
+            <th class="d-none d-md-table-cell">Sexe</th>
+            <th style="min-width:140px;">Décision</th>
+            <th style="min-width:150px;">Classe l'an prochain</th>
+          </tr></thead>
+          <tbody>
+            {% for row in rows %}
+            <tr data-row>
+              <td class="d-none d-sm-table-cell" style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
+              <td class="d-none d-md-table-cell" style="color:rgba(255,255,255,0.5)!important;font-size:0.82rem;">{% if not row.student.unique_id %}—{% else %}{{ row.student.unique_id }}{% endif %}</td>
+              <td class="fw-semibold">{{ row.student }}</td>
+              <td class="d-none d-md-table-cell">{{ row.student.genre }}</td>
+
+              {# Decision (pre-selectionnee sur la valeur deja saisie) #}
+              <td>
+                <select name="decision_{{ row.student.id }}"
+                        class="form-select form-select-sm fw-semibold decision-select"
+                        data-student="{{ row.student.id }}">
+                  <option value="">— À décider —</option>
+                  {% for value, label in decision_choices %}
+                  <option value="{{ value }}"
+                    {% if row.decision == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+
+              {# Classe cible : options injectees par JS selon la decision #}
+              <td>
+                <select name="next_classroom_{{ row.student.id }}"
+                        class="form-select form-select-sm fw-semibold next-select"
+                        data-student="{{ row.student.id }}"
+                        data-selected="{{ row.next_classroom_id|default_if_none:'' }}"
+                        disabled>
+                  <option value="">— Aucune —</option>
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-center mt-3">
+        <button type="submit" class="btn btn-success fw-semibold px-4" hx-post="{% url 'end_year_assignment_form' %}"
+                hx-include="select" hx-target="#marks_form" data-with-spinner>
+          <i class="bi bi-save me-2"></i>Enregistrer les décisions
+        </button>
+      </div>
+    </form>
+
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-user-graduate fs-2 mb-2 d-block"></i>
+      <p class="mb-0">Aucun élève dans cette classe.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  // Valeurs de décision qui exigent une classe + quelle liste utiliser.
+  const PROMU    = "{{ promote_value }}";   // ex. "Promu"
+  const REDOUBLE = "{{ repeat_value }}";    // ex. "Redoublant"
+
+  const promoteSrc = document.getElementById('promote-src');
+  const repeatSrc  = document.getElementById('repeat-src');
+
+  // Retourne le <select> source correspondant à la décision (ou null).
+  function srcFor(decision) {
+    if (decision === PROMU)    return promoteSrc;
+    if (decision === REDOUBLE) return repeatSrc;
+    return null;
+  }
+
+  // Remplit un select de destination selon la décision donnée.
+  // savedVal : id éventuel à re-sélectionner (valeur déjà enregistrée).
+  function fillNext(nextSel, decision, savedVal) {
+    if (!nextSel) return;
+    const src = srcFor(decision);
+    if (!src) {                      // Transféré / Sorti / vide
+      nextSel.innerHTML = '<option value="">— Aucune —</option>';
+      nextSel.value = "";
+      nextSel.disabled = true;
+      return;
+    }
+    nextSel.disabled = false;
+    nextSel.innerHTML = src.innerHTML;     // clone des options de la bonne liste
+    if (savedVal) nextSel.value = savedVal;
+  }
+
+  function init() {
+    // Lignes élèves : init + écoute des changements de décision.
+    document.querySelectorAll('.decision-select').forEach(function (dSel) {
+      const sid = dSel.dataset.student;
+      const nSel = document.querySelector('.next-select[data-student="' + sid + '"]');
+      fillNext(nSel, dSel.value, nSel ? nSel.dataset.selected : "");
+      dSel.addEventListener('change', function () {
+        fillNext(nSel, dSel.value, "");   // changement manuel -> on repart propre
+      });
+    });
+
+    // Barre en masse : le select de classe suit la décision en masse.
+    const bulkDecision = document.getElementById('bulk_decision');
+    const bulkNext = document.getElementById('bulk_next_classroom');
+    if (bulkDecision && bulkNext) {
+      bulkDecision.addEventListener('change', function () {
+        fillNext(bulkNext, bulkDecision.value, "");
+      });
+    }
+
+    // Bouton "Appliquer à tous".
+    const applyBtn = document.getElementById('apply-bulk');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function () {
+        const dVal = bulkDecision ? bulkDecision.value : "";
+        const nVal = bulkNext ? bulkNext.value : "";
+        document.querySelectorAll('tr[data-row]').forEach(function (tr) {
+          const dSel = tr.querySelector('.decision-select');
+          const nSel = tr.querySelector('.next-select');
+          if (dVal && dSel) dSel.value = dVal;
+          fillNext(nSel, dSel ? dSel.value : "", "");
+          if (nVal && nSel && !nSel.disabled) nSel.value = nVal;
+        });
+      });
+    }
+  }
+
+  init();   // fragment injecté : le DOM cible est déjà prêt
+})();
+</script>

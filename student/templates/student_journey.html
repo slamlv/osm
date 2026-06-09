@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+===========================================================================
+ TEMPLATE — Parcours scolaire d'un élève
+ Fichier : student_journey.html
+
+ Hérite de base.html (page autonome, pas un fragment HTMX).
+ Thème sombre cohérent avec students_list.html (.osm-table-outer, cartes
+ #1b3a57). En-tête élève (photo Cloudinary + infos) puis tableau d'historique
+ année par année : classe, moyennes/rangs trimestriels, moyenne/rang annuels,
+ décision de fin d'année. Responsive : les colonnes secondaires se masquent
+ sur petit écran pour rester lisible.
+===========================================================================
+{% endcomment %}
+
+{% block content %}
+<style>
+  .pj-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:18px; }
+  .pj-photo { width:84px; height:84px; object-fit:cover; border-radius:14px; border:2px solid rgba(255,255,255,0.15); background:#0d2236; }
+  .pj-meta { color:rgba(255,255,255,0.55); font-size:0.8rem; }
+  .pj-meta strong { color:rgba(255,255,255,0.85); font-weight:600; }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; min-width:640px; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr.current-year { box-shadow:inset 3px 0 0 #ffc107; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .rang { color:rgba(255,255,255,0.45); font-size:0.78rem; }
+  .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+
+  @media (max-width: 767.98px) {
+    .osm-table-outer table { min-width:0; }
+    .osm-table-outer thead th { padding:8px 8px; font-size:0.66rem; }
+    .osm-table-outer tbody td { padding:8px 8px; font-size:0.8rem; }
+  }
+</style>
+
+<div class="px-3 px-md-4 py-3">
+
+  <!-- En-tête élève -->
+  <div class="pj-card p-3 p-md-4 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        {% if student.photo %}
+          <img src="{{ student.photo.url }}" alt="{{ student }}" class="pj-photo">
+        {% else %}
+          <img src="{% static 'image/student.jpg' %}" alt="{{ student }}" class="pj-photo">
+        {% endif %}
+        <div>
+          <h5 class="text-white fw-bold mb-1">{{ student }}</h5>
+          <div class="pj-meta">
+            Matricule : <strong>{{ student.unique_id|default:"—" }}</strong> ·
+            Sexe : <strong>{{ student.genre }}</strong>
+            {% if student.classe %}· Classe actuelle : <strong>{{ student.classe.code }}</strong>{% endif %}
+          </div>
+          <div class="pj-meta mt-1">
+            {{ nb_annees }} année{{ nb_annees|pluralize }} dans l'établissement
+          </div>
+        </div>
+      </div>
+      <a class="btn btn-secondary btn-sm" href="{% url 'student-details' id=student.id %}">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+      </a>
+    </div>
+  </div>
+
+  {% if enrollments %}
+  <div class="osm-table-outer">
+    <table class="table table-hover align-middle">
+      <thead><tr>
+        <th>Année</th>
+        <th>Classe</th>
+        <th class="d-none d-lg-table-cell text-center">Trim. 1</th>
+        <th class="d-none d-lg-table-cell text-center">Trim. 2</th>
+        <th class="d-none d-lg-table-cell text-center">Trim. 3</th>
+        <th class="text-center">Moy. annuelle</th>
+        <th class="d-none d-sm-table-cell text-center">Rang</th>
+        <th>Décision</th>
+      </tr></thead>
+      <tbody>
+        {% for enr in enrollments %}
+        <tr {% if enr.school_year.is_current %}class="current-year"{% endif %}>
+          <td class="fw-semibold">{{ enr.school_year.libelle }}</td>
+          <td>{{ enr.classroom.code|default:"—" }}</td>
+
+          {# Trimestres : moyenne + rang (—  si non renseigné) #}
+          <td class="d-none d-lg-table-cell text-center">
+            {% if enr.moyenne_t1 is not None %}{{ enr.moyenne_t1|floatformat:2 }}{% if enr.rang_t1 %} <span class="rang">{{ enr.rang_t1 }}e</span>{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="d-none d-lg-table-cell text-center">
+            {% if enr.moyenne_t2 is not None %}{{ enr.moyenne_t2|floatformat:2 }}{% if enr.rang_t2 %} <span class="rang">{{ enr.rang_t2 }}e</span>{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="d-none d-lg-table-cell text-center">
+            {% if enr.moyenne_t3 is not None %}{{ enr.moyenne_t3|floatformat:2 }}{% if enr.rang_t3 %} <span class="rang">{{ enr.rang_t3 }}e</span>{% endif %}{% else %}—{% endif %}
+          </td>
+
+          {# Moyenne annuelle (mise en avant) #}
+          <td class="text-center fw-semibold">
+            {% if enr.moyenne_annuelle is not None %}{{ enr.moyenne_annuelle|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td class="d-none d-sm-table-cell text-center">
+            {% if enr.rang_annuel %}{{ enr.rang_annuel }}e{% else %}—{% endif %}
+          </td>
+
+          {# Décision de fin d'année (badge coloré + traçabilité en tooltip) #}
+          <td>
+            {% if enr.decision == "Promu" %}
+              <span class="badge text-bg-success"
+                {% if enr.decided_by %}data-bs-toggle="tooltip" title="Décidé par {{ enr.decided_by }}{% if enr.decided_at %} le {{ enr.decided_at|date:'d/m/Y' }}{% endif %}"{% endif %}>
+                Promu{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
+            {% elif enr.decision == "Redoublant" %}
+              <span class="badge text-bg-warning"
+                {% if enr.decided_by %}data-bs-toggle="tooltip" title="Décidé par {{ enr.decided_by }}{% if enr.decided_at %} le {{ enr.decided_at|date:'d/m/Y' }}{% endif %}"{% endif %}>
+                Redoublant{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
+            {% elif enr.decision == "Transféré" %}
+              <span class="badge text-bg-info">Transféré</span>
+            {% elif enr.decision == "Sorti" %}
+              <span class="badge text-bg-secondary">Sorti</span>
+            {% else %}
+              <span class="badge text-bg-light text-dark">En cours</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="pj-meta mt-2 mb-0">
+    <i class="bi bi-info-circle me-1"></i>L'année en cours est repérée par un liseré jaune.
+  </p>
+
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-signpost-2 fs-2 mb-2 d-block"></i>
+    <p class="mb-0">Aucun parcours enregistré pour cet élève.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
