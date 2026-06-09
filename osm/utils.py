@@ -78,6 +78,17 @@ def admin_required(view_func):
     return _wrapped_vied
 
 
+class BlockIfYearClosed:
+    """À mixer dans les vues de saisie (notes, etc.)."""
+    def dispatch(self, request, *args, **kwargs):
+        school = request.user.school          # l'établissement courant (tenant)
+        if school.is_year_closed:
+            message(request, "L'année est clôturée : cette action n'est plus disponible.",
+                    msg_type="warning")
+            return redirect("idex")
+        return super().dispatch(request, *args, **kwargs)
+
+
 class WithUsersSchoolSchema:
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:

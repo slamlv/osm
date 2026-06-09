@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django_tenants.models import TenantMixin, DomainMixin
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -122,6 +123,7 @@ class School(TenantMixin):
     first_break_duration = models.IntegerField(choices=((10, 10), (15, 15), (20, 20), (25, 25), (30, 30)), default=15)
     second_break_duration = models.IntegerField(choices=((10, 10), (15, 15), (20, 20), (25, 25), (30, 30)), default=30)
     mergedprogrammations = models.BooleanField(default=False, verbose_name="Programmations Combinées")
+    last_schoolyear_closed = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, null=True, blank=True, related_name="school_closed")
 
     auto_create_schema = True
 
@@ -129,6 +131,15 @@ class School(TenantMixin):
         db_table = '"School"'
         verbose_name = "Etablissement"
         verbose_name_plural = "Etablissements"
+
+    @property
+    def is_year_closed(self):
+        current = SchoolYear.current()
+        if not current:
+            return False
+        cloturee = self.last_schoolyear_closed_id == current.id
+        date_passee = current.date_cloture and current.date_cloture < timezone.now().date()
+        return bool(cloturee or date_passee)
 
     def __str__(self):
         return self.nom
