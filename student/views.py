@@ -25,7 +25,7 @@ from .forms import StudentForm, ParentForm, DForm, BulkDecisionForm
 from osm.forms import SearchForm
 from osm.forms import SearchForm
 from note.forms import CheckForm, MarksForm, SelectForm
-from .models import Parent, Student, StudentDiscipline, EnrollmentStatus
+from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView
 from pandas import DataFrame, read_excel, ExcelWriter
