@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+===========================================================================
+ TEMPLATE — Mise à jour des photos d'une classe (en masse, ligne par ligne)
+ Fichier : class_photos.html
+
+ Page autonome (extends base.html), thème sombre.
+ Chaque ligne : photo actuelle, choix d'un fichier, APERÇU instantané, puis
+ envoi DÉLIBÉRÉ via un bouton "Enregistrer" par ligne (désactivé tant qu'aucun
+ fichier n'est sélectionné, réactivé à chaque nouvelle sélection, redésactivé
+ après succès). Upload INDÉPENDANT par ligne. La compression réutilise
+ window.OSMCompressImage (resizeAndConvert exposée depuis
+ client_multi_image_upload.js). Fallback :
+ envoi du fichier brut si la fonction n'est pas disponible.
+
+ L'URL d'upload par élève vient d'un gabarit data-url-tpl où le 0 final est
+ remplacé par l'id de l'élève côté JS.
+===========================================================================
+{% endcomment %}
+
+{% block content %}
+<style>
+  .cp .osm-table-outer { overflow-x:auto; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .cp .osm-table-outer table { margin-bottom:0; min-width:560px; width:100%; }
+  .cp .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .cp .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .cp .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .cp .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .cp input[type=file] { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; font-size:0.8rem; }
+  .cp .thumb { width:54px; height:54px; object-fit:cover; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:#0d2236; }
+  .cp .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+  .cp .state-ok { color:#4ade80; }
+  .cp .state-err { color:#f87171; }
+
+  @media (max-width: 767.98px) {
+    .cp .osm-table-outer table { min-width:0; }
+    .cp .osm-table-outer thead th, .cp .osm-table-outer tbody td { padding:7px 8px; font-size:0.8rem; }
+    .cp .thumb { width:42px; height:42px; }
+    .cp input[type=file] { font-size:0.72rem; }
+    .cp .save-photo { padding:0.25rem 0.5rem; }   /* bouton icône compact */
+  }
+</style>
+
+<div class="cp px-3 px-md-4 py-3"
+     data-url-tpl="{% url 'student_photo_upload' id=classroom.id student_id=0 %}"
+     data-csrf="{{ csrf_token }}">
+
+  <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>
+      <i class="bi bi-camera me-1"></i>
+      Photos — <strong>{{ classroom.code }}</strong> · Effectif : <strong>{{ classroom.effectif }}</strong>
+      · Cliquer sur le bouton Enregistrer apès sélection de l'image.
+    </span>
+    <a class="btn btn-secondary btn-sm" href="{% url 'classroom-students' id=classroom.id %}">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+
+  {% if students %}
+  <div class="osm-table-outer">
+    <table class="table align-middle">
+      <thead><tr>
+        <th class="d-none d-sm-table-cell" style="width:36px;">#</th>
+        <th class="d-none d-md-table-cell" style="width:70px;">Actuelle</th>
+        <th>Nom(s) et Prénom(s)</th>
+        <th class="d-none d-md-table-cell" style="width:70px;">Aperçu</th>
+        <th style="min-width:160px;">Nouvelle photo</th>
+        <th style="width:120px;">Action</th>
+        <th style="width:130px;">État</th>
+      </tr></thead>
+      <tbody>
+        {% for student in students %}
+        <tr data-sid="{{ student.id }}">
+          <td class="d-none d-sm-table-cell" style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
+          <td class="d-none d-md-table-cell">
+            {% if student.photo %}
+              <img src="{{ student.photo.url }}" class="thumb current-thumb" alt="">
+            {% else %}
+              <img src="{% static 'image/student.jpg' %}" class="thumb current-thumb" alt="">
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ student }}</td>
+          <td class="d-none d-md-table-cell"><img class="thumb preview-thumb d-none" alt="aperçu"></td>
+          <td>
+            {# Aperçu inline, visible uniquement sur mobile (les colonnes dédiées sont masquées) #}
+            <img class="thumb preview-thumb-mobile d-none d-md-none mb-1" alt="aperçu">
+            <input type="file" accept="image/*" class="form-control form-control-sm photo-input">
+          </td>
+          <td>
+            <button type="button" class="btn btn-success btn-sm fw-semibold save-photo" disabled>
+              <i class="bi bi-save"></i><span class="d-none d-sm-inline ms-1">Enregistrer</span>
+            </button>
+          </td>
+          <td class="state"><span class="text-white-50 small">—</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-white-50 small mt-2 mb-0">
+    <i class="bi bi-info-circle me-1"></i>Les images sont compressées automatiquement avant envoi.
+  </p>
+
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-user-graduate fs-2 mb-2 d-block"></i>
+    <p class="mb-0">Aucun élève dans cette classe.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  const root = document.querySelector('.cp');
+  if (!root) return;
+  const urlTpl = root.dataset.urlTpl;
+  const csrf = root.dataset.csrf;
+
+  function setState(cell, html) { cell.innerHTML = html; }
+
+  // Compresse via la fonction partagée du site si dispo, sinon renvoie le
+  // fichier brut (fallback) -> dans ce cas le serveur reçoit l'original.
+  function compress(file) {
+    if (typeof window.OSMCompressImage === 'function') {
+      return window.OSMCompressImage(file).then(function (blob) {
+        return blob || file;   // si la compression échoue, on tente le brut
+      }).catch(function () { return file; });
+    }
+    return Promise.resolve(file);
+  }
+
+  function filenameFor(blob, original) {
+    const base = (original && original.includes('.'))
+      ? original.substring(0, original.lastIndexOf('.')) : (original || 'photo');
+    const ext = blob.type === 'image/webp' ? 'webp'
+              : blob.type === 'image/jpeg' ? 'jpg'
+              : 'img';
+    return base + '.' + ext;
+  }
+
+  function uploadRow(tr) {
+    const sid = tr.dataset.sid;
+    const stateCell = tr.querySelector('.state');
+    const current = tr.querySelector('.current-thumb');
+    const btn = tr.querySelector('.save-photo');
+    const file = tr._pendingFile;           // fichier mémorisé à la sélection
+    if (!file) return;
+
+    // Pendant l'envoi : bouton désactivé + spinner d'état.
+    btn.disabled = true;
+    setState(stateCell, '<span class="spinner-border spinner-border-sm text-info" role="status"></span>');
+
+    compress(file).then(function (blob) {
+      const fd = new FormData();
+      fd.append('photo', blob, filenameFor(blob, file.name));
+      const url = urlTpl.replace(/0(\/?)$/, sid + '$1');
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf },
+        body: fd,
+      });
+    })
+    .then(function (resp) { return resp.json().then(function (d) { return { ok: resp.ok, d: d }; }); })
+    .then(function (res) {
+      if (res.ok && res.d.success) {
+        setState(stateCell, '<i class="bi bi-check-circle-fill state-ok"></i> <span class="state-ok small">Enregistrée</span>');
+        if (res.d.url && current) current.src = res.d.url;
+        tr._pendingFile = null;             // consommé
+        // Bouton reste désactivé après succès (réactivé seulement à une nouvelle sélection).
+      } else {
+        setState(stateCell, '<i class="bi bi-x-circle-fill state-err"></i> <span class="state-err small">' + (res.d.message || 'Échec') + '</span>');
+        btn.disabled = false;               // échec -> on permet de réessayer
+      }
+    })
+    .catch(function () {
+      setState(stateCell, '<i class="bi bi-x-circle-fill state-err"></i> <span class="state-err small">Erreur réseau</span>');
+      btn.disabled = false;                 // échec -> réessayable
+    });
+  }
+
+  // Sélection d'un fichier : on PRÉPARE seulement (aperçu + activation bouton),
+  // l'envoi ne part qu'au clic sur "Enregistrer".
+  root.querySelectorAll('.photo-input').forEach(function (input) {
+    input.addEventListener('change', function () {
+      const tr = input.closest('tr[data-sid]');
+      // Deux emplacements d'aperçu : colonne dédiée (desktop) + inline (mobile).
+      const previews = tr.querySelectorAll('.preview-thumb, .preview-thumb-mobile');
+      const btn = tr.querySelector('.save-photo');
+      const stateCell = tr.querySelector('.state');
+      const file = input.files && input.files[0];
+
+      // Nettoie un éventuel aperçu précédent.
+      if (tr._previewUrl) { try { URL.revokeObjectURL(tr._previewUrl); } catch (e) {} tr._previewUrl = null; }
+
+      if (!file) {                          // sélection annulée
+        tr._pendingFile = null;
+        previews.forEach(function (p) { p.classList.add('d-none'); });
+        btn.disabled = true;
+        setState(stateCell, '<span class="text-white-50 small">—</span>');
+        return;
+      }
+
+      tr._pendingFile = file;
+      tr._previewUrl = URL.createObjectURL(file);
+      previews.forEach(function (p) {
+        p.src = tr._previewUrl;
+        // Sur desktop l'aperçu inline reste caché par d-md-none ; sur mobile
+        // c'est la colonne dédiée qui reste cachée par d-none d-md-table-cell.
+        if (p.classList.contains('preview-thumb-mobile')) p.classList.remove('d-none');
+        else p.classList.remove('d-none');
+      });
+      btn.disabled = false;                 // prêt à enregistrer
+      setState(stateCell, '<span class="text-warning small">Prête</span>');
+    });
+  });
+
+  // Clic sur "Enregistrer" : lance l'upload de la ligne.
+  root.querySelectorAll('.save-photo').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const tr = btn.closest('tr[data-sid]');
+      uploadRow(tr);
+    });
+  });
+})();
+</script>
+{% endblock %}

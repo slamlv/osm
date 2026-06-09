@@ -2,7 +2,8 @@ from django.urls import path
 from .views import ClassroomAdd, ClassRooms, ClassroomDelete, ClassRoomStudents, SubjectDelete, ClassRoomTeachers,\
     classroom_form_reload, ClassroomEdit, Subjects, SubjectAdd, SubjectEdit, stats, StatsCheck, MarksSheet,\
     classroom_list, ClassMatieres, MatiereAdd, reload, RemoveMatiere, TimeTable, TimeTableForm, SetProgrammation,\
-    reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm, TitulaireAssignment
+    reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm, TitulaireAssignment,\
+    ClassPhotosPage, StudentPhotoUpload
 
 urlpatterns = [
     path("classroom-add", ClassroomAdd.as_view(), name="classroom-add"),
@@ -30,5 +31,7 @@ urlpatterns = [
     path("reload_teachers", reload_teachers, name="reload_teachers"),
     path("stats", stats, name="stats"),
     path("stats-check", StatsCheck.as_view(), name="stats-check"),
-    path("titulaire_assignment", TitulaireAssignment.as_view(), name="titulaire_assignment")
+    path("titulaire_assignment", TitulaireAssignment.as_view(), name="titulaire_assignment"),
+    path("class_photos_update-<int:id>", ClassPhotosPage.as_view(), name="class_photos_update"),
+    path("class-<int:id>-student_photo-<int:student_id>", StudentPhotoUpload.as_view(), name="student_photo_upload")
 ]

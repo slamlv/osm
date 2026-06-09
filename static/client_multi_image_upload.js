@@ -112,6 +112,8 @@
     });
   }
 
+  window.OSMCompressImage = resizeAndConvert;
+
   // helper: create a File from a Blob (with filename & type)
   function blobToFile(blob, filename) {
     try {

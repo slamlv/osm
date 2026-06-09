@@ -26,6 +26,10 @@
         <a class="btn btn-secondary btn-sm" href="{% url 'students' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
         {% endif %}
       {% else %}
+        {% if pk %}
+        <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'class_photos_update' id=pk %}" title="Mettre à jour les photos" data-bs-toggle="tooltip">
+          <i class="bi bi-camera me-1"></i>Photos</a>
+        {% endif %}
         {% if pk and datas %}
         <a class="btn btn-danger btn-sm fw-semibold" href="{% url 'classroom-list' id=pk %}" title="Télécharger en PDF" data-bs-toggle="tooltip">
           <i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
