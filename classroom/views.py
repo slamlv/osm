@@ -14,7 +14,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from staff.models import Discipline
+from staff.models import Discipline, Personnel
 from student.models import Student
 from note.forms import CheckForm, MarksForm, SelectForm
 from note.models import Note
@@ -28,6 +28,59 @@ import datetime
 from collections import OrderedDict
 from django.core import signing
 from django.forms import ValidationError
+
+
+"""
+=============================================================================
+ VIEW — Attribution des titulaires aux classes (toutes les classes)
+=============================================================================
+FLUX :
+  GET  -> tableau, une ligne par classe, select de titulaire pré-rempli.
+  POST -> lit titulaire_<classroom_id> et met à jour ClassRoom.titulaire en masse
+          (bulk_update). Une valeur vide = "aucun titulaire" (None).
+=============================================================================
+"""
+class TitulaireAssignment(LoggedAdminView):
+    template_name = "titulaire_assignment.html"
+
+    def get(self, *args, **kwargs):
+        classrooms = ClassRoom.objects.select_related("classe", "titulaire").order_by_niveau()
+        context = {
+            "title": "Attribution des titulaires",
+            "classrooms": classrooms,
+            "personnels": Personnel.objects.personnels_tries(),
+        }
+        return render(self.request, self.template_name, context)
+
+    def post(self, *args, **kwargs):
+        classrooms = list(
+            ClassRoom.objects.select_related("titulaire").order_by_niveau()
+        )
+
+        # Ids de personnel valides (sécurité : on n'accepte que des ids connus).
+        valid_personnel_ids = set(
+            Personnel.objects.values_list("id", flat=True)
+        )
+
+        to_update, nb = [], 0
+        for cls in classrooms:
+            raw = self.request.POST.get(f"titulaire_{cls.id}") or None
+            new_id = int(raw) if (raw and int(raw) in valid_personnel_ids) else None
+
+            if (cls.titulaire_id or None) != new_id:
+                cls.titulaire_id = new_id
+                to_update.append(cls)
+                nb += 1
+
+        if to_update:
+            ClassRoom.objects.bulk_update(to_update, ["titulaire"])
+
+        if nb:
+            message(self.request, f"Titulaires mis à jour pour {nb} classe(s).")
+        else:
+            message(self.request, "Aucune modification effectuée.", msg_type="warning")
+
+        return redirect("titulaire_assignment")
 
 
 class ClassRoomProgression(LoggedAdminView):

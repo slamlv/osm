@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ClassroomAdd, ClassRooms, ClassroomDelete, ClassRoomStudents, SubjectDelete, ClassRoomTeachers,\
     classroom_form_reload, ClassroomEdit, Subjects, SubjectAdd, SubjectEdit, stats, StatsCheck, MarksSheet,\
     classroom_list, ClassMatieres, MatiereAdd, reload, RemoveMatiere, TimeTable, TimeTableForm, SetProgrammation,\
-    reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm
+    reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm, TitulaireAssignment
 
 urlpatterns = [
     path("classroom-add", ClassroomAdd.as_view(), name="classroom-add"),
@@ -29,5 +29,6 @@ urlpatterns = [
     path("set_programmation", SetProgrammation.as_view(), name="set_programmation"),
     path("reload_teachers", reload_teachers, name="reload_teachers"),
     path("stats", stats, name="stats"),
-    path("stats-check", StatsCheck.as_view(), name="stats-check")
+    path("stats-check", StatsCheck.as_view(), name="stats-check"),
+    path("titulaire_assignment", TitulaireAssignment.as_view(), name="titulaire_assignment")
 ]

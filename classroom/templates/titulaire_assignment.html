@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% comment %}
+===========================================================================
+ TEMPLATE — Attribution des titulaires aux classes
+ Fichier : titulaire_assignment.html
+
+ Page autonome (extends base.html). Tableau une ligne par classe + select de titulaire
+ (natif, stylé .form-card), enregistrement groupé. Responsive : compactage
+ et masquage de colonnes secondaires < md.
+===========================================================================
+{% endcomment %}
+
+{% block content %}
+<style>
+  .ta select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; font-size:0.84rem; }
+  .ta select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .ta select option { background-color:#1b3a57; color:#fff; }
+
+  .ta .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .ta .osm-table-outer table { margin-bottom:0; min-width:520px; width:100%; }
+  .ta .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .ta .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .ta .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .ta .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .ta .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .ta .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+
+  @media (max-width: 767.98px) {
+    .ta .osm-table-outer table { min-width:0; }
+    .ta .osm-table-outer thead th { padding:8px 8px; font-size:0.68rem; }
+    .ta .osm-table-outer tbody td { padding:8px 8px; font-size:0.8rem; }
+    .ta select { font-size:0.8rem; }
+  }
+</style>
+
+<div class="ta px-3 px-md-4 py-3">
+
+  {% if classrooms %}
+
+    {% comment %} Source d'options personnel - rendue UNE SEULE FOIS {% endcomment %}
+    <select id="staff-src" class="d-none" aria-hidden="true" tabindex="-1">
+      <option value="">— Aucun —</option>
+      {% for p in personnels %}<option value="{{ p.id }}">{{ p.short_name }}{% if p.poste != "Enseignant" %} ({{ p.poste }}){% endif %}</option>{% endfor %}
+    </select>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="osm-table-outer">
+        <table class="table table-hover align-middle">
+          <thead><tr>
+            <th class="d-none d-sm-table-cell" style="width:36px;">#</th>
+            <th>Classe</th>
+            <th class="d-none d-md-table-cell">Niveau</th>
+            <th class="d-none d-md-table-cell text-center">Effectif</th>
+            <th style="min-width:220px;">Titulaire</th>
+          </tr></thead>
+          <tbody>
+            {% for cls in classrooms %}
+            <tr>
+              <td class="d-none d-sm-table-cell" style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
+              <td class="fw-semibold">{{ cls.code }}</td>
+              <td class="d-none d-md-table-cell">{{ cls.level|default:"—" }}</td>
+              <td class="d-none d-md-table-cell text-center">{{ cls.effectif }}</td>
+              <td>
+                <select name="titulaire_{{ cls.id }}"
+                        class="form-select form-select-sm fw-semibold staff-select"
+                        data-selected="{{ cls.titulaire_id|default_if_none:'' }}"></select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-center mt-3">
+        <button type="submit" class="btn btn-success fw-semibold px-4" data-with-spinner>
+          <i class="bi bi-save me-2"></i>Enregistrer les titulaires
+        </button>
+      </div>
+    </form>
+
+  {% else %}
+    <div class="empty-state">
+      <i class="bi bi-mortarboard fs-2 mb-2 d-block"></i>
+      <p class="mb-0">Aucune classe enregistrée.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  const staffSrc = document.getElementById('staff-src');
+
+  // Remplit un select avec la liste du personnel, et re-sélectionne savedVal.
+  function fillStaff(sel, savedVal) {
+    if (!sel || !staffSrc) return;
+    sel.innerHTML = staffSrc.innerHTML;     // clone des options (rendues 1 fois)
+    if (savedVal) sel.value = savedVal;
+  }
+
+  function init() {
+    // Chaque ligne : on injecte la liste + le titulaire déjà enregistré.
+    document.querySelectorAll('.staff-select').forEach(function (sel) {
+      fillStaff(sel, sel.dataset.selected);
+    });
+  }
+
+  init();
+})();
+</script>
+{% endblock %}

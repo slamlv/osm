@@ -326,6 +326,7 @@
                 {% if user.is_admin %}
                 <li><a class="dropdown-item" href="{% url 'classrooms' %}"><i class="bi bi-grid me-2 text-info"></i>Liste des Classes</a></li>
                 <li><a class="dropdown-item" href="{% url 'classroom-add' %}"><i class="bi bi-plus-square me-2 text-info"></i>Ajouter une Classe</a></li>
+                <li><a class="dropdown-item" href="{% url 'titulaire_assignment' %}"><i class="bi bi-person-check me-2 text-warning"></i>Attribution des titulaires</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'classroom_time_table' %}"><i class="bi bi-calendar-week me-2 text-danger"></i>Emploi du temps</a></li>
                 <li><a class="dropdown-item" href="{% url 'plages_horaires' %}"><i class="bi bi-clock me-2 text-danger"></i>Plages horaires</a></li>

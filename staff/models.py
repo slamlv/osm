@@ -61,6 +61,19 @@ class Discipline(models.Model):
 
 
 class StaffQuerySet(models.QuerySet):
+    def personnels_tries(self):
+        """
+        Tout le personnel, enseignants en tête (poste='Enseignant'), puis par nom.
+        """
+        return (
+            self.annotate(ens=Case(
+                When(poste="Enseignant", then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            ))
+            .order_by("ens", "nom", "prenom")
+        )
+
     def priorite_par_matiere(self, matiere_id):
         from collections import OrderedDict
         queryset = self.annotate(
