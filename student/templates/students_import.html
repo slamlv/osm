@@ -17,7 +17,10 @@
       <h6 class="text-white fw-bold mb-0">{% if livret %}Livret SPIDER{% else %}Importation d'élèves{% endif %}</h6>
     </div>
     <div class="p-3 p-sm-4">
-      <form method="post" enctype="multipart/form-data">
+      {% comment %} data-download n'est posé QUE pour le livret (réponse = fichier Excel).
+         Pour l'import d'élèves, le form se soumet normalement -> Django re-rend
+         la page avec le rapport. {% endcomment %}
+      <form method="post" enctype="multipart/form-data"{% if livret %} data-download="1"{% endif %}>
         {% csrf_token %}
 
         {% if not livret %}
@@ -81,26 +84,67 @@
 </div>
 
 <script>
-document.querySelector('form').addEventListener('submit', async function(e) {
+(function () {
+  const form = document.querySelector('form');
+  if (!form) return;
+
+  // IMPORT D'ÉLÈVES (pas de data-download) : soumission classique.
+  // Django re-rend la page avec le rapport -> on ne touche à rien, et le
+  // spinner générique du base se réinitialise au rechargement.
+  if (!form.dataset.download) return;
+
+  // LIVRET SPIDER : la vue renvoie un fichier Excel -> fetch + téléchargement.
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const btn = this.querySelector('[data-with-spinner]');
-    const response = await fetch(this.action, {
+    const btn = form.querySelector('[data-with-spinner]');
+    // HTML d'origine du bouton, capturé avant que le spinner générique ne le
+    // remplace (au cas où son listener submit s'exécute avant le nôtre).
+    const originalBtnHtml = btn ? (btn.dataset.originalHtml ?? btn.innerHTML) : null;
+    try {
+      const response = await fetch(form.action || window.location.href, {
         method: 'POST',
-        body: new FormData(this),
-        headers: {'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value}
-    });
-    btn.innerHTML = btn.dataset.originalHtml;
-    btn.disabled = false;
-    delete btn.dataset.originalHtml;
-    delete btn.dataset.spinnerActive;
-    const filename = response.headers.get('Content-Disposition').split('filename=')[1];
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-});
+        body: new FormData(form),
+        headers: { 'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value },
+      });
+
+      const disposition = response.headers.get('Content-Disposition') || '';
+      // Si ce n'est pas un fichier (erreur serveur, page renvoyée), on évite
+      // de "télécharger" du HTML : on ré-affiche la réponse.
+      if (!disposition.includes('attachment')) {
+        document.open();
+        document.write(await response.text());
+        document.close();
+        return;
+      }
+
+      let filename = 'livret.xlsx';
+      const m = disposition.match(/filename\*=UTF-8''([^;]+)/i) || disposition.match(/filename=['"]?([^;'"]+)['"]?/i);
+      if (m) filename = decodeURIComponent(m[1].trim());
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      // Restaure le bouton EXACTEMENT comme le spinner générique du base :
+      // il a stocké le HTML d'origine dans dataset.originalHtml et l'a remplacé
+      // par "Traitement...". On le remet, sinon le bouton reste figé (pas de
+      // rechargement ni d'événement HTMX pour déclencher restoreAll()).
+      if (btn) {
+        if (originalBtnHtml !== null) btn.innerHTML = originalBtnHtml;
+        btn.disabled = false;
+        delete btn.dataset.originalHtml;
+        delete btn.dataset.spinnerActive;
+      }
+    }
+  });
+})();
 </script>
 {% endblock %}
