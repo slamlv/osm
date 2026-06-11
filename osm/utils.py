@@ -362,7 +362,7 @@ class BaseDetailView(View):
         elif self.model == User:
             queryset = queryset.prefetch_related('staff_member__enseignant__matiere__sujet')
         elif self.model == Student:
-            queryset = queryset.objects_all
+            queryset = Student.objects_all
         elif self.model == Parent:
             queryset = queryset.prefetch_related('father_children__classe', 'mother_children__classe')
         elif self.model == School:
