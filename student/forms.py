@@ -160,7 +160,7 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         if not (min_year < date.year < max_year):
             message(self.context['request'], f"L'année de naissance doit être comprise entre {min_year} et {max_year}", msg_type="warning")
             raise forms.ValidationError("")
-        students = Student.objects
+        students = Student.objects_all
         if self.student_id:
             students = students.exclude(pk=self.student_id)
         # Validation du nom et du prénom

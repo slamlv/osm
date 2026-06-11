@@ -1,7 +1,8 @@
 from django.urls import path
 from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, StudentEdit, StudentDelete,\
     Students, StudentDetails, ParentDetails, Parents, discipline, Discipline, StudentsImport, students_export,\
-    StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney
+    StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney, StudentsTrash, StudentsWithoutClass,\
+    StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
@@ -22,4 +23,10 @@ urlpatterns = [
     path("end_year_assignment", EndYearAssignment.as_view(), name="end_year_assignment"),
     path("end_year_assignment_form", EndYearAssignmentForm.as_view(), name="end_year_assignment_form"),
     path("student_journey-<int:id>", StudentJourney.as_view(), name="student_journey"),
+    path("students_corbeille", StudentsTrash.as_view(), name="students_trash"),
+    path("students_without_class", StudentsWithoutClass.as_view(), name="students_without_class"),
+    path("student_toggle_active-<int:id>", StudentToggleActive.as_view(), name="student_toggle_active"),
+    path("students_delete_deactivated", DeleteDeactivatedStudents.as_view(), name="students_delete_deactivated"),
+    path("students_delete_without_class", DeleteStudentsWithoutClass.as_view(), name="students_delete_without_class"),
+    path("class_bulk_assignment", AssignClassToWithoutClass.as_view(), name="class_bulk_assignment")
 ]

@@ -58,22 +58,25 @@ class StudentQuerySet(models.QuerySet):
     def order_by_classroom_level(self):
         order = {
             None: 0,
-            'Sixième': 1,
-            'Cinquième': 2,
-            'Quatrième': 3,
-            'Troisième': 4,
-            'Seconde': 5,
-            'Première': 6,
-            'Terminale': 7,
+            'Sixième': 1, 'Cinquième': 2, 'Quatrième': 3, 'Troisième': 4,
+            'Seconde': 5, 'Première': 6, 'Terminale': 7,
         }
-
         return self.order_by(
             Case(
                 *[When(classe__classe__niveau=key, then=Value(value)) for key, value in order.items()],
-                default=Value(999),
+                default=Value(8),
                 output_field=IntegerField()
             ), 'classe', 'nom', 'prenom'
         )
+
+
+class StudentAllManager(models.Manager.from_queryset(StudentQuerySet)):
+    pass
+
+
+class StudentActiveManager(models.Manager.from_queryset(StudentQuerySet)):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True)
 
 
 class Student(models.Model):
@@ -88,13 +91,37 @@ class Student(models.Model):
     classe = models.ForeignKey(ClassRoom, on_delete=models.SET_NULL, related_name="students", null=True)
     photo = models.ImageField(upload_to="image/student", blank=True, null=True)
     unique_id = models.IntegerField(unique=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = StudentActiveManager()  # actifs only (usage courant)
+    objects_all = StudentAllManager()  # tout (actifs + désactivés)
 
     UniqueConstraint(name="unique_student", fields=['nom', 'prenom', 'date_naissance'])
 
-    objects = StudentQuerySet.as_manager()
-
     class Meta:
         db_table = '"Student"'
+        base_manager_name = "objects_all"  # accès liés / admin voient TOUT
+
+    # ------------------------------------------------------------------
+    # Suppression DÉFINITIVE : on retire aussi la photo du stockage.
+    # Centraliser ici garantit que TOUTE suppression (DeleteView unitaire,
+    # suppression groupée, admin) nettoie l'image -> pas d'orphelin Cloudinary.
+    # ------------------------------------------------------------------
+    def delete(self, *args, **kwargs):
+        from osm.utils import delete_image
+        if self.photo:
+            delete_image(self.photo)
+        return super().delete(*args, **kwargs)
+
+    def deactivate(self):
+        if self.is_active:
+            self.is_active = False
+            self.save(update_fields=["is_active"])
+
+    def activate(self):
+        if not self.is_active:
+            self.is_active = True
+            self.save(update_fields=["is_active"])
 
     def student_to_dict(self):
         return {

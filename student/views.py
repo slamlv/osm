@@ -10,7 +10,7 @@ from django.views import View
 from django.views.decorators.http import condition
 from django.views.generic import DeleteView, DetailView
 from django.forms.models import model_to_dict
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.conf import settings
 from fpdf import FPDF
 from fpdf.enums import VAlign, TableCellFillMode
@@ -39,6 +39,212 @@ from os import path
 
 """
 =============================================================================
+ VIEW — Attribution de classe en masse (aux élèves sans classe)
+=============================================================================
+Mécanisme:
+  - un SELECT de classe par ligne (cas isolés / hétérogènes) ;
+  - une barre "sélection + classe groupée" qui PRÉ-REMPLIT (côté JS) le select
+    des lignes cochées ; l'utilisateur peut ensuite ajuster chaque ligne ;
+  - à l'enregistrement, le serveur ne lit QUE le select de chaque ligne
+    (classe_<student_id>). Une seule logique, aucune ambiguïté.
+
+On fait des save() individuels (et pas bulk_update) :
+  affecter une classe déclenche le signal post_save -> création automatique du
+  StudentEnrollment de l'année courante. On VEUT ce signal ici, on fait save() par
+  élève, dans une transaction. On prévoit que les volumes (sans-classe) sont faibles.
+"""
+
+
+class AssignClassToWithoutClass(LoggedAdminView):
+    template_name = "class_bulk_assignment.html"
+
+    def get_students(self):
+        return Student.objects.filter(classe__isnull=True).order_by_classroom_level()
+
+    def get(self, *args, **kwargs):
+        students = self.get_students()
+        context = {
+            "title": "Attribuer une classe (aux élèves sans classe)",
+            "students": students,
+            "classrooms": ClassRoom.objects.select_related("classe").order_by_niveau(),
+        }
+        return render(self.request, self.template_name, context)
+
+    def post(self, *args, **kwargs):
+        students = list(Student.objects.filter(classe__isnull=True))
+
+        # Ids de classe valides (sécurité).
+        valid_class_ids = set(ClassRoom.objects.values_list("id", flat=True))
+
+        assigned = 0
+        with transaction.atomic():
+            for student in students:
+                raw = self.request.POST.get(f"classe_{student.id}") or None
+                if not raw:
+                    continue                       # ligne laissée vide -> on ignore
+                try:
+                    cid = int(raw)
+                except (TypeError, ValueError):
+                    continue
+                if cid not in valid_class_ids:
+                    continue
+
+                student.classe_id = cid
+                # save() individuel -> déclenche le signal post_save qui crée le
+                # StudentEnrollment de l'année courante s'il n'existe pas.
+                student.save(update_fields=["classe"])
+                assigned += 1
+
+        if assigned:
+            message(self.request, f"{assigned} élève(s) affecté(s) à une classe.")
+        else:
+            message(self.request, "Aucune affectation effectuée.", msg_type="warning")
+        return redirect("students_without_class")
+
+
+"""
+=============================================================================
+ VIEWS — Corbeille (désactivés) & À régulariser (actifs sans classe)
+=============================================================================
+"""
+# -----------------------------------------------------------------------------
+# Base commune aux deux écrans secondaires : on réutilise students_list.html.
+# -----------------------------------------------------------------------------
+class _StudentSubListView(LoggedAdminView):
+    """
+    Classe de base : rend students_list.html avec un queryset et un contexte
+    spécifiques. Les sous-classes définissent get_queryset() + les libellés.
+    """
+    template_name = "students_list.html"
+    title = ""
+    info = ""
+    review_mode = None          # "trash" | "without_class" -> pilote le bouton groupé
+
+    def get_queryset(self):
+        raise NotImplementedError
+
+    def get(self, *args, **kwargs):
+        datas = self.get_queryset()
+        context = {
+            "title": self.title,
+            "info": self.info,
+            "datas": datas,
+            "review_mode": self.review_mode,   # le template affiche le bon bouton
+            "pk": None, # pas de pk -> students_list.html sait qu'on n'est pas dans une classe
+            # on masque la barre de recherche/ajout sur ces écrans secondaires
+            "secondary": True,
+        }
+        return render(self.request, self.template_name, context)
+
+
+# -----------------------------------------------------------------------------
+# Corbeille : les élèves désactivés
+# -----------------------------------------------------------------------------
+class StudentsTrash(_StudentSubListView):
+    title = "Corbeille — élèves désactivés"
+    info = "Élèves désactivés. Vous pouvez les réactiver, ou les supprimer définitivement."
+    review_mode = "trash"
+
+    def get_queryset(self):
+        return Student.objects_all.filter(is_active=False).order_by_classroom_level()
+
+
+# -----------------------------------------------------------------------------
+# À régulariser : les actifs sans classe
+# -----------------------------------------------------------------------------
+class StudentsWithoutClass(_StudentSubListView):
+    title = "À régulariser — élèves sans classe"
+    info = "Élèves actifs non affectés à une classe. Attribuez-leur une classe, ou supprimez-les."
+    review_mode = "without_class"
+
+    def get_queryset(self):
+        # Actifs (objects) + sans classe.
+        return Student.objects.filter(classe__isnull=True).order_by_classroom_level()
+
+
+# -----------------------------------------------------------------------------
+# Toggle activer/désactiver (unitaire)
+# -----------------------------------------------------------------------------
+class StudentToggleActive(LoggedAdminView):
+    def post(self, *args, **kwargs):
+        student = get_object_or_404(Student.objects_all, pk=self.kwargs["id"])
+        if student.is_active:
+            student.deactivate()
+            message(self.request, f"{student} a été désactivé(e) et n'apparaîtra plus dans les listes, bulletins et autres.")
+        else:
+            student.activate()
+            message(self.request, f"{student} a été réactivé(e).")
+        nxt = self.request.POST.get("next")
+        return redirect(nxt) if nxt else redirect("students")
+
+
+# -----------------------------------------------------------------------------
+# Suppression groupée — désactivés (depuis la corbeille)
+# -----------------------------------------------------------------------------
+class DeleteDeactivatedStudents(LoggedAdminView):
+    template_name = "students_bulk_delete.html"
+
+    def get_targets(self):
+        return Student.objects_all.filter(is_active=False)
+
+    def get(self, *args, **kwargs):
+        targets = self.get_targets()
+        return render(self.request, self.template_name, {
+            "title": "Vider la corbeille",
+            "count": targets.count(),
+            "alerte": ("Cette action est IRRÉVERSIBLE : tous les élèves désactivés "
+                       "seront définitivement supprimés (notes, parcours, discipline, photos)."),
+            "back": "students_trash",
+        })
+
+    def post(self, *args, **kwargs):
+        targets = self.get_targets()
+        n = targets.count()
+        if n:
+            with transaction.atomic():
+                for student in targets:
+                    student.delete()
+            message(self.request, f"{n} élève(s) désactivé(s) supprimé(s) définitivement.")
+        else:
+            message(self.request, "La corbeille est déjà vide.", msg_type="warning")
+        return redirect("students_trash")
+
+
+# -----------------------------------------------------------------------------
+# Suppression groupée — actifs sans classe (depuis l'écran à régulariser)
+# -----------------------------------------------------------------------------
+class DeleteStudentsWithoutClass(LoggedAdminView):
+    template_name = "students_bulk_delete.html"
+
+    def get_targets(self):
+        return Student.objects.filter(classe__isnull=True)   # actifs sans classe
+
+    def get(self, *args, **kwargs):
+        targets = self.get_targets()
+        return render(self.request, self.template_name, {
+            "title": "Supprimer les élèves sans classe",
+            "count": targets.count(),
+            "alerte": ("Cette action est IRRÉVERSIBLE : notes, parcours, discipline "
+                       "et photos de ces élèves seront définitivement perdus. "
+                       "Pour seulement les retirer des listes, désactivez-les plutôt."),
+            "back": "students_without_class",
+        })
+
+    def post(self, *args, **kwargs):
+        targets = self.get_targets()
+        n = targets.count()
+        if n:
+            with transaction.atomic():
+                for student in targets:
+                    student.delete()
+            message(self.request, f"{n} élève(s) sans classe supprimé(s) définitivement.")
+        else:
+            message(self.request, "Aucun élève sans classe à supprimer.", msg_type="warning")
+        return redirect("students_without_class")
+
+
+"""
+=============================================================================
  VIEW — Parcours scolaire d'un élève au sein de l'établissement
 =============================================================================
 """
@@ -50,7 +256,7 @@ class StudentJourney(LoggedAdminView):
     def get(self, *args, **kwargs):
         # Élève + relations affichées dans l'en-tête (classe actuelle, parents).
         student = get_object_or_404(
-            Student.objects.select_related("classe", "pere", "mere"),
+            Student.objects_all.select_related("classe", "pere", "mere"),
             pk=self.kwargs["id"]
         )
 
@@ -428,7 +634,7 @@ class StudentsImport(LoggedAdminView):
                             rapport.append([False, f"Ligne {line_number} : Le matricule doit être une suite de 9 "
                                                    f"chiffres"])
                             continue
-                        if Student.objects.filter(unique_id=matricule).exists():
+                        if Student.objects_all.filter(unique_id=matricule).exists():
                             rapport.append([False, f"Ligne {line_number} : Ce matricule a déjà été enregistré pour un "
                                                    f"autre élève"])
                             continue
@@ -451,7 +657,7 @@ class StudentsImport(LoggedAdminView):
                             rapport.append([False, f"Ligne {line_number} : L'année de naissance doit être comprise "
                                                    f"entre {min_year} et {max_year}"])
                             continue
-                        if Student.objects.filter(nom=nom, prenom=prenom, date_naissance=date_naissance).exists():
+                        if Student.objects_all.filter(nom=nom, prenom=prenom, date_naissance=date_naissance).exists():
                             rapport.append([False, f"Ligne {line_number} : Un(e) élève du même nom et né le même jour "
                                                    f"a déjà été enregistré"])
                             continue
@@ -582,7 +788,7 @@ class StudentEdit(LoggedAdminView):
 
     def get_object(self):
         student_id = self.kwargs.get("id")
-        students = Student.objects.select_related('classe', 'pere', 'mere')
+        students = Student.objects_all.select_related('classe', 'pere', 'mere')
         return get_object_or_404(students, pk=student_id)
 
     def post(self, *args, **kwargs):

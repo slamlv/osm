@@ -169,6 +169,8 @@ class BaseListView(View):
                 if 'total' in info:
                     context['info'] += f" {self.request.user.school.kind_numbers}"
             context['pk'] = pk
+            context['nb_trash'] = Student.objects_all.filter(is_active=False).count()
+            context['nb_without'] = Student.objects.filter(classe__isnull=True).count()
         return render(self.request, self.template_name, context=context)
 
     def post(self, *args, **kwargs):
@@ -284,6 +286,8 @@ class DeleteView(LoggedAdminView):
     def get_object(self):
         if self.model == Personnel:
             queryset = Personnel.objects.select_related('user')
+        elif self.model == Student:
+            queryset = Student.objects_all
         else:
             queryset = self.model.objects
         instance = get_object_or_404(queryset, pk=self.kwargs['id'])
@@ -357,6 +361,8 @@ class BaseDetailView(View):
                 return get_object_or_404(queryset, user_id=self.request.user.pk)
         elif self.model == User:
             queryset = queryset.prefetch_related('staff_member__enseignant__matiere__sujet')
+        elif self.model == Student:
+            queryset = queryset.objects_all
         elif self.model == Parent:
             queryset = queryset.prefetch_related('father_children__classe', 'mother_children__classe')
         elif self.model == School:

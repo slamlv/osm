@@ -189,6 +189,14 @@ class ClassRoom(models.Model):
         db_table = '"ClassRoom"'
 
     @property
+    def active_students(self):
+        """
+        Élèves ACTIFS de la classe (exclut les désactivés).
+        L'attribut brut self.students reste disponible si besoin de TOUT voir.
+        """
+        return self.students(manager="objects").all()
+
+    @property
     def next_level(self):
         levels = ["Sixième", "Cinquième", "Quatrième", "Troisième", "Seconde", "Première", "Terminale"]
         index = levels.index(self.classe.niveau)

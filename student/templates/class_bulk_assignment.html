@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% comment %}
+===========================================================================
+ TEMPLATE — Attribution de classe en masse (élèves sans classe)
+
+ Page autonome, thème sombre:
+   - une checkbox + un select de classe par ligne ;
+   - une barre "sélection groupée" qui PRÉ-REMPLIT (JS) le select des lignes
+     cochées ; l'utilisateur ajuste librement avant d'enregistrer ;
+   - bouton "Enregistrer les affectations".
+===========================================================================
+{% endcomment %}
+
+{% block content %}
+<style>
+  .ac select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; font-size:0.84rem; }
+  .ac select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .ac select option { background-color:#1b3a57; color:#fff; }
+  .ac .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .ac .osm-table-outer table { margin-bottom:0; min-width:560px; width:100%; }
+  .ac .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .ac .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .ac .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .ac .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .ac .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .ac .toolbar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:0.75rem 1rem; }
+  .ac .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
+  .ac .form-check-input { background-color:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.3); }
+  @media (max-width: 767.98px) {
+    .ac .osm-table-outer table { min-width:0; }
+    .ac .osm-table-outer thead th, .ac .osm-table-outer tbody td { padding:8px 8px; }
+    .ac select { font-size:0.8rem; }
+  }
+</style>
+
+<div class="ac px-3 px-md-4 py-3">
+
+  <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-diagram-3 me-1"></i>Attribuez une classe aux élèves sans classe.</span>
+    <a class="btn btn-secondary btn-sm" href="{% url 'students_without_class' %}">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+
+  {% if students %}
+
+    {% comment %} Source d'options classes - rendue UNE SEULE FOIS {% endcomment %}
+    <select id="class-src" class="d-none" aria-hidden="true" tabindex="-1">
+      <option value="">— Choisir —</option>
+      {% for c in classrooms %}<option value="{{ c.id }}">{{ c.code }}</option>{% endfor %}
+    </select>
+
+    <!-- Barre de pré-remplissage groupé -->
+    <div class="toolbar d-flex flex-column flex-md-row gap-2 mb-3 align-items-stretch align-items-md-end">
+      <div class="flex-grow-1">
+        <label class="form-label small fw-semibold text-white-50 mb-1">Classe à pré-remplir pour les élèves cochés</label>
+        <select id="bulk_class" class="form-select fw-bold"></select>
+      </div>
+      <button type="button" id="apply-selected" class="btn btn-info btn-sm fw-semibold">
+        <i class="bi bi-magic me-1"></i>Pré-remplir les sélectionnés
+      </button>
+    </div>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="osm-table-outer">
+        <table class="table table-hover align-middle">
+          <thead><tr>
+            <th style="width:42px;"><input type="checkbox" class="form-check-input" id="check-all" title="Tout sélectionner"></th>
+            <th class="d-none d-md-table-cell">Identifiant</th>
+            <th>Nom(s) et Prénom(s)</th>
+            <th class="d-none d-sm-table-cell">Sexe</th>
+            <th style="min-width:170px;">Classe à attribuer</th>
+          </tr></thead>
+          <tbody>
+            {% for student in students %}
+            <tr>
+              <td><input type="checkbox" class="form-check-input row-check"></td>
+              <td class="d-none d-md-table-cell" style="color:rgba(255,255,255,0.5)!important;font-size:0.82rem;">{% if not student.unique_id %}—{% else %}{{ student.unique_id }}{% endif %}</td>
+              <td class="fw-semibold">{{ student }}</td>
+              <td class="d-none d-sm-table-cell">{{ student.genre }}</td>
+              <td>
+                <select name="classe_{{ student.id }}" class="form-select form-select-sm fw-semibold class-select"></select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-center mt-3">
+        <button type="submit" class="btn btn-success fw-semibold px-4" data-with-spinner>
+          <i class="bi bi-save me-2"></i>Enregistrer les affectations
+        </button>
+      </div>
+    </form>
+
+  {% else %}
+    <div class="empty-state">
+      <i class="bi bi-check2-circle fs-2 mb-2 d-block"></i>
+      <p class="mb-0">Aucun élève sans classe à régulariser.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  const src = document.getElementById('class-src');
+
+  function fillSelect(sel, val) {
+    if (!sel || !src) return;
+    sel.innerHTML = src.innerHTML;      // clone des options (rendues 1 fois)
+    if (val) sel.value = val;
+  }
+
+  function init() {
+    // Remplit chaque select de ligne (vide au départ).
+    document.querySelectorAll('.class-select').forEach(function (sel) { fillSelect(sel, ""); });
+    // Remplit le select groupé.
+    const bulk = document.getElementById('bulk_class');
+    fillSelect(bulk, "");
+
+    // Tout sélectionner.
+    const checkAll = document.getElementById('check-all');
+    if (checkAll) {
+      checkAll.addEventListener('change', function () {
+        document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = checkAll.checked; });
+      });
+    }
+
+    // Pré-remplir les lignes COCHÉES avec la classe groupée (commodité de saisie).
+    // L'utilisateur peut ensuite ajuster n'importe quelle ligne avant d'enregistrer.
+    const applyBtn = document.getElementById('apply-selected');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function () {
+        const val = bulk ? bulk.value : "";
+        if (!val) return;
+        document.querySelectorAll('tbody tr').forEach(function (tr) {
+          const cb = tr.querySelector('.row-check');
+          const sel = tr.querySelector('.class-select');
+          if (cb && cb.checked && sel) sel.value = val;
+        });
+      });
+    }
+  }
+
+  init();
+})();
+</script>
+{% endblock %}

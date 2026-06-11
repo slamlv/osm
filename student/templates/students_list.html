@@ -17,7 +17,7 @@
 
   <!-- Bannière info + actions export -->
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <span>{{ info }}</span>
+    <span>{% if datas and secondary %} {{ datas.count }} {% endif %} {{ info }}</span>
     <div class="d-flex gap-2 flex-wrap">
       {% if search %}
         {% if pk %}
@@ -34,23 +34,46 @@
         <a class="btn btn-danger btn-sm fw-semibold" href="{% url 'classroom-list' id=pk %}" title="Télécharger en PDF" data-bs-toggle="tooltip">
           <i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
         {% endif %}
-        {% if datas %}
+        {% if not pk and not secondary %}
+          <a class="btn btn-warning btn-sm fw-semibold {% if not nb_without %}disabled{% endif %}" href="{% url 'students_without_class' %}"
+             title="Élèves sans classe" data-bs-toggle="tooltip">
+            <i class="bi bi-exclamation-triangle me-1"></i>À régulariser{% if nb_without %} ({{ nb_without }}){% endif %}
+          </a>
+          <a class="btn btn-dark btn-sm fw-semibold {% if not nb_trash %}disabled{% endif %}" href="{% url 'students_trash' %}"
+             title="Èlèves s=désactivés" data-bs-toggle="tooltip">
+            <i class="bi bi-trash3 me-1"></i>Corbeille{% if nb_trash %} ({{ nb_trash }}){% endif %}
+          </a>
+        {% endif %}
+        {% if datas and not secondary %}
         <a class="btn btn-success btn-sm fw-semibold" href="{% url 'students_export' cls_id=pk %}" title="Exporter en Excel" data-bs-toggle="tooltip">
           <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel</a>
+        {% endif %}
+        {% if secondary %}
+            {% if review_mode == "trash" and datas %}
+            <a href="{% url 'students_delete_deactivated' %}" class="btn btn-outline-danger btn-sm fw-semibold">
+                <i class="bi bi-trash me-1"></i>Vider la corbeille</a>
+            {% elif review_mode == "without_class" and datas %}
+            <a href="{% url 'class_bulk_assignment' %}" class="btn btn-warning btn-sm fw-semibold">
+              <i class="bi bi-diagram-3 me-1"></i>Attribuer une classe</a>
+            <a href="{% url 'students_delete_without_class' %}" class="btn btn-outline-danger btn-sm fw-semibold">
+                <i class="bi bi-trash me-1"></i>Supprimer tous les sans-classe</a>
+            {% endif %}
+        <a class="btn btn-secondary btn-sm" href="{% url 'students' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
         {% endif %}
       {% endif %}
     </div>
   </div>
-
   {% if datas %}
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="toolbar d-flex flex-column flex-sm-row gap-2 mb-3 align-items-stretch align-items-sm-center">
-      <div class="flex-grow-1">{{ search_form.search }}</div>
-      <button class="btn btn-info btn-sm fw-semibold" type="submit"><i class="bi bi-search me-1"></i>Rechercher</button>
-      <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'student-add' %}"><i class="fas fa-user-graduate me-1"></i>Ajouter un Élève</a>
-    </div>
-  </form>
+      {% if not secondary %}
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="toolbar d-flex flex-column flex-sm-row gap-2 mb-3 align-items-stretch align-items-sm-center">
+          <div class="flex-grow-1">{{ search_form.search }}</div>
+          <button class="btn btn-info btn-sm fw-semibold" type="submit"><i class="bi bi-search me-1"></i>Rechercher</button>
+          <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'student-add' %}"><i class="fas fa-user-graduate me-1"></i>Ajouter un Élève</a>
+        </div>
+      </form>
+      {% endif %}
 
   <div class="osm-table-outer">
     <table class="table table-hover align-middle">
@@ -87,6 +110,16 @@
               <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'student-edit' id=student.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
               <a class="btn btn-outline-danger btn-sm" title="Supprimer" href="{% url 'student-delete' id=student.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
               <a class="btn btn-outline-info btn-sm" title="Parcours" data-bs-toggle="tooltip" href="{% url 'student_journey' id=student.id %}"><i class="bi bi-signpost-2"></i></a>
+              <form method="post" action="{% url 'student_toggle_active' id=student.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                {% if student.is_active %}
+                <button type="submit" class="btn btn-outline-warning btn-sm" title="Désactiver" data-bs-toggle="tooltip"><i class="bi bi-person-dash"></i></button>
+                {% else %}
+                <button type="submit" class="btn btn-outline-success btn-sm" title="Réactiver" data-bs-toggle="tooltip"><i class="bi bi-person-check"></i></button>
+                {% endif %}
+            </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
