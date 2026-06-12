@@ -46,16 +46,16 @@
           <td style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
           <td class="fw-semibold">{{ user_account.username }}</td>
           <td>
-            <span class="d-none d-lg-inline">{{ user_account.staff_member.all.0 }}</span>
-            <span class="d-lg-none">{{ user_account.staff_member.all.0.short_name }}</span>
+            <span class="d-none d-lg-inline">{{ user_account.staff_member }}</span>
+            <span class="d-lg-none">{{ user_account.staff_member.short_name }}</span>
             {% if user_account.is_admin %}<i class="bi bi-shield-check ms-1 text-warning"></i>{% endif %}
           </td>
           <td>{{ user_account.contact }}</td>
           <td>
             <div class="d-flex gap-2">
               <a class="btn btn-outline-light btn-sm" title="Afficher" data-bs-toggle="tooltip" href="{% url 'user_details' id=user_account.id %}"><i class="bi bi-eye"></i></a>
-              <a class="btn btn-outline-warning btn-sm" title="Modifier" data-bs-toggle="tooltip" href="{% url 'staff-edit' id=user_account.staff_member.all.0.id %}"><i class="bi bi-pencil-square"></i></a>
-              <a class="btn btn-outline-info btn-sm" title="Emploi du temps" data-bs-toggle="tooltip" href="{% url 'staff-timetable' id=user_account.staff_member.all.0.id %}"><i class="bi bi-clock"></i></a>
+              <a class="btn btn-outline-warning btn-sm" title="Modifier" data-bs-toggle="tooltip" href="{% url 'staff-edit' id=user_account.staff_member.id %}"><i class="bi bi-pencil-square"></i></a>
+              <a class="btn btn-outline-info btn-sm" title="Emploi du temps" data-bs-toggle="tooltip" href="{% url 'staff-timetable' id=user_account.staff_member.id %}"><i class="bi bi-clock"></i></a>
               {% if user_account != user %}
               <a class="btn btn-outline-danger btn-sm" title="Supprimer" href="{% url 'user_delete' id=user_account.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
               {% endif %}

@@ -17,19 +17,34 @@
 <div class="px-3 px-md-4 py-3">
 
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <span>{{ info }}</span>
+    <span>{% if archive_mode %} {{ datas.count }} {% endif %} {{ info }}</span>
+    <div class="d-flex gap-2 flex-wrap">
+    {% if nb_archive %}
+    <a class="btn btn-dark btn-sm fw-semibold {% if not nb_archive %}disabled{% endif %}" href="{% url 'staff_archive' %}"
+       title="Anciens membres" data-bs-toggle="tooltip"><i class="bi bi-archive me-1"></i>Anciens ({{ nb_archive }})</a>{% endif %}
+    {% if archive_mode %}
+      {% if archive_count %}
+      <a class="btn btn-outline-danger btn-sm fw-semibold" href="{% url 'staff_delete_archived' %}">
+        <i class="bi bi-trash me-1"></i>Vider la corbeille ({{ archive_count }})</a>
+      {% endif %}
+      <a class="btn btn-secondary btn-sm fw-semibold" href="{% url 'staff' %}">
+        <i class="bi bi-arrow-left me-1"></i>Retour</a>
+    {% endif %}
     {% if search %}<a class="btn btn-secondary btn-sm" href="{% url 'staff' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>{% endif %}
+    </div>
   </div>
 
   {% if datas %}
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="toolbar d-flex flex-column flex-sm-row gap-2 mb-3 align-items-stretch align-items-sm-center">
-      <div class="flex-grow-1">{{ search_form.search }}</div>
-      <button class="btn btn-info btn-sm fw-semibold" type="submit"><i class="bi bi-search me-1"></i>Rechercher</button>
-      <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'add_staff_member' %}"><i class="bi bi-person-plus me-1"></i>Ajouter un membre</a>
-    </div>
-  </form>
+      {% if not archive_mode %}
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="toolbar d-flex flex-column flex-sm-row gap-2 mb-3 align-items-stretch align-items-sm-center">
+          <div class="flex-grow-1">{{ search_form.search }}</div>
+          <button class="btn btn-info btn-sm fw-semibold" type="submit"><i class="bi bi-search me-1"></i>Rechercher</button>
+          <a class="btn btn-warning btn-sm fw-semibold" href="{% url 'add_staff_member' %}"><i class="bi bi-person-plus me-1"></i>Ajouter un membre</a>
+        </div>
+      </form>
+      {% endif %}
 
   <div class="osm-table-outer">
     <table class="table table-hover align-middle">
@@ -53,10 +68,21 @@
           <td>
             <div class="d-flex gap-2">
               <a class="btn btn-outline-light btn-sm" title="Afficher" data-bs-toggle="tooltip" href="{% url 'staff-details' id=member.id %}"><i class="bi bi-eye"></i></a>
-              <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'staff-edit' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
-              <a class="btn btn-outline-info btn-sm" title="Emploi du temps" href="{% url 'staff-timetable' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-clock"></i></a>
+              {% if not archive_mode %}
+                <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'staff-edit' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
+                <a class="btn btn-outline-info btn-sm" title="Emploi du temps" href="{% url 'staff-timetable' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-clock"></i></a>
+              {% endif %}
+              <form method="post" action="{% url 'staff_toggle_poste' id=member.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                {% if member.en_poste %}
+                <button type="submit" class="btn btn-outline-warning btn-sm" title="Désactiver" data-bs-toggle="tooltip"><i class="bi bi-box-arrow-right"></i></button>
+                {% else %}
+                <button type="submit" class="btn btn-outline-success btn-sm" title="Réintégrer" data-bs-toggle="tooltip"><i class="bi bi-box-arrow-in-left"></i></button>
+                {% endif %}
+              </form>
               {% if member.user != user %}
-              <a class="btn btn-outline-danger btn-sm" title="Supprimer" href="{% url 'staff-delete' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
+                <a class="btn btn-outline-danger btn-sm" title="Supprimer définitivement" href="{% url 'staff-delete' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
               {% endif %}
             </div>
           </td>

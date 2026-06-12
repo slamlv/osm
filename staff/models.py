@@ -115,6 +115,17 @@ class StaffQuerySet(models.QuerySet):
         )
 
 
+class StaffAllManager(models.Manager.from_queryset(StaffQuerySet)):
+    """Tout le personnel (en poste + partis)."""
+    pass
+
+
+class StaffEnPosteManager(models.Manager.from_queryset(StaffQuerySet)):
+    """Par défaut : seulement le personnel EN POSTE."""
+    def get_queryset(self):
+        return super().get_queryset().filter(en_poste=True)
+
+
 class Personnel(models.Model):
 
     class Grade(models.TextChoices):
@@ -137,9 +148,11 @@ class Personnel(models.Model):
     since = models.IntegerField(null=True)
     discipline = models.ManyToManyField(Discipline)
     photo = models.ImageField(upload_to="image/staff", null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, unique=True, null=True, related_name="staff_member")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name="staff_member")
+    en_poste = models.BooleanField(default=True)
 
-    objects = StaffQuerySet.as_manager()
+    objects = StaffEnPosteManager()
+    objects_all = StaffAllManager()
 
     @property
     def progression(self):
@@ -409,9 +422,28 @@ class Personnel(models.Model):
 
     class Meta:
         db_table = '"Personnel"'
+        base_manager_name = "objects_all"
         constraints = [
             UniqueConstraint(fields=['email'], condition=Q(email__isnull=False), name='unique_notnull_email')
         ]
+
+    def delete(self, *args, **kwargs):
+        from osm.utils import delete_image
+        if self.photo:
+            delete_image(self.photo)
+        return super().delete(*args, **kwargs)
+
+    def leave_school(self):
+        """Quitter l'établissement : en_poste=False."""
+        if self.en_poste:
+            self.en_poste = False
+            self.save(update_fields=["en_poste"])
+
+    def reinstate(self):
+        """Réintégrer (en_poste=True)."""
+        if not self.en_poste:
+            self.en_poste = True
+            self.save(update_fields=["en_poste"])
 
     @property
     def post(self):

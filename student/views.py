@@ -379,7 +379,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
         promote_ids = {c.id for c in bulk_form.promote_qs}
         repeat_ids = {c.id for c in bulk_form.repeat_qs}
 
-        decided_by = self.request.user.staff_member.first().short_name or self.request.user.username
+        decided_by = self.request.user.staff_member.short_name or self.request.user.username
         now = timezone.now()
 
         to_update, to_create, nb = [], [], 0

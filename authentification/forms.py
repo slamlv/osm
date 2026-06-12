@@ -121,7 +121,7 @@ class UserForm(DynamicFormMixin, forms.Form):
         mdp = self.cleaned_data.get("mdp")
         mdp_confirm = self.cleaned_data.get("mdp_confirm")
         username = self.cleaned_data.get("username")
-        staff = Personnel.objects
+        staff = Personnel.objects_all
 
         # Contrainte pour les chefs d'établissement
         poste = self.cleaned_data.get("poste")
@@ -220,7 +220,7 @@ class ResetForm(DynamicFormMixin, forms.Form):
         email = self.cleaned_data['email']
         email = valid_email(email, self.context['request'])
         if email:
-            if not Personnel.objects.filter(email=email).exists():
+            if not Personnel.objects_all.filter(email=email).exists():
                 message(self.context['request'], "Adresse électronique (email) introuvable.", msg_type="warning")
                 raise forms.ValidationError("")
 

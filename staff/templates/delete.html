@@ -14,6 +14,7 @@
       <strong class="text-white">{{ info }}</strong> {{ alerte }}
     </p>
     {% if nb %}<p class="text-danger small fw-semibold mb-3">{{ nb }}</p>{% endif %}
+    <p class="text-warning small mb-1">NB : CETTE ACTION EST IRRÉVERSIBLE, VOUS PERDREZ DÉFINITIVEMENT SES DONNÉES</p>
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="d-flex gap-2 justify-content-center mt-3">

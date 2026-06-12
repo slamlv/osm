@@ -29,7 +29,7 @@
       <img src="{{ object.photo.url }}" alt="Photo" class="profile-img mb-3"
            data-bs-toggle="modal" data-bs-target="#photoModal" style="cursor:zoom-in;">
       {% else %}
-      <img src="{% static 'image/no_pp.png' %}" alt="Photo" class="profile-img mb-3">
+      <img src="{% static 'no_pp.png' %}" alt="Photo" class="profile-img mb-3">
       {% endif %}
       <h5 class="text-white fw-bold mb-0">{{ m_user.username }}</h5>
     </div>
@@ -110,7 +110,7 @@
       {% endif %}
 
       <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-2">
-        <a class="btn btn-warning fw-semibold" href="{% url 'staff-edit' id=m_user.staff_member.all.0.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
+        <a class="btn btn-warning fw-semibold" href="{% url 'staff-edit' id=m_user.staff_member.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
         {% if user != m_user %}<a class="btn btn-outline-danger" href="{% url 'user_delete' id=m_user.pk %}"><i class="bi bi-trash me-2"></i>Supprimer</a>{% endif %}
         <a class="btn btn-outline-secondary" href="{% url 'users' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
       </div>

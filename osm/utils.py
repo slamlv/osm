@@ -157,7 +157,9 @@ class BaseListView(View):
         datas = self.dataset()
         info = f"{len(datas)} {self.objects} au total."
         context = {'datas': datas, 'info': info, 'title': self.title, 'search_form': SearchForm()}
-        if self.model == Student:
+        if self.model == Personnel:
+            context['nb_archive'] = Personnel.objects_all.filter(en_poste=False).count()
+        elif self.model == Student:
             pk = 0
             if self.id:
                 classe = ClassRoom.objects.get(id=self.kwargs['id'])
@@ -285,7 +287,7 @@ class DeleteView(LoggedAdminView):
 
     def get_object(self):
         if self.model == Personnel:
-            queryset = Personnel.objects.select_related('user')
+            queryset = Personnel.objects_all.select_related('user')
         elif self.model == Student:
             queryset = Student.objects_all
         else:
@@ -308,15 +310,15 @@ class BaseStaffMemberTimetable(View):
         instance_id = self.kwargs.get('id')
         title = "Emploi du temps"
         if not instance_id:
-            instance_id = self.request.user.staff_member.first().pk
+            instance_id = self.request.user.staff_member.pk
         if mp:
             staffmember = (
-                Personnel.objects.prefetch_related('programmations__classrooms','programmations__tranche_horaire',
+                Personnel.objects_all.prefetch_related('programmations__classrooms','programmations__tranche_horaire',
                                                    'programmations__matiere__sujet').get(pk=instance_id)
             )
         else:
             staffmember = (
-                Personnel.objects.prefetch_related('programmations__classroom','programmations__tranche_horaire',
+                Personnel.objects_all.prefetch_related('programmations__classroom','programmations__tranche_horaire',
                                                    'programmations__matiere__sujet').get(pk=instance_id)
             )
         title += f" {staffmember.short_firstname}"
@@ -356,6 +358,7 @@ class BaseDetailView(View):
         instance_id = self.kwargs.get("id")
         queryset = self.model.objects
         if self.model == Personnel:
+            queryset = self.model.objects_all
             queryset = queryset.select_related('user').prefetch_related('enseignant__matiere__sujet')
             if self.title == "Mes informations":
                 return get_object_or_404(queryset, user_id=self.request.user.pk)
@@ -373,7 +376,7 @@ class BaseDetailView(View):
     def get(self, *args, **kwargs):
         instance = self.get_object()
         if self.model == User:
-            instance = instance.staff_member.all()[0]
+            instance = instance.staff_member
         context = {'object': instance, 'title': self.title}
         if self.model in [Personnel, User]:
             dpc = disciplines_par_classe(instance)

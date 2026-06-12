@@ -525,7 +525,7 @@ class Marks(LoggedUserView):
 
     @classmethod
     def check(cls, self):
-        staff_member = self.request.user.staff_member.first()
+        staff_member = self.request.user.staff_member
         msg, enseignements = "", None
         if staff_member.rapporteur.exists():
             enseignements = staff_member.rapporteur.select_related('matiere__sujet', 'classroom')
@@ -556,7 +556,7 @@ class Marks(LoggedUserView):
 @logged_user_view
 def classrooms_set(request):
     pg = int(request.GET.get('pg', 0))
-    staff_member = request.user.staff_member.first()
+    staff_member = request.user.staff_member
     if pg:
         enseignements = staff_member.enseignant.select_related('matiere__sujet', 'classroom')
     else:
@@ -568,7 +568,7 @@ def classrooms_set(request):
 
 @logged_user_view
 def levels_set(request):
-    staff_member = request.user.staff_member.first()
+    staff_member = request.user.staff_member
     if staff_member.rapporteur.all().exists():
         enseignements = staff_member.rapporteur.select_related('matiere__sujet', 'classroom')
     select_form = SelectForm(request.GET, context={"request": request, 'trim': False, 'level': True,

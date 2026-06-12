@@ -201,7 +201,7 @@ class User(AbstractUser):
 
     @property
     def is_titulaire(self):
-        staff_member = self.staff_member.first()
+        staff_member = self.staff_member
         if staff_member.titulaire.exists():
             return True
         else:

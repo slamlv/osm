@@ -395,7 +395,7 @@
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'user-details' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Mes informations</a></li>
                 <li><a class="dropdown-item" href="{% url 'user-timetable' %}"><i class="bi bi-calendar-week me-2 text-info"></i>Mon emploi du temps</a></li>
-                <li><a class="dropdown-item" href="{% url 'progression' id=user.staff_member.first.id %}"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ma progression</a></li>
+                <li><a class="dropdown-item" href="{% url 'progression' id=user.staff_member.id %}"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ma progression</a></li>
                 {% if user.is_admin %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-warning"></i>Informations Établissement</a></li>

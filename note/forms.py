@@ -110,7 +110,7 @@ class SelectForm(DynamicFormMixin, forms.Form):
             if user.is_admin:
                 classrooms =  ClassRoom.objects.all().order_by_niveau()
             else:
-                classrooms =  user.staff_member.first().titulaire.all()
+                classrooms =  user.staff_member.titulaire.all()
             return [(classroom.pk, classroom.code) for classroom in classrooms]
         if self.progression or self.pg:
             label = matiere()

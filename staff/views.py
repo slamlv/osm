@@ -2,6 +2,7 @@
 from sys import prefix
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db import transaction
 from django.db.models import Q
 from django.forms import model_to_dict
 from django.http import Http404, request, HttpResponse
@@ -26,16 +27,77 @@ from osm.utils import message, one_escape, LoggedUserView, LoggedAdminView, logg
 import os
 
 
+class StaffArchive(LoggedAdminView):
+    template_name = "staff_list.html"
+
+    def get(self, *args, **kwargs):
+        datas = (
+            Personnel.objects_all
+            .filter(en_poste=False)
+            .select_related("user")
+            .order_by_poste()
+        )
+        return render(self.request, self.template_name, {
+            "info": "Anciens membres du personnel.",
+            "datas": datas,
+            "search": False,
+            "archive_mode": True,
+            "archive_count": datas.count(),
+        })
+
+
+class StaffToggleEnPoste(LoggedAdminView):
+    def post(self, *args, **kwargs):
+        staff = get_object_or_404(Personnel.objects_all, pk=self.kwargs["id"])
+        if staff.en_poste:
+            staff.leave_school()
+            message(self.request, f"{staff} n'apparaitra pls dans les listes. Son compte d'accès a été désactivé.")
+        else:
+            staff.reinstate()
+            message(self.request, f"{staff} a été réintégré(e).")
+        nxt = self.request.POST.get("next")
+        return redirect(nxt) if nxt else redirect("staff_archive")
+
+
+class DeleteArchivedStaff(LoggedAdminView):
+    template_name = "students_bulk_delete.html"
+
+    def get_targets(self):
+        return Personnel.objects_all.filter(en_poste=False)
+
+    def get(self, *args, **kwargs):
+        targets = self.get_targets()
+        return render(self.request, self.template_name, {
+            "title": "Vider la corbeille du personnel",
+            "count": targets.count(),
+            "alerte": ("Cette action est IRRÉVERSIBLE : les anciens membres du personnel seront "
+                       "définitivement supprimés (et leurs comptes pour ceux qui en ont)."),
+            "back": "staff_archive",
+        })
+
+    def post(self, *args, **kwargs):
+        targets = self.get_targets()
+        n = targets.count()
+        if n:
+            with transaction.atomic():
+                for staff in targets:
+                    staff.delete()
+            message(self.request, f"{n} ancien(s) membre(s) supprimé(s) définitivement.")
+        else:
+            message(self.request, "La corbeille du personnel est déjà vide.", msg_type="warning")
+        return redirect("staff_archive")
+
+
 class Progression(LoggedUserView):
     template_name = "progression.html"
     title = "Couverture des Programmes"
 
     def get(self, *args, **kwargs):
         i = kwargs.get("id")
-        if (not self.request.user.is_admin) and i != self.request.user.staff_member.first().pk:
+        if (not self.request.user.is_admin) and i != self.request.user.staff_member.pk:
             return render(self.request, "404.html")
         msg, staff_member = ProgressionSelectForm.check(self, i)
-        if i == 0 or i == self.request.user.staff_member.first().pk:
+        if i == 0 or i == self.request.user.staff_member.pk:
             titre = "Ma progression"
             is_user = True
         else:
@@ -58,14 +120,14 @@ class ProgressionSelectForm(LoggedUserView):
         if i is not None and i > 0:
             staff_member = Personnel.objects.get(pk=i)
         else:
-            staff_member = self.request.user.staff_member.first()
+            staff_member = self.request.user.staff_member
         msg, enseignements = "", None
         if staff_member.rapporteur.exists() or staff_member.enseignant.exists():
             if i is None:
                 enseignements = staff_member.enseignant.select_related('matiere__sujet', 'classroom')
         else:
             msg = "Vous n'êtes affecté à aucune salle de classe"
-            if i is not None and i > 0 and i != self.request.user.staff_member.first().pk:
+            if i is not None and i > 0 and i != self.request.user.staff_member.pk:
                 msg = "Ce membre du personnel n'est affecté à aucune salle de classe"
         if i is not None:
             return msg, staff_member
@@ -243,7 +305,7 @@ class StaffMemberEdit(LoggedAdminView):
 
     def get_object(self):
         member_id = self.kwargs.get("id")
-        members = Personnel.objects.select_related('user')
+        members = Personnel.objects_all.select_related('user')
         return get_object_or_404(members, pk=member_id)
 
     def post(self, *args, **kwargs):
@@ -259,7 +321,7 @@ class StaffMemberEdit(LoggedAdminView):
                                                                   contact=member.contact, email=member.email,
                                                                   civilite=member.civilite, poste=member.poste)
                 message(self.request, "Informations du membre du personnel modifiées avec succès !")
-            return redirect("staff", id=default.pk)
+            return redirect("staff-details", id=default.pk)
         context = {"form": form, "title": self.title, 'reset': "Annuler les changements", 'back': reverse("staff")}
         return render(self.request, self.template_name, context)
 
@@ -326,7 +388,7 @@ class UserEdit(LoggedUserView):
         return render(self.request, self.template_name, context)
 
     def get_object(self):
-        members = Personnel.objects.select_related('user')
+        members = Personnel.objects_all.select_related('user')
         return get_object_or_404(members, user_id=self.request.user.pk)
 
     def post(self, *args, **kwargs):
@@ -409,9 +471,9 @@ class AddUser(LoggedAdminView):
             new_user.set_password("123456")
 
             new_user.save()
-            Personnel.add_disciplines(Personnel.objects.get(user=new_user),
+            Personnel.add_disciplines(Personnel.objects_all.get(user=new_user),
                                       Personnel.get_disciplines(form.cleaned_data.get("discipline")))
-            Personnel.objects.filter(user=new_user).update(grade=form.cleaned_data.get('grade'),
+            Personnel.objects_all.filter(user=new_user).update(grade=form.cleaned_data.get('grade'),
                                                            since=form.cleaned_data.get('since'))
             message(self.request, "Compte utilisateur crée avec succès")
             return redirect("users")
@@ -421,7 +483,7 @@ class AddUser(LoggedAdminView):
 @logged_admin_view
 def admin(request, pk: int):
     user = User.objects.prefetch_related('staff_member__enseignant__matiere__sujet').get(pk=pk)
-    member = user.staff_member.all()[0]
+    member = user.staff_member
     if user.is_admin:
         user.is_admin = False
     else:
@@ -433,11 +495,10 @@ def admin(request, pk: int):
 @logged_admin_view
 def active(request, pk: int):
     user = User.objects.prefetch_related('staff_member__enseignant__matiere__sujet').get(pk=pk)
-    member = user.staff_member.all()[0]
+    member = user.staff_member
     if user.is_active:
         user.is_active = False
     else:
         user.is_active = True
     user.save()
     return render(request, "reload_details.html", {"object": member, 'm_user': user})
-

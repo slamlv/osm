@@ -76,7 +76,7 @@ def signup(request):
             has_send = send_the_mail(subject="Confirmez votre email pour Oméga School Manager", receivers=[email, ],
                                      template="confirmation_email.html", context=context)
             if has_send:
-                staff_member = Personnel.objects.get(user_id=new_user.pk)
+                staff_member = Personnel.objects_all.get(user_id=new_user.pk)
                 Personnel.add_disciplines(staff_member,
                                           Personnel.get_disciplines(form.cleaned_data.get("discipline")))
                 message(request, """Compte créé avec succès, veillez consulter votre boîte mail pour

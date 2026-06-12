@@ -36,7 +36,7 @@ def index(request):
             if len(activities) == 3:
                 break
     context = {'activities': activities, 'exists': exists,
-               'greet': f"{greet()} {request.user.staff_member.first().short_firstname}"}
+               'greet': f"{greet()} {request.user.staff_member.short_firstname}"}
     return render(request, "index.html", context)
 
 

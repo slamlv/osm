@@ -4,7 +4,6 @@
 ===========================================================================
  TEMPLATE — Confirmation d'une suppression groupée (définitive)
 
- Utilisé par DeleteStudentsWithoutClass et DeleteDeactivatedStudents.
  Contexte attendu : title, count, kind, alerte, back (nom d'URL de retour).
 ===========================================================================
 {% endcomment %}
@@ -23,7 +22,7 @@
           {{ alerte }}
         </div>
         <p class="text-white-50 mb-4">
-          <strong class="text-white">{{ count }}</strong> élève(s) sont concernés.
+          <strong class="text-white">{{ count }}</strong>{% if back == 'staff_archive' %} membre(s) {% else %} élève(s) {% endif %}sont concernés.
         </p>
 
         <form method="post" action="">
