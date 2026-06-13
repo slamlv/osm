@@ -1,6 +1,7 @@
 # Create your views here.
 import os
 
+import openpyxl
 from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -16,6 +17,8 @@ from fpdf import FPDF
 from fpdf.enums import VAlign, TableCellFillMode
 from fpdf.table import Table
 from babel.dates import format_date
+from openpyxl.utils.datetime import to_excel
+from openpyxl.worksheet.datavalidation import DataValidation
 
 from authentification.models import SchoolYear
 from note.models import Note, Enseignements
@@ -28,13 +31,198 @@ from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView
-from pandas import DataFrame, read_excel, ExcelWriter
-from openpyxl.utils import get_column_letter
+from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
+from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
 from openpyxl import load_workbook
 from io import BytesIO
 from datetime import datetime
 from os import path
+
+
+"""
+=============================================================================
+ VIEW — Téléchargement du MODÈLE d'import avec liste déroulante des classes
+=============================================================================
+Principe :
+  - on lit le modèle statique (static\document\Modèle_Liste_des_Élèves.xlsx) ;
+  - on injecte une VALIDATION DE DONNÉES (liste déroulante Excel) sur la
+    colonne Classe (G), alimentée par les classes RÉELLES de l'établissement
+    courant + une option "(Aucune)" ;
+  - on renvoie le fichier en téléchargement (BytesIO -> HttpResponse).
+
+Structure du modèle (vérifiée) :
+  - feuille "Élèves"
+  - en-têtes en ligne 4 ; données à partir de la ligne 5
+  - colonne Classe = G  (Statut = H)
+"""
+
+# Emplacement du modèle dans les statiques.
+TEMPLATE_FILENAME = "document/Modèle Liste des Élèves.xlsx"
+
+HEADER_ROW = 4          # ligne des en-têtes
+FIRST_DATA_ROW = 5      # première ligne de données
+DATE_COL = "D"          # colonne Date de naissance
+CLASS_COL = "G"         # colonne Classe
+STATUT_COL = "H"        # colonne Statut
+LAST_DATA_ROW = 1000    # jusqu'où appliquer les listes déroulantes
+
+# Largeurs "optimales" par colonne (optionnel : appliquées seulement si
+# APPLY_WIDTHS = True).
+APPLY_WIDTHS = False
+COLUMN_WIDTHS = {
+    "A": 13,   # Matricule
+    "B": 28,   # Noms
+    "C": 19,   # Prénoms
+    "D": 17,   # Date de naissance
+    "E": 20,   # Lieu de naissance
+    "F": 13,   # Sexe
+    "G": 16,   # Classe
+    "H": 16,   # Statut
+}
+
+# Insérer le nom de l'établissement dans le titre (optionnel).
+SHOW_SCHOOL_NAME = True
+
+
+def _find_template_path():
+    """
+    Localise le modèle dans les répertoires statiques. On essaie d'abord
+    finders (collectstatic non requis en dev), puis STATIC_ROOT.
+    """
+    # 1) via les finders
+    try:
+        from django.contrib.staticfiles import finders
+        p = finders.find(TEMPLATE_FILENAME)
+        if p:
+            return p
+    except Exception:
+        pass
+    # 2) repli : STATIC_ROOT
+    if getattr(settings, "STATIC_ROOT", None):
+        p = os.path.join(settings.STATIC_ROOT, TEMPLATE_FILENAME)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _make_list_validation(wb, ws, options, sheet_name, anchor):
+    """
+    Construit une DataValidation de type liste pour 'options'. Si la liste est
+    courte (et sans virgule), on l'inline ; sinon on l'écrit dans une feuille
+    cachée dédiée (sheet_name) et on pointe dessus. Renvoie la DataValidation.
+    """
+    joined = ",".join(options)
+    if len(joined) <= 250 and not any("," in (o or "") for o in options):
+        dv = DataValidation(type="list", formula1=f'"{joined}"',
+                            allow_blank=True, showDropDown=False)
+    else:
+        if sheet_name in wb.sheetnames:
+            del wb[sheet_name]
+        src = wb.create_sheet(sheet_name)
+        for i, val in enumerate(options, start=1):
+            src.cell(row=i, column=1, value=val)
+        src.sheet_state = "hidden"
+        ref = f"{quote_sheetname(sheet_name)}!$A$1:$A${len(options)}"
+        dv = DataValidation(type="list", formula1=ref,
+                            allow_blank=True, showDropDown=False)
+    return dv
+
+
+class ImportTemplateDownload(LoggedAdminView):
+    """
+    Génère et renvoie le modèle d'import avec :
+      - colonne Classe (G) en liste déroulante (classes de l'établissement + (Aucune)) ;
+      - colonne Statut (H) en liste déroulante (Nouveau / Redoublant) ;
+      - (option) largeurs de colonnes ;
+      - (option) nom de l'établissement dans le titre.
+    """
+
+    def get(self, *args, **kwargs):
+        path = _find_template_path()
+        if not path:
+            return HttpResponse("Modèle introuvable sur le serveur.", status=500)
+
+        wb = openpyxl.load_workbook(path)
+        ws = wb["Élèves"] if "Élèves" in wb.sheetnames else wb.active
+
+        # --- 1) Liste déroulante CLASSE (G) ---
+        codes = list(
+            ClassRoom.objects.order_by_niveau().values_list("code", flat=True)
+        )
+        class_options = ["(Aucune)"] + [c for c in codes if c]
+        dv_class = _make_list_validation(wb, ws, class_options, "_classes", CLASS_COL)
+        dv_class.error = "Choisissez une classe dans la liste (ou (Aucune))."
+        dv_class.errorTitle = "Classe invalide"
+        dv_class.prompt = "Sélectionnez la classe de l'élève."
+        dv_class.promptTitle = "Classe"
+        ws.add_data_validation(dv_class)
+        dv_class.add(f"{CLASS_COL}{FIRST_DATA_ROW}:{CLASS_COL}{LAST_DATA_ROW}")
+
+        # --- 2) Liste déroulante STATUT (H) ---
+        statut_options = ["Nouveau", "Redoublant"]
+        dv_statut = _make_list_validation(wb, ws, statut_options, "_statuts", STATUT_COL)
+        dv_statut.error = "Choisissez « Nouveau » ou « Redoublant » (ou laissez vide)."
+        dv_statut.errorTitle = "Statut invalide"
+        dv_statut.prompt = "Nouveau ou Redoublant (laisser vide = Nouveau par défaut)."
+        dv_statut.promptTitle = "Statut"
+        ws.add_data_validation(dv_statut)
+        dv_statut.add(f"{STATUT_COL}{FIRST_DATA_ROW}:{STATUT_COL}{LAST_DATA_ROW}")
+
+        # --- 2bis) Colonne DATE DE NAISSANCE (D) : format forcé jj/mm/aaaa ---
+        # Double protection contre l'inversion jour/mois :
+        #  (a) on impose le FORMAT D'AFFICHAGE jj/mm/aaaa sur les cellules ->
+        #      Excel range une vraie date non ambiguë ;
+        #  (b) on ajoute une validation "date" qui borne les années plausibles,
+        #      ce qui force aussi Excel à traiter la saisie comme une date.
+        from openpyxl.styles import Alignment as _Align
+        from datetime import date as _date
+        for r in range(FIRST_DATA_ROW, LAST_DATA_ROW + 1):
+            cell = ws[f"{DATE_COL}{r}"]
+            cell.number_format = "DD/MM/YYYY"
+            cell.alignment = _Align(horizontal="center")
+
+        now_year = __import__("datetime").datetime.now().year
+        min_year, max_year = now_year - 30, now_year - 8
+        dv_date = DataValidation(
+            type="date", operator="between",
+            formula1=int(to_excel(_date(min_year, 1, 1))),
+            formula2=int(to_excel(_date(max_year, 12, 31))),
+            allow_blank=True, showErrorMessage=True,
+        )
+        dv_date.error = f"Entrez une date de naissance valide au format jj/mm/aaaa (année comprise entre {min_year} et {max_year} (inclus)"
+        dv_date.errorTitle = "Date invalide"
+        dv_date.prompt = f"Format : jj/mm/aaaa (ex. 15/03/{now_year-12})."
+        dv_date.promptTitle = "Date de naissance"
+        ws.add_data_validation(dv_date)
+        dv_date.add(f"{DATE_COL}{FIRST_DATA_ROW}:{DATE_COL}{LAST_DATA_ROW}")
+
+        # --- 3) (Option) Largeurs de colonnes ---
+        if APPLY_WIDTHS:
+            for col, width in COLUMN_WIDTHS.items():
+                ws.column_dimensions[col].width = width
+
+        # --- 4) (Option) Nom de l'établissement dans le titre fusionné (A2) ---
+        if SHOW_SCHOOL_NAME:
+            try:
+                school = getattr(self.request.user, "school", None)
+                nom_etab = getattr(school, "nom", None) if school else None
+                if nom_etab:
+                    # A2 est la cellule "ancre" de la fusion A2:H3 -> on y écrit.
+                    ws["A2"] = f"Liste des Élèves — {nom_etab}"
+            except Exception:
+                pass   # purement cosmétique : on n'échoue jamais là-dessus
+
+        # --- Sérialisation + téléchargement ---
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        resp = HttpResponse(
+            buffer.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = 'attachment; filename="Modele Liste des Eleves.xlsx"'
+        return resp
 
 
 """
@@ -594,6 +782,46 @@ class StudentsImport(LoggedAdminView):
             rapport = self.import_students(file)
         return render(self.request, self.template_name, context={'title': self.title, 'rapport': rapport})
 
+    def parse_birthdate(self, value):
+        from datetime import date, datetime as _dt
+        """
+        Renvoie un datetime.date, ou None si invalide.
+        - Si Excel a déjà fourni une date/datetime (ou un Timestamp pandas), on la
+          prend telle quelle (NON ambiguë).
+        - Si c'est une chaîne, on force le format français jj/mm/aaaa (dayfirst),
+          en acceptant les séparateurs / - . et l'année sur 2 ou 4 chiffres.
+        """
+
+        if value is None or isnull(value):
+            return None
+
+        # 1) Déjà une date/datetime/Timestamp -> Excel l'a stockée comme vraie date.
+        if isinstance(value, (Timestamp, _dt)):
+            return value.date()
+        if isinstance(value, date):
+            return value
+
+        # 2) Chaîne -> on force le jour en premier (jj/mm/aaaa), formats explicites.
+        s = str(value).strip()
+        if not s:
+            return None
+
+        # Formats explicites prioritaires (sans ambiguïté).
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d/%m/%y", "%d-%m-%y"):
+            try:
+                return _dt.strptime(s, fmt).date()
+            except ValueError:
+                continue
+
+        # Repli : pandas avec dayfirst=True (jour d'abord), jamais le défaut US.
+        dt = to_datetime(s, errors="coerce", dayfirst=True)
+        if dt is None or (hasattr(dt, "isnull") and dt.isnull()):
+            return None
+        try:
+            return dt.date()
+        except Exception:
+            return None
+
     # Détecter la ligne des en-têtes dans la 10 premières lignes maximum
     def detect_header_row(self, df: DataFrame):
         for i in range(min(10, len(df))):
@@ -603,12 +831,12 @@ class StudentsImport(LoggedAdminView):
         return None
 
     def import_students(self, file):
-        rapport = list()
+        rapport = []
         required_fields = ['matricule', 'noms', 'date de naissance', 'lieu de naissance', 'sexe']
         try:
             df = read_excel(file, header=None, engine="openpyxl")
             header_row = self.detect_header_row(df)
-            if not header_row:
+            if header_row is None:
                 rapport.append([False, f"Entêtes introuvables : {self.required_fiels}"])
             else:
                 from osm.utils import one_escape, is_alphanumeric
@@ -647,15 +875,16 @@ class StudentsImport(LoggedAdminView):
                             rapport.append([False, f"Ligne {line_number} : Le prénom doit être une chaîne "
                                                    f"alphanumérique"])
                             continue
-                        date_naissance = to_datetime(line['date de naissance'], errors='coerce').date()
-                        if date_naissance is NaT:
-                            rapport.append([False, f"Ligne {line_number} : La date de naissance est incorrecte"])
+                        date_naissance = self.parse_birthdate(line['date de naissance'])
+                        if date_naissance is None:
+                            rapport.append([False, f"Ligne {line_number} : La date de naissance est invalide "
+                                                   f"(format attendu : jj/mm/aaaa)"])
                             continue
                         now = datetime.now().year
                         min_year, max_year = now - 30, now - 8
-                        if not (min_year < date_naissance.year < max_year):
+                        if not (min_year <= date_naissance.year <= max_year):
                             rapport.append([False, f"Ligne {line_number} : L'année de naissance doit être comprise "
-                                                   f"entre {min_year} et {max_year}"])
+                                                   f"entre {min_year} et {max_year} (inclus)"])
                             continue
                         if Student.objects_all.filter(nom=nom, prenom=prenom, date_naissance=date_naissance).exists():
                             rapport.append([False, f"Ligne {line_number} : Un(e) élève du même nom et né le même jour "
@@ -672,11 +901,14 @@ class StudentsImport(LoggedAdminView):
                             continue
                         classe_id = None
                         if 'classe' in df.columns and notna(line['classe']):
-                            try:
-                                classe_id = ClassRoom.objects.get(code__iexact=str(line['classe']).strip()).id
-                            except:
-                                rapport.append([False, f"Ligne {line_number} : La classe indiquée n'existe pas"])
-                                continue
+                            raw_classe = str(line['classe']).strip()
+                            if raw_classe and raw_classe != "(Aucune)":
+                                classroom = ClassRoom.objects.filter(code__iexact=raw_classe).first()
+                                if classroom is None:
+                                    rapport.append([False, f"Ligne {line_number} : classe « {raw_classe} » "
+                                                           f"inconnue — élève importé sans classe (à régulariser)."])
+                                else:
+                                    classe_id = classroom.id
                         statut = "Nouveau"
                         if 'statut' in df.columns and notna(line['statut']):
                             if str(line['statut']).lower() in ["redoublant", "redoublante", "r"]:

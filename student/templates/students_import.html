@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load static %}
 
 {% block content %}
 <style>
@@ -28,17 +27,19 @@
           <i class="bi bi-info-circle me-2"></i>
           Formats acceptés : <strong>.xls, .xlsx, .ods</strong><br>
           Champs obligatoires : matricule, noms, prénoms, date de naissance, lieu de naissance, sexe.<br>
-          Champs facultatifs : classe, statut.
+          Champs facultatifs : classe, statut.<br>
+          La date de naissance doit suivre le format jj/mm/aaaa
         </div>
         <div class="mb-4">
           <label class="text-white control-label" style="font-size:0.82rem;margin-bottom:4px;display:block;">Fichier Excel ou LibreOffice</label>
           <input class="form-control" type="file" id="file" name="file" accept=".xls,.xlsx,.ods">
         </div>
         <div class="d-flex gap-2 justify-content-center mb-4">
-          <a class="btn btn-outline-secondary fw-semibold" href="{% static 'Modèle Liste des Élèves.xlsx' %}"
-             data-bs-toggle="tooltip" title="Télécharger le fichier Modèle">
-            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Modèle
-          </a>
+          <a class="btn btn-outline-secondary fw-semibold"
+            href="{% url 'students_import_template' %}"
+            data-bs-toggle="tooltip" title="Télécharger le modèle (avec vos classes)">
+           <i class="bi bi-file-earmark-spreadsheet me-2"></i>Modèle
+         </a>
           <button class="btn btn-success fw-semibold" type="submit"
                   data-bs-toggle="tooltip" title="Fichier Excel ou LibreOffice" data-with-spinner>
             <i class="bi bi-upload me-2"></i>Importer
@@ -54,7 +55,7 @@
               <span class="{% if elt.0 %}text-success{% else %}text-danger{% endif %} fw-bold flex-shrink-0">
                 {% if elt.0 %}✔{% else %}✘{% endif %}
               </span>
-              <span class="{% if elt.0 %}text-white{% else %}text-danger{% endif %}">{{ elt.1 }}</span>
+              <span class="{% if elt.0 %}text-success{% else %}text-danger{% endif %}">{{ elt.1 }}</span>
             </div>
             {% endfor %}
           </div>

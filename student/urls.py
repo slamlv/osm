@@ -2,7 +2,8 @@ from django.urls import path
 from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, StudentEdit, StudentDelete,\
     Students, StudentDetails, ParentDetails, Parents, discipline, Discipline, StudentsImport, students_export,\
     StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney, StudentsTrash, StudentsWithoutClass,\
-    StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass
+    StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass,\
+    ImportTemplateDownload
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
@@ -28,5 +29,6 @@ urlpatterns = [
     path("student_toggle_active-<int:id>", StudentToggleActive.as_view(), name="student_toggle_active"),
     path("students_delete_deactivated", DeleteDeactivatedStudents.as_view(), name="students_delete_deactivated"),
     path("students_delete_without_class", DeleteStudentsWithoutClass.as_view(), name="students_delete_without_class"),
-    path("class_bulk_assignment", AssignClassToWithoutClass.as_view(), name="class_bulk_assignment")
+    path("class_bulk_assignment", AssignClassToWithoutClass.as_view(), name="class_bulk_assignment"),
+    path("students_import_template", ImportTemplateDownload.as_view(), name="students_import_template")
 ]
