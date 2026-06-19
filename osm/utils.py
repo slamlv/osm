@@ -2,8 +2,10 @@
     Ce fichier contient des classes et des fonctions de base utilisées par les applications
 """
 import os
+import re
 import threading
 import uuid
+import zipfile
 from datetime import datetime, time
 from io import BytesIO
 from urllib.parse import quote
@@ -12,7 +14,7 @@ from django.conf import settings
 from django.db.models import Q, Model
 from PIL import Image
 from django.contrib import messages
-from django.http import FileResponse
+from django.http import FileResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.defaultfilters import title
 from django.urls import reverse
@@ -158,7 +160,12 @@ class BaseListView(View):
         info = f"{len(datas)} {self.objects} au total."
         context = {'datas': datas, 'info': info, 'title': self.title, 'search_form': SearchForm()}
         if self.model == Personnel:
+            from classroom.models import Programmation
             context['nb_archive'] = Personnel.objects_all.filter(en_poste=False).count()
+            context['programmations'] = Programmation.objects.filter(enseignant__isnull=False).exists()
+        elif self.model == ClassRoom:
+            from classroom.models import Programmation
+            context['programmations'] = Programmation.objects.exists()
         elif self.model == Student:
             pk = 0
             if self.id:
@@ -173,6 +180,7 @@ class BaseListView(View):
             context['pk'] = pk
             context['nb_trash'] = Student.objects_all.filter(is_active=False).count()
             context['nb_without'] = Student.objects.filter(classe__isnull=True).count()
+            context['students_with_class'] = Student.objects.filter(classe__isnull=False).exists()
         return render(self.request, self.template_name, context=context)
 
     def post(self, *args, **kwargs):
@@ -305,9 +313,9 @@ class DeleteView(LoggedAdminView):
 
 
 class BaseStaffMemberTimetable(View):
-    def get_object(self):
+    def get_object(self, staff_member_id=0):
         mp = self.request.user.school.mergedprogrammations
-        instance_id = self.kwargs.get('id')
+        instance_id = staff_member_id or self.kwargs.get('id')
         title = "Emploi du temps"
         if not instance_id:
             instance_id = self.request.user.staff_member.pk
@@ -332,9 +340,42 @@ class BaseStaffMemberTimetable(View):
                    'total_heures': staffmember_recap[1], 'id': self.kwargs.get('id')}
         return render(self.request, "staff_member_timetable.html", context)
 
-    def post(self, *args, **kwargs):
+    def build_pdf_or_reason(self, staff_member, annee, school):
+        if not staff_member.programmations.exists():
+            return "Aucune programmation disponible pour ce membre du personnel"  # -> sautée (ZIP) ou message d'erreur (une classe)
         from classroom.views import StaffMemberTimeTable
-        from django.http import JsonResponse
+        staffmember, title, mp = self.get_object(staff_member.pk)
+        result = staffmember.timetable(mp, school.pk, download=True)
+        data = {
+            'filename': "Emploi du temps",
+            'annee': annee,
+            'time_table': result[0],
+            'infos': result[1],
+            'school': result[2],
+            'recap_and_total': result[3],
+        }
+        return StaffMemberTimeTable(data=data)
+
+    def post(self, *args, **kwargs):
+        if 'signed' not in self.request.POST.keys():
+            staff_members = (
+                Personnel.objects.prefetch_related('programmations')
+            )
+            annee = school_year()
+            school = User.objects.select_related('school').get(id=self.request.user.id).school
+
+            def build(staff_member):
+                return self.build_pdf_or_reason(staff_member, annee, school)
+
+            def namer(staff_member):
+                return f"{staff_member.short_firstname} Emploi du temps.pdf "
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=staff_members,
+                zip_filename=f"Emplois du temps - Toutes le personnel.zip",
+                per_file_namer=namer,
+            )
         staffmember, title, mp = self.get_object()
         empty_timetable = True if 'timetable_checkbox' in self.request.POST.keys() else False
         data = {'filename': title, 'annee': school_year()}
@@ -346,6 +387,7 @@ class BaseStaffMemberTimetable(View):
             data['time_table'], data['infos'], data['school'], data['recap_and_total'] = (
                 staffmember.timetable(mp, school_id, download=True)
             )
+        from classroom.views import StaffMemberTimeTable
         return pdf_response(StaffMemberTimeTable(data=data), f"{data['filename']}.pdf")
 
 
@@ -588,6 +630,132 @@ def truncate_str(pdf, str_value: str, max_with: float):
         truncate_value = str_value[:i] + "."
         if pdf.get_string_width(truncate_value) <= max_with:
             return truncate_value
+
+
+
+def _safe_filename(name):
+    name = re.sub(r'[\\/:*?"<>|]+', "_", str(name)).strip()
+    return name or "document"
+
+
+def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename, per_file_namer, empty_message=None):
+    """
+    build_pdf_for_classroom(classroom) -> FPDF | str (raison) | None
+    classrooms      : itérable de ClassRoom.
+    zip_filename    : nom du ZIP final.
+    per_file_namer(classroom) -> nom du PDF dans le ZIP (sans extension).
+    empty_message   : message renvoyé si AUCUN PDF n'a pu être généré. (défaut : message générique.)
+    Retour :
+      - FileResponse (ZIP) si au moins 1 PDF généré ;
+      - JsonResponse(success=False) si aucun PDF.
+    """
+    # Phase 1 : on construit les PDF en mémoire, en notant les sauts.
+    produced = []         # (filename_sans_ext, bytes)
+    skipped = []          # (classe, raison)
+
+    for classroom in classrooms:
+        code = classroom.code if isinstance(classroom, ClassRoom) else classroom.short_name
+        try:
+            result = build_pdf_for_classroom(classroom)
+        except Exception as exc:
+            skipped.append((str(code), f"erreur inattendue ({exc})"))
+            continue
+
+        if result is None:
+            skipped.append((str(code), "ignorée (aucun contenu)"))
+            continue
+        if isinstance(result, str):
+            skipped.append((str(code), result))
+            continue
+
+        # result est un objet FPDF.
+        try:
+            # IMPORTANT : on s'aligne sur pdf_response -> on NE
+            # FERME PAS le buffer. fpdf2.output() peut re-seek le buffer, et un
+            # buf.close() provoque "seek of closed file" (erreur avalée -> classe
+            # sautée). On récupère les octets sans fermer.
+            buf = BytesIO()
+            result.output(buf)
+            buf.seek(0)
+            produced.append((_safe_filename(per_file_namer(classroom)), buf.read()))
+            del result
+        except Exception as exc:
+            skipped.append((str(code), f"échec génération PDF ({exc})"))
+
+    # Phase 2 : décision.
+    if not produced:
+        # Aucun document -> message d'échec (pas de ZIP vide).
+        if empty_message:
+            msg = empty_message
+        elif skipped:
+            # Récap concis des raisons (limité pour rester lisible).
+            details = " ; ".join(f"{c} : {r}" for c, r in skipped[:5])
+            extra = "" if len(skipped) <= 5 else f" (et {len(skipped) - 5} autre(s))"
+            msg = f"Aucun document n'a pu être généré. {details}{extra}"
+        else:
+            msg = "Aucun document n'a pu être généré (aucune classe éligible)."
+        return JsonResponse({"success": False, "message": msg})
+
+    # Au moins un PDF -> on assemble le ZIP.
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fname, content in produced:
+            zf.writestr(fname, content)
+        if skipped:
+            lines = ["Rapport de génération", "=====================", "",
+                     f"{len(produced)} document(s) généré(s).",
+                     f"{len(skipped)} classe(s) ignorée(s) :", ""]
+            for code, reason in skipped:
+                lines.append(f" - {code} : {reason}")
+            zf.writestr("rapport.txt", "\n".join(lines))
+
+    zip_buffer.seek(0)
+    safe_zip = _safe_filename(zip_filename)
+    if not safe_zip.lower().endswith(".zip"):
+        safe_zip += ".zip"
+    response = FileResponse(zip_buffer, as_attachment=True, filename=safe_zip)
+    response["Content-Disposition"] = f"attachment; filename=\"{safe_zip}\""
+    return response
+
+
+# Vérifie la complétude des notes pour une classe et un ensemble d'évaluations ou le mérite de tableau d'honneur.
+# Ou que la salle de classe n'est pas vide. Renvoie None si OK, sinon la RAISON (str) du blocage.
+def check_notes(classroom, evl_in, pv=False, trim="", marks_sheet=False):
+    from note.forms import MarksForm
+    if marks_sheet:
+        if not classroom.students.exists():
+            return "Aucun élève dans cette salle de classe"
+        else:
+            return None
+    rapport = "Certaines notes de "
+    checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i]))
+              for i in range(len(evl_in))]
+    for status in checks:
+        manquante = any(not elt["status"] for elt in status[1])
+        if manquante:
+            rapport += f"l'évaluation n° {status[0]}"
+        if rapport != "Certaines notes de " and status != checks[-1]:
+            rapport += ", "
+    if rapport != "Certaines notes de ":
+        return f"{rapport} n'ont pas été remplies en {classroom.code}."
+    if pv:
+        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=True)
+        datas = dict()
+        datas['students'] = list()
+        for student in data['students_data']:
+            if student['moyenne'] >= 12:
+                datas['students'].append({
+                    'nom': student['student']['nom'],
+                    'moyenne': student['moyenne'],
+                    'rang': student['rang'],
+                })
+        del data
+        if not datas['students']:
+            return (f"Aucun élève de {classroom.code} ne mérite un tableau d'honneur pour le compte "
+                    f"{'annuel' if trim == 'ANNUELLE' else trim.lower()}")
+        else:
+            return datas
+    return None   # tout est rempli
 
 
 def pdf_response(fpdf_object, final_filename):
@@ -1251,9 +1419,33 @@ def base_header(pdf, mode='P', y_img=0):
     pdf.set_font_size(8)
     row.cell(f"**{pdf.school.name}**", v_align=VAlign.T)
 
-    logo = (pdf.school.logo, "static/image/no_image.jpg")[pdf.school.logo == ""]
+    # IMPORTANT (mode "Toutes les classes" / génération en boucle) :
+    # pdf.school.logo est un FieldFile partagé entre les PDF successifs. Le lire
+    # directement via pdf.image(...) consomme/ferme son flux -> la 2e classe
+    # déclenche "seek of closed file". On lit donc le logo dans un BytesIO NEUF
+    # à chaque appel, pour ne jamais partager de flux entre PDF.
+    logo_src = pdf.school.logo if pdf.school.logo != "" else "static/image/no_image.jpg"
     x_img = 92 if mode == 'P' else 135.5
-    pdf.image(logo, x=x_img, y=y_img+6, w=26, keep_aspect_ratio=True)
+    try:
+        if hasattr(logo_src, "read"):
+            # FieldFile (ImageField) -> on récupère des octets frais.
+            try:
+                logo_src.open("rb")
+            except Exception:
+                pass
+            logo_bytes = logo_src.read()
+            try:
+                logo_src.close()
+            except Exception:
+                pass
+            logo = BytesIO(logo_bytes)
+        else:
+            # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
+            logo = logo_src
+        pdf.image(logo, x=x_img, y=y_img + 6, w=26, keep_aspect_ratio=True)
+    except Exception:
+        # En cas de souci de logo, on n'interrompt pas la génération du PDF.
+        pass
     table.render()
 
 

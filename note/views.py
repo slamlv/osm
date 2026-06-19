@@ -12,7 +12,8 @@ from urllib.parse import quote
 from django.db.models.expressions import result
 
 from osm.utils import formated_float, resized_image, school_year, message, LoggedUserView, LoggedAdminView, \
-    logged_user_view, logged_admin_view, resize_image, truncate_str, base_infos, base_header, pdf_response
+    logged_user_view, logged_admin_view, resize_image, truncate_str, base_infos, base_header, pdf_response, check_notes, \
+    zip_pdfs_response
 from django.db.models import Sum
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -872,45 +873,60 @@ class MarksReport(LoggedAdminView):
     title = "Relevé de Notes"
 
     def get(self, *args, **kwargs):
-        form = CheckForm(context={"marks-report": True})
+        form = CheckForm(context={'marks-report': True, 'all': True})
         context = {"title": self.title, "form": form, 'marks_report': True}
         return render(self.request, self.template_name, context)
 
+    @staticmethod
+    def build_pdf_or_reason(classroom, evl_in, annee, school, trimestre):
+        reason = check_notes(classroom, evl_in)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        data = classroom.marks_report_data(evl_in)
+        data['school_data'], data['classe'] = school, classroom.code
+        data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, annee,\
+            f"Relevé de Notes {trimestre.title()} {classroom.code}.pdf", (f"E{evl_in[0]}", f"E{evl_in[1]}")
+        return TMarksReport(data=data)
+
     def post(self, *args, **kwargs):
-        clsrm, evl = int(self.request.POST["clsrm"]), int(self.request.POST["evl"])
+        evl = int(self.request.POST["evl"])
         evl_in = (((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3]
-        classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=clsrm)
-        rapport = "Certaines notes de "
-        checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
-        for status in checks:
-            i = 0
-            for elt in status[1]:
-                if not elt["status"]:
-                    i = 1
-                    break
-            if i:
-                rapport += f"l'évaluation n° {status[0]}"
-            if rapport != "Certaines notes de " and status != checks[-1]:
-                rapport += ", "
-        if rapport != "Certaines notes de ":
-            return JsonResponse({
-                'success': False,
-                'message': f"{rapport} n'ont pas été remplies en {classroom.code}"
-            })
-        else:
-            classroom = (
+        trimestre = (("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")[evl == 3]
+
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        selected = self.request.POST.get("clsrm")
+
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+            classrooms = (
                 ClassRoom.objects.select_related('classe').
-                prefetch_related('students', 'matieres__sujet').
-                get(pk=clsrm)
+                prefetch_related('students', 'matieres__sujet')
             )
-            trimestre = (("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")[evl == 3]
-            filename = f"Relevé de Notes {trimestre.title()} {classroom.code}.pdf"
-            data = classroom.marks_report_data(evl_in)
-            user = User.objects.select_related('school').get(id=self.request.user.id)
-            data['school_data'] = user.school
-            data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, school_year(), filename, \
-                (f"E{evl_in[0]}", f"E{evl_in[1]}")
-            return pdf_response(TMarksReport(data=data), filename)
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, evl_in, annee, school, trimestre)
+
+            def namer(clsrm):
+                return f"{clsrm.code} Relevé de Notes {trimestre.title()}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Relevés de Notes {trimestre.title()} - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = (
+            ClassRoom.objects.select_related('classe').
+            prefetch_related('students', 'matieres__sujet').
+            get(pk=int(selected))
+        )
+        result = self.build_pdf_or_reason(classroom, evl_in, annee, school, trimestre)
+        if isinstance(result, str):
+            return JsonResponse({'success': False, 'message': result})
+        return pdf_response(result, result.data['filename'])
 
 
 class ExamReport(LoggedAdminView):
@@ -918,47 +934,71 @@ class ExamReport(LoggedAdminView):
     title = "Procès Verbal"
 
     def get(self, *args, **kwargs):
-        form = CheckForm(context={"transcript": True})
+        form = CheckForm(context={'transcript': True, 'all': True})
         context = {"title": self.title, "form": form, 'marks_report': True}
         return render(self.request, self.template_name, context)
 
+    # Construit le PDF d'UNE classe, ou renvoie la RAISON de saut (str).
+    @staticmethod
+    def build_pdf_or_reason(classroom, evl_in, pv_ordered, seuil, annee, school, trimestre):
+        reason = check_notes(classroom, evl_in)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+
+        classroom = (
+            ClassRoom.objects.select_related('classe')
+            .prefetch_related('students', 'matieres')
+            .get(pk=classroom.pk)
+        )
+        filename = f"Procès Verbal {trimestre.title()} {classroom.code}.pdf"
+        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered, seuil=seuil)
+        data['school_data'] = school
+        data['trimestre'], data['annee'], data['filename'], data['seuil'] = (
+            trimestre, annee, filename, seuil
+        )
+        return ExamRecord(data=data)
+
     def post(self, *args, **kwargs):
-        clsrm, evl = int(self.request.POST["clsrm"]), int(self.request.POST["evl"])
-        pv_ordered = True if 'checkbox' in self.request.POST.keys() else False
+        evl = int(self.request.POST["evl"])
+        pv_ordered = 'checkbox' in self.request.POST.keys()
         seuil = float(self.request.POST["seuil"])
         evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
-        classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=clsrm)
-        rapport = "Certaines notes de "
-        checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
-        for status in checks:
-            i = 0
-            for elt in status[1]:
-                if not elt["status"]:
-                    i = 1
-                    break
-            if i:
-                rapport += f"l'évaluation n° {status[0]}"
-            if rapport != "Certaines notes de " and status != checks[-1]:
-                rapport += ", "
-        if rapport != "Certaines notes de ":
-            return JsonResponse({
-                'success': False,
-                'message': f"{rapport} n'ont pas été remplies en {classroom.code}."
-            })
-        else:
-            classroom = (
-                ClassRoom.objects.select_related('classe').
-                prefetch_related('students', 'matieres').
-                get(pk=clsrm)
+        trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
+                      "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUEL")[evl == 4]
+
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        selected = self.request.POST.get("clsrm")
+
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+            classrooms = (
+                ClassRoom.objects.prefetch_related('matieres').order_by_niveau()
             )
-            trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
-                         [evl == 3], "ANNUEL")[evl == 4]
-            filename = f"Procès Verbal {trimestre.title()} {classroom.code}.pdf"
-            data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered, seuil=seuil)
-            user = User.objects.select_related('school').get(id=self.request.user.id)
-            data['school_data'] = user.school
-            data['trimestre'], data['annee'], data['filename'], data['seuil'] = trimestre, school_year(), filename, seuil
-            return pdf_response(ExamRecord(data=data), filename)
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(
+                    clsrm, evl_in, pv_ordered, seuil, annee, school, trimestre
+                )
+
+            def namer(clsrm):
+                return f"{clsrm.code} Procès Verbal {trimestre.title()}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Procès Verbaux {'Annuels' if trimestre == 'ANNUEL' else trimestre.title()} - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=int(selected))
+        result = self.build_pdf_or_reason(classroom, evl_in, pv_ordered, seuil, annee, school, trimestre)
+        if isinstance(result, str):
+            # notes incomplètes -> message d'erreur
+            return JsonResponse({'success': False, 'message': result})
+        # result est l'objet ExamRecord ; son filename a été mis dans data.
+        return pdf_response(result, result.data['filename'])
 
 
 class TableauHonneur(LoggedAdminView):
@@ -966,63 +1006,57 @@ class TableauHonneur(LoggedAdminView):
     title = "Tableau d'Honneur"
 
     def get(self, *args, **kwargs):
-        form = CheckForm(context={"transcript": True})
+        form = CheckForm(context={'transcript': True, 'all': True})
         context = {"title": self.title, "form": form, 'marks_report': True, 'tableau': True}
         return render(self.request, self.template_name, context)
 
+    @staticmethod
+    def build_pdf_or_reason(classroom, evl_in, annee, school, trimestre):
+        reason = check_notes(classroom, evl_in, pv=True, trim=trimestre)
+        if isinstance(reason, str):
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        data = reason
+        data['school_data'], data['classe'] = school, classroom.code
+        data['trimestre'], data['annee'] = trimestre, annee
+        return TableaudHonneur(data=data)
+
     def post(self, *args, **kwargs):
-        clsrm, evl = int(self.request.POST["clsrm"]), int(self.request.POST["evl"])
+        evl = int(self.request.POST["evl"])
         evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
-        classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=clsrm)
-        rapport = "Certaines notes de "
-        checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
-        for status in checks:
-            i = 0
-            for elt in status[1]:
-                if not elt["status"]:
-                    i = 1
-                    break
-            if i:
-                rapport += f"l'évaluation n° {status[0]}"
-            if rapport != "Certaines notes de " and status != checks[-1]:
-                rapport += ", "
-        if rapport != "Certaines notes de ":
-            return JsonResponse({
-                'success': False,
-                'message': f"{rapport} n'ont pas été remplies en {classroom.code}."
-            })
-        else:
-            classroom = (
+        trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
+                     [evl == 3], "ANNUELLE")[evl == 4]
+
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        selected = self.request.POST.get("clsrm")
+
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+            classrooms = (
                 ClassRoom.objects.select_related('classe').
-                prefetch_related('students', 'matieres').
-                get(pk=clsrm)
+                prefetch_related('students', 'matieres')
             )
-            trim = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
-                         [evl == 3], "ANNUEL")[evl == 4]
-            trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
-                         [evl == 3], "ANNUELLE")[evl == 4]
-            filename = f"Tableaux d'honneur {trim.title()} {classroom.code}.pdf"
-            data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=True)
-            datas = dict()
-            datas['students'] = list()
-            for student in data['students_data']:
-                if student['moyenne'] >= 12:
-                    datas['students'].append({
-                        'nom': student['student']['nom'],
-                        'moyenne': student['moyenne'],
-                        'rang': student['rang'],
-                    })
-            if not datas['students']:
-                return JsonResponse({
-                    'success': False,
-                    'message': f"Aucun élève de {classroom.code} ne mérite un tableau d'honneur pour le compte {trim.lower()}"
-                })
-            else:
-                del data
-                user = User.objects.select_related('school').get(id=self.request.user.id)
-                datas['school_data'], datas['classe'] = user.school, classroom.code
-                datas['trimestre'], datas['annee'], datas['filename'] = trimestre.lower(), school_year(), filename
-                return pdf_response(TableaudHonneur(data=datas), filename)
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, evl_in, annee, school, trimestre)
+
+            def namer(clsrm):
+                return f"{clsrm.code} Tableaux d'honneur {'Annuels' if trimestre == 'ANNUELLE' else trimestre.title()}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Tableaux dHonneur {'Annuels' if trimestre == 'ANNUELLE' else trimestre.title()} - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = ClassRoom.objects.prefetch_related('students', 'matieres').get(pk=int(selected))
+        result = self.build_pdf_or_reason(classroom, evl_in, annee, school, trimestre)
+        if isinstance(result, str):
+            return JsonResponse({'success': False, 'message': result})
+        filename = f"Tableaux d'honneur {'Annuels' if trimestre == 'ANNUELLE' else trimestre.title()} {classroom.code}.pdf"
+        return pdf_response(result, filename)
 
 
 class TableaudHonneur(FPDF):
@@ -1043,6 +1077,24 @@ class TableaudHonneur(FPDF):
         logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
         if logo:
             with self.local_context(fill_opacity=0.2):
+                try:
+                    if hasattr(logo, "read"):
+                        # FieldFile (ImageField) -> on récupère des octets frais.
+                        try:
+                            logo.open("rb")
+                        except Exception:
+                            pass
+                        logo_bytes = logo.read()
+                        try:
+                            logo.close()
+                        except Exception:
+                            pass
+                        logo = BytesIO(logo_bytes)
+                    else:
+                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
+                        logo = logo
+                except Exception:
+                    pass
                 self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
 
     def draw_tables(self):

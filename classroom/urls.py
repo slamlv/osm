@@ -3,7 +3,7 @@ from .views import ClassroomAdd, ClassRooms, ClassroomDelete, ClassRoomStudents,
     classroom_form_reload, ClassroomEdit, Subjects, SubjectAdd, SubjectEdit, stats, StatsCheck, MarksSheet,\
     classroom_list, ClassMatieres, MatiereAdd, reload, RemoveMatiere, TimeTable, TimeTableForm, SetProgrammation,\
     reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm, TitulaireAssignment,\
-    ClassPhotosPage, StudentPhotoUpload
+    ClassPhotosPage, StudentPhotoUpload, ClassroomsLists
 
 urlpatterns = [
     path("classroom-add", ClassroomAdd.as_view(), name="classroom-add"),
@@ -24,6 +24,8 @@ urlpatterns = [
     path("classroom-<int:id>-delete", ClassroomDelete.as_view(), name="classroom-delete"),
     path("classroom-<int:id>-teachers", ClassRoomTeachers.as_view(), name="classroom-teachers"),
     path("class-<int:id>-subjects", ClassMatieres.as_view(), name="class-subjects"),
+    path("classroom-<int:id>-list", classroom_list, name="classroom-list"),
+    path("classrooms_lists", ClassroomsLists.as_view(), name="classrooms_lists"),
     path("classroom-<int:id>-list", classroom_list, name="classroom-list"),
     path("classroom_time_table", TimeTableForm.as_view(), name="classroom_time_table"),
     path("time_table", TimeTable.as_view(), name="time_table"),

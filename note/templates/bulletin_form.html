@@ -10,11 +10,12 @@
 </style>
 
 <div class="container py-3" style="max-width:580px;">
-  {% if not marks_report %}
   <div class="alert alert-info py-2 small rounded-3 mb-3">
-    <i class="bi bi-info-circle me-2"></i>La génération peut prendre quelques instants pour les classes à fort effectif.
+    <i class="bi bi-info-circle me-2"></i>
+    {% if not marks_report %}La génération des bulletins scolaires peut prendre quelques instants pour les classes à fort effectif.
+    {% else %}La génération pour toutes les classes peut prendre quelques instants selon le nombre de classes et les effectifs.
+    {% endif %}Veuillez patienter le cas échéant.
   </div>
-  {% endif %}
   <div class="form-card">
     <div class="form-card-header d-flex align-items-center gap-2">
       <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>

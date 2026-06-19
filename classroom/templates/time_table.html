@@ -1,21 +1,51 @@
 <style>
-  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
-  .osm-table-outer table { margin-bottom:0; min-width:480px; }
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; width:100%; }
+  .osm-table-outer table { margin-bottom:0; min-width:480px; width:100%; }
   .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
   .osm-table-outer thead th { color:rgba(255,255,255,0.7)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:9px 8px; text-align:center; white-space:nowrap; }
   .osm-table-outer thead th:first-child { text-align:left; min-width:80px; }
   .osm-table-outer tbody tr.pause-row th { background:rgba(255,255,255,0.04)!important; color:rgba(255,255,255,0.4)!important; font-size:0.75rem; font-weight:600; text-align:center; border-color:rgba(255,255,255,0.06)!important; }
   .osm-table-outer tbody tr:not(.pause-row) th { background:linear-gradient(135deg,#162e44,#1b3a57)!important; color:rgba(255,255,255,0.5)!important; font-size:0.75rem; white-space:nowrap; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
-  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:6px 8px; vertical-align:middle; }
+  .osm-table-outer tbody tr:not(.pause-row) td { background-color:#1b3a57!important; min-width:90px; color:rgba(255,255,255,0.85)!important; border-color:rgba(255,255,255,0.06)!important; padding:5px 7px; vertical-align:middle; }
+  /* Hauteur de ligne fixe (sauf les lignes de pause) */
+  .osm-table-outer tbody tr:not(.pause-row) { height:50px; }
+  /* Le bloc de cours occupe toute la hauteur de la cellule */
+  .osm-table-outer td .osm-slot-block { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2px 4px; }
   .osm-table-outer .slot { cursor:pointer; }
   .osm-table-outer .slot:hover { background-color:#1f4266!important; }
+  /* Aspect des cellules vides cliquables */
+  .osm-table-outer td.slot .osm-slot-empty { height:100%; min-height:38px; display:flex; align-items:center; justify-content:center; border:1px dashed rgba(255,255,255,0.14); border-radius:8px; color:rgba(255,255,255,0.22); font-size:1.05rem; transition:border-color .15s, color .15s, background-color .15s; }
+  .osm-table-outer td.slot:hover .osm-slot-empty { border-color:rgba(13,110,253,0.55); color:rgba(13,110,253,0.85); background-color:rgba(13,110,253,0.10); }
   .recap-panel { background:rgba(13,110,253,0.08); border:1px solid rgba(13,110,253,0.2); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
   .download-bar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.75rem 1rem; margin-top:1rem; }
 </style>
 
-<div class="alert alert-success py-2 small rounded-3 mb-3">
+<div class="alert alert-success py-2 small rounded-3 mb-2">
   <i class="bi bi-calendar-week me-2"></i><strong>{{ t_title }}</strong>
 </div>
+
+<div class="download-bar">
+  <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}">
+    {% csrf_token %}
+    <input type="hidden" name="signed" value="{{ signed }}">
+    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+      <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+        <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+      </button>
+      <div class="d-flex align-items-center gap-2">
+        <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
+        <label for="timetable_checkbox_id" class="text-white-50 small mb-0">Emploi du temps vierge</label>
+      </div>
+    </div>
+    <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
+  </form>
+</div>
+
+<p class="text-white-50 small mt-2 d-flex align-items-center gap-2">
+  <i class="bi bi-hand-index-thumb"></i>
+  Cliquez sur une cellule pour programmer un cours.
+</p>
 
 <div class="osm-table-outer"
      hx-get="{% url 'time_table' %}" hx-trigger="refresh from:body once"
@@ -42,10 +72,12 @@
               data-programmation-id="{{ elt.programmation_id }}"
               data-nb-tranches="{{ elt.rowspan }}" data-classroom-id="{{ classroom_id }}">
             {% if elt.matiere %}
-            <div class="{{ elt.colors }} rounded text-center fw-bold {% if elt.enseignant %}py-1{% else %}py-3{% endif %}">
+            <div class="{{ elt.colors }} rounded text-center fw-bold osm-slot-block">
               <span style="font-size:0.8rem;">{{ elt.matiere }}</span>
               {% if elt.enseignant %}<div class="small {{ elt.colors }}" style="font-size:0.72rem;">{{ elt.enseignant.short_firstname }}</div>{% endif %}
             </div>
+            {% else %}
+            <div class="osm-slot-empty"><i class="bi bi-plus-lg"></i></div>
             {% endif %}
           </td>
           {% endif %}
@@ -65,21 +97,3 @@
   </div>
 </div>
 {% endif %}
-
-<div class="download-bar">
-  <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}">
-    {% csrf_token %}
-    <input type="hidden" name="signed" value="{{ signed }}">
-    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
-      <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
-        <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
-        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
-      </button>
-      <div class="d-flex align-items-center gap-2">
-        <input type="checkbox" class="form-check-input" name="timetable_checkbox" id="timetable_checkbox_id">
-        <label for="timetable_checkbox_id" class="text-white-50 small mb-0">Emploi du temps vierge</label>
-      </div>
-    </div>
-    <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
-  </form>
-</div>

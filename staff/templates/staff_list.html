@@ -18,19 +18,47 @@
 
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
     <span>{% if archive_mode %} {{ datas.count }} {% endif %} {{ info }}</span>
-    <div class="d-flex gap-2 flex-wrap">
-    {% if nb_archive %}
-    <a class="btn btn-dark btn-sm fw-semibold {% if not nb_archive %}disabled{% endif %}" href="{% url 'staff_archive' %}"
-       title="Anciens membres" data-bs-toggle="tooltip"><i class="bi bi-archive me-1"></i>Anciens ({{ nb_archive }})</a>{% endif %}
-    {% if archive_mode %}
-      {% if archive_count %}
-      <a class="btn btn-outline-danger btn-sm fw-semibold" href="{% url 'staff_delete_archived' %}">
-        <i class="bi bi-trash me-1"></i>Vider la corbeille ({{ archive_count }})</a>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+
+      {% if nb_archive %}
+      <a class="btn btn-dark btn-sm fw-semibold" href="{% url 'staff_archive' %}"
+         title="Anciens membres" data-bs-toggle="tooltip">
+        <i class="bi bi-archive me-1"></i>Anciens ({{ nb_archive }})
+      </a>
       {% endif %}
-      <a class="btn btn-secondary btn-sm fw-semibold" href="{% url 'staff' %}">
-        <i class="bi bi-arrow-left me-1"></i>Retour</a>
-    {% endif %}
-    {% if search %}<a class="btn btn-secondary btn-sm" href="{% url 'staff' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>{% endif %}
+
+      {% if archive_mode %}
+        {% if archive_count %}
+        <a class="btn btn-outline-danger btn-sm fw-semibold" href="{% url 'staff_delete_archived' %}">
+          <i class="bi bi-trash me-1"></i><span>Vider la corbeille ({{ archive_count }})</span>
+        </a>
+        {% endif %}
+        <a class="btn btn-secondary btn-sm fw-semibold" href="{% url 'staff' %}">
+          <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+      {% endif %}
+
+      {% if search %}
+      <a class="btn btn-secondary btn-sm" href="{% url 'staff' %}">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+      </a>
+      {% elif programmations %}
+      <form method="post" enctype="multipart/form-data" id="download-form"
+            action="{% url 'staff-timetable' id=4 %}" class="d-inline-flex align-items-center m-0">
+        {% csrf_token %}
+        <button class="btn btn-danger btn-sm fw-semibold d-inline-flex align-items-center"
+                type="submit" data-bs-toggle="tooltip"
+                title="Télécharger tous les emplois du temps en PDF">
+          <span class="btn-text" id="btn-text">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Emplois du temps
+          </span>
+          <span class="spinner-border spinner-border-sm d-none ms-2" role="status"
+                aria-hidden="true" id="spinner"></span>
+        </button>
+        <div id="error-zone" class="alert alert-warning d-none mt-0 ms-2 py-1 px-2 small rounded-3 mb-0"></div>
+      </form>
+      {% endif %}
+
     </div>
   </div>
 

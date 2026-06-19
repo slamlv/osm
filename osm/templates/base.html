@@ -381,7 +381,7 @@
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'set_periods' %}"><i class="bi bi-calendar-range me-2 text-warning"></i>Périodes de remplissage</a></li>
                 <li><a class="dropdown-item" href="{% url 'marks_check' %}"><i class="bi bi-check2-square me-2 text-warning"></i>Vérifier le remplissage</a></li>
-                <li><a class="dropdown-item" href="{% url 'marks_report' %}"><i class="bi bi-file-earmark-bar-graph me-2 text-warning"></i>Relevé trimestriel</a></li>
+                <li><a class="dropdown-item" href="{% url 'marks_report' %}"><i class="bi bi-file-earmark-bar-graph me-2 text-warning"></i>Relevé de notes trimestriel</a></li>
                 <li><a class="dropdown-item" href="{% url 'fill_livret_bepc' %}"><i class="bi bi-journal-bookmark me-2 text-warning"></i>Livret BEPC</a></li>
                 {% endif %}
               </ul>
@@ -802,15 +802,23 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
         body: new FormData(form),
       })
       .then(function (response) {
-        // La vue retourne directement un PDF (Content-Disposition: attachment)
+        // La vue peut retourner un FICHIER (PDF unique ou ZIP "Toutes les
+        // classes") OU un JSON (erreur / ancien format).
         const ct = response.headers.get('Content-Type') || '';
+        const disposition = response.headers.get('Content-Disposition') || '';
         if (!response.ok) {
           return response.text().then(function (t) { throw new Error(t || ('Erreur ' + response.status)); });
         }
-        if (ct.includes('application/pdf') || ct.includes('application/octet-stream')) {
+        // Critère robuste : si c'est une pièce jointe (attachment) OU un type
+        // de fichier connu (pdf, zip, octet-stream), on télécharge le blob.
+        const isFile = disposition.toLowerCase().includes('attachment')
+          || ct.includes('application/pdf')
+          || ct.includes('application/zip')
+          || ct.includes('application/x-zip-compressed')
+          || ct.includes('application/octet-stream');
+        if (isFile) {
           // Déclencher le téléchargement depuis le blob reçu
-          const disposition = response.headers.get('Content-Disposition') || '';
-          let filename = 'document.pdf';
+          let filename = 'document';
           const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
           const asciiMatch = disposition.match(/filename=['"]?([^;'"]+)['"]?/i);
           if (utf8Match)  filename = decodeURIComponent(utf8Match[1]);

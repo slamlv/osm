@@ -18,7 +18,7 @@
   <!-- Bannière info + actions export -->
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
     <span>{% if datas and secondary %} {{ datas.count }} {% endif %} {{ info }}</span>
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
       {% if search %}
         {% if pk %}
         <a class="btn btn-secondary btn-sm" href="{% url 'classroom-students' id=pk %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
@@ -47,6 +47,22 @@
         {% if datas and not secondary %}
         <a class="btn btn-success btn-sm fw-semibold" href="{% url 'students_export' cls_id=pk %}" title="Exporter en Excel" data-bs-toggle="tooltip">
           <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel</a>
+          {% if students_with_class %}
+          <form method="post" enctype="multipart/form-data" id="download-form"
+                action="{% url 'classrooms_lists' %}" class="d-inline-flex align-items-center m-0">
+            {% csrf_token %}
+            <button class="btn btn-danger btn-sm fw-semibold d-inline-flex align-items-center"
+                    type="submit" data-bs-toggle="tooltip"
+                    title="Télécharger tous les emplois du temps en PDF">
+              <span class="btn-text" id="btn-text">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Listes
+              </span>
+              <span class="spinner-border spinner-border-sm d-none ms-2" role="status"
+                    aria-hidden="true" id="spinner"></span>
+            </button>
+            <div id="error-zone" class="alert alert-warning d-none mt-0 ms-2 py-1 px-2 small rounded-3 mb-0"></div>
+          </form>
+          {% endif %}
         {% endif %}
         {% if secondary %}
             {% if review_mode == "trash" and datas %}

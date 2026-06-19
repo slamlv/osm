@@ -4,10 +4,10 @@ from io import BytesIO
 from django.urls import reverse
 from fpdf.enums import TableHeadingsDisplay
 
-from authentification.models import TrancheHoraire, School
+from authentification.models import TrancheHoraire, School, User
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
-    base_header, base_infos, delete_image
+    base_header, base_infos, delete_image, zip_pdfs_response, check_notes
 from django.db.models import Q
 from django.forms import model_to_dict
 from django.http import Http404, HttpResponse, JsonResponse
@@ -475,7 +475,40 @@ class TimeTable(LoggedAdminView):
                    't_title': title, 'signed': signing.dumps(classroom_id)}
         return render(self.request, self.template_name, context=context)
 
+    def build_pdf_or_reason(self, classroom, annee):
+        if not classroom.programmations.exists():
+            return "Aucune programmation disponible pour cette classe"  # -> sautée (ZIP) ou message d'erreur (une classe)
+        result = self.get_time_table(classroom.pk, download=True)
+        data = {
+            'filename': "Emploi du temps",
+            'annee': annee,
+            'time_table': result[0],
+            'classroom': result[1],
+            'school': result[2],
+        }
+        data['filename'] += f" {data['classroom']}"
+        return ClassroomTimeTable(data=data)
+
     def post(self, *args, **kwargs):
+        if 'signed' not in self.request.POST.keys():
+            classrooms = (
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('programmations')
+            )
+            annee = school_year()
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, annee)
+
+            def namer(clsrm):
+                return f"{clsrm.code} Emploi du temps.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Emplois du temps - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
         try:
             classroom_id = signing.loads(self.request.POST["signed"])
             empty_timetable = True if 'timetable_checkbox' in self.request.POST.keys() else False
@@ -917,37 +950,60 @@ class MarksSheet(LoggedUserView):
         if msg:
             context = {'title': self.title, 'msg': msg}
         else:
-            select_form = SelectForm(context={
+            select_form = SelectForm(context={'all': True,
                 "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': enseignements})
             context = {'marks_sheet': True, 'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
+    @staticmethod
+    def build_pdf_or_reason(classroom, annee, school):
+        reason = check_notes(classroom, None, marks_sheet=True)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+
+        return PDFMarksSheet(classroom=classroom, annee=annee, school=school)
+
     def post(self, *args, **kwargs):
-        msg, enseignements = self.check()
-        if msg:
-            context = {'title': self.title, 'msg': msg}
-        else:
-            select_form = SelectForm(self.request.POST, context={
-                "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': enseignements})
-            context = {'marks_sheet': True, 'title': self.title, 'select_form': select_form}
-            if select_form.is_valid():
-                classroom = (
-                    ClassRoom.objects.prefetch_related('students').
-                    get(pk=select_form.cleaned_data["classroom"])
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        selected = self.request.POST.get("classroom")
+
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+            if self.request.user.is_admin:
+                classrooms = ClassRoom.objects.select_related('classe').prefetch_related('students').order_by_niveau()
+            else:
+                enseignements = Enseignements.objects.select_related('matiere__sujet', 'classroom').filter(
+                    Q(rapporteur_id=self.request.user.staff_member.pk) | Q(enseignant_id=self.request.user.staff_member.pk))
+                classes_id = [ens.classroom.pk for ens in enseignements]
+                classrooms = (
+                    ClassRoom.objects.select_related('classe')
+                    .prefetch_related('students').filter(pk__in=classes_id).order_by_niveau()
                 )
-                if classroom.students.exists():
-                    filename = f"Fiche de Notes {classroom.code}.pdf"
-                    marks_report = PDFMarksSheet(classroom=classroom, annee=school_year(),
-                                                 school=self.request.user.school)
-                    buffer = BytesIO()
-                    marks_report.output(buffer)
-                    buffer.seek(0)
-                    response = HttpResponse(buffer, content_type="application/pdf")
-                    response['Content-Disposition'] = f"attachment; filename={filename}"
-                    return response
-                else:
-                    message(self.request, "Aucun élève dans cette salle de classe.", msg_type="warning")
-        return render(self.request, self.template_name, context)
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, annee, school)
+
+            def namer(clsrm):
+                return f"{clsrm.code} Fiche de Notes.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Fiches de Notes - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = (
+            ClassRoom.objects.prefetch_related('students').
+            get(pk=int(selected))
+        )
+        result = self.build_pdf_or_reason(classroom, annee, school)
+        filename = f"Fiche de Notes {classroom.code}.pdf"
+        if isinstance(result, str):
+            return JsonResponse({'success': False, 'message': result})
+        return pdf_response(result, filename)
 
 
 def add_fonts(pdf):
@@ -1026,6 +1082,37 @@ class PDFMarksSheet(FPDF):
         self.set_font('inter', 'I', 7)
         self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
         self.cell(99, 6, f"FICHE DE NOTES ({self.classroom.code}) - Page {self.page_no()}/{{nb}}", align='R')
+
+
+class ClassroomsLists(LoggedAdminView):
+    @staticmethod
+    def build_pdf_or_reason(classroom, annee, school):
+        reason = check_notes(classroom, None, marks_sheet=True)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+
+        filename = f"Liste des élèves {classroom.code}.pdf"
+        cls_list = ClassroomList(classroom=classroom, annee=annee, school=school)
+        cls_list.set_title(filename)
+        return cls_list
+
+    def post(self, *args, **kwargs):
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        classrooms = ClassRoom.objects.select_related('classe').prefetch_related('students').order_by_niveau()
+
+        def build(clsrm):
+            return self.build_pdf_or_reason(clsrm, annee, school)
+
+        def namer(clsrm):
+            return f"{clsrm.code} Liste des élèves.pdf"
+
+        return zip_pdfs_response(
+            build_pdf_for_classroom=build,
+            classrooms=classrooms,
+            zip_filename=f"Liste des élèves - Toutes les classes.zip",
+            per_file_namer=namer,
+        )
 
 
 @logged_admin_view

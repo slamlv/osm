@@ -20,7 +20,7 @@ from babel.dates import format_date
 from openpyxl.utils.datetime import to_excel
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from authentification.models import SchoolYear
+from authentification.models import SchoolYear, User
 from note.models import Note, Enseignements
 from classroom.models import ClassRoom
 from note.views import ReportCard
@@ -30,7 +30,8 @@ from osm.forms import SearchForm
 from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
-    with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView
+    with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
+    check_notes
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
@@ -670,7 +671,53 @@ class StudentsIdCards(LoggedAdminView):
         context = {'marks_sheet': True, 'csi': True, 'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
+    @staticmethod
+    def build_pdf_or_reason(classroom, data):
+        reason = check_notes(classroom, None, marks_sheet=True)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        data['students'] = list(classroom.students.order_by('nom', 'prenom'))
+        return StudentsIdentityCards(data=data)
+
     def post(self, *args, **kwargs):
+        empty_csi = True if 'csi_checkbox' in self.request.POST.keys() else False
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        data = {'annee': annee, 'school_data': school.school_to_dict()}
+        selected = self.request.POST.get("classroom")
+        filename = self.title
+        if not empty_csi:
+            # -------- Cas "Toutes les classes" -> ZIP --------
+            if selected == "__all__":
+                classrooms = (
+                    ClassRoom.objects.prefetch_related('students__pere', 'students__mere')
+                )
+
+                def build(clsrm):
+                    return self.build_pdf_or_reason(clsrm, data)
+
+                def namer(clsrm):
+                    return f"{clsrm.code} {filename}.pdf"
+
+                return zip_pdfs_response(
+                    build_pdf_for_classroom=build,
+                    classrooms=classrooms,
+                    zip_filename=f"Cartes dIdentité Scolaire - Toutes les classes.zip",
+                    per_file_namer=namer,
+                )
+
+            # -------- Cas "une seule classe" --------
+            classroom = (
+                ClassRoom.objects.prefetch_related('students__pere', 'students__mere').
+                get(pk=int(selected))
+            )
+            result = self.build_pdf_or_reason(classroom, data)
+            if isinstance(result, str):
+                return JsonResponse({'success': False, 'message': result})
+            return pdf_response(result, f"{filename} {classroom.code}.pdf")
+        return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")
+
+    """def post(self, *args, **kwargs):
         empty_csi = True if 'csi_checkbox' in self.request.POST.keys() else False
         data = {'annee': school_year(), 'school_data': self.request.user.school.school_to_dict()}
         filename = self.title
@@ -686,7 +733,7 @@ class StudentsIdCards(LoggedAdminView):
                     'success': False,
                     'message': "Aucun élève dans cette salle de classe"
                 })
-        return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")
+        return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")"""
 
 
 # Exportation de la liste des élèves dans un fichier Excel

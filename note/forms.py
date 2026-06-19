@@ -123,7 +123,7 @@ class SelectForm(DynamicFormMixin, forms.Form):
             return [(classroom.pk, classroom.code) for classroom in classrooms]
         if self.marks_sheet:
             if self.context['request'].user.is_admin:
-                return [(classroom.pk, classroom.code) for classroom in ClassRoom.objects.order_by_niveau()]
+                return [("__all__", "Toutes")] + [(classroom.pk, classroom.code) for classroom in ClassRoom.objects.order_by_niveau()]
         matiere = matiere()
         enseignements = self.context['enseignements']
         if not self.marks_sheet and matiere:
@@ -137,6 +137,8 @@ class SelectForm(DynamicFormMixin, forms.Form):
                 if (niveau, niveau) not in levels:
                     levels.append((niveau, niveau))
             return levels
+        if 'all' in self.context.keys():
+            return [("__all__", "Toutes")] + [(classroom.pk, classroom.code) for classroom in classrooms]
         return [(classroom.pk, classroom.code) for classroom in classrooms]
 
 
@@ -474,8 +476,8 @@ class CheckForm(DynamicFormMixin, forms.Form):
     def classes(self):
         classes = ClassRoom.objects.select_related('classe').order_by_niveau()
         choices = [(classe.pk, classe.code) for classe in classes]
-        if 'stats' in self.context.keys():
-            choices.insert(0, (0, "Toutes"))
+        if 'all' in self.context.keys():
+            choices.insert(0, ("__all__", "Toutes"))
         return choices
 
     def get_choices(self):
