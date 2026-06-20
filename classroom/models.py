@@ -339,6 +339,14 @@ class ClassRoom(models.Model):
             Enseignements.objects.create(matiere=matiere, classroom=classroom, rapporteur=get_staff_member())
 
     @property
+    def nb_filles(self):
+        return self.students.filter(sexe="Fille").count()
+
+    @property
+    def nb_garcons(self):
+        return self.students.filter(sexe="Garçon").count()
+
+    @property
     def kind_numbers(self):
         g = self.students.filter(sexe="Garçon").count()
         f = self.students.filter(sexe="Fille").count()
@@ -430,6 +438,11 @@ class ClassRoom(models.Model):
                         formated_float((nbgr / nbge) * 100) if nbge else 0
                     data_matiere['nbte'], data_matiere['nbtr'], data_matiere['pct'] = len(notes_moyennes), nbtr,\
                         formated_float((nbtr / len(notes_moyennes)) * 100)
+                    data_matiere['ppf'], data_matiere['ppg'], data_matiere['ppt'] = (
+                        formated_float((data_matiere['nbfe'] / self.nb_filles) * 100),
+                        formated_float((data_matiere['nbge'] / self.nb_garcons) * 100),
+                        formated_float((data_matiere['nbte'] / self.effectif) * 100)
+                    )
                     data_matiere['min_max'] = f"[{min(notes_moyennes)} - {max(notes_moyennes)}]"
                     data_matiere['moyenne'] = formated_float(sum(notes_moyennes) / len(notes_moyennes))
                 else:
@@ -443,8 +456,8 @@ class ClassRoom(models.Model):
         result = {
             'label': self.code,
             'effectif': self.effectif,
-            'garcons': self.students.filter(sexe="Garçon").count(),
-            'filles': self.students.filter(sexe="Fille").count(),
+            'garcons': self.nb_garcons,
+            'filles': self.nb_filles,
             'redoublants': self.students.filter(statut="Redoublant").count()
         }
         if for_stats or pv:
@@ -452,6 +465,12 @@ class ClassRoom(models.Model):
                 moyenne_generale, taux, min_max, nb, nb_admis, result['nbfe'], result['nbfr'], result['nbge'],\
                     result['nbgr'], result['pcf'], result['pcg'], result['min_std'], result['max_std'], result['min'],\
                     result['max'] = self.set_rang(students_data, for_stats=True, seuil=seuil)
+                result['ppf'], result['ppg'], result['ppt'], result['titulaire'] = (
+                    formated_float((result['nbfe']/ result['filles']) * 100),
+                    formated_float((result['nbge']/ result['garcons']) * 100),
+                    formated_float((nb / result['effectif']) * 100),
+                    self.titulaire.short_name if self.titulaire else "/"
+                )
             elif pv:
                 if pv_ordered:
                     students_data, moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data,

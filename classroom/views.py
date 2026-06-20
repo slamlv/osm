@@ -554,131 +554,6 @@ def checks_notes(classrooms, evl_in):
     return None
 
 
-def school_stats(classrooms, evals, seuil=10.0):
-    result = [classroom.marks_report_data(evals, for_stats=True, for_global_stats=True, seuil=seuil) for classroom in classrooms]
-    effectif = nbfe = nbfr = nbge = nbgr = nbe = nbr = total_moyenne = 0
-    min_std, max_std, minim, maxim = None, None, float("inf"), float("-inf")
-    min_clst, max_clst, mint, maxt = None, None, float("inf"), float("-inf")
-    min_clsmg, max_clmg, min_mg, max_mg = None, None, float("inf"), float("-inf")
-    for classroom_data in result:
-        effectif += classroom_data["effectif"]
-        nbfe += classroom_data["nbfe"]
-        nbfr += classroom_data["nbfr"]
-        nbge += classroom_data["nbge"]
-        nbgr += classroom_data["nbgr"]
-        nbr += classroom_data["nbr"]
-        nbe += classroom_data["nbe"]
-        total_moyenne += classroom_data["moyenne_generale"] * classroom_data['nbe']
-        if minim > classroom_data["min"]:
-            minim = classroom_data["min"]
-            min_std = f"{classroom_data['min_std']} - {classroom_data['label']}"
-        if maxim < classroom_data["max"]:
-            maxim = classroom_data["max"]
-            max_std = f"{classroom_data['max_std']} - {classroom_data['label']}"
-        if mint > classroom_data["taux"]:
-            mint = classroom_data["taux"]
-            min_clst = classroom_data['label']
-        if maxt < classroom_data["taux"]:
-            maxt = classroom_data["taux"]
-            max_clst = classroom_data['label']
-        if min_mg > classroom_data["moyenne_generale"]:
-            min_mg = classroom_data["moyenne_generale"]
-            min_clsmg = classroom_data['label']
-        if max_mg < classroom_data["moyenne_generale"]:
-            max_mg = classroom_data["moyenne_generale"]
-            max_clsmg = classroom_data['label']
-    result.insert(0, {
-        'label': "Global",
-        'effectif': effectif,
-        'nbfe': nbfe,
-        'nbfr': nbfr,
-        'pcf': formated_float((nbfr / nbfe) * 100),
-        'nbge': nbge,
-        'nbgr': nbgr,
-        'pcg': formated_float((nbgr / nbge) * 100),
-        'nbe': nbe,
-        'nbr': nbr,
-        'taux': formated_float((nbr / nbe) * 100),
-        'min': minim,
-        'max': maxim,
-        'min_std': min_std,
-        'max_std': max_std,
-        'min_max': f"[{minim} - {maxim}]",
-        'min_clsmg': f"{min_mg} - {min_clsmg}",
-        'min_clst': f"{mint}% - {min_clst}",
-        'max_clsmg': f"{max_mg} - {max_clsmg}",
-        'max_clst': f"{maxt}% - {max_clst}",
-        'moyenne_generale': formated_float(total_moyenne / nbe)
-    })
-    return result
-
-
-class StatsCheck(LoggedAdminView):
-    template_name = "stats.html"
-    title = "Statistiques"
-
-    def get(self, *args, **kwargs):
-        check_form = CheckForm(context={'transcript': True, 'stats': True})
-        context = {"title": self.title, "check_form": check_form, "stats": False}
-        return render(self.request, self.template_name, context)
-
-    def post(self, *args, **kwargs):
-        check_form = CheckForm(self.request.POST or None, context={'transcript': True, 'stats': True})
-        context = {"title": self.title, "check_form": check_form, "stats": False}
-        return render(self.request, self.template_name, context)
-
-
-@logged_admin_view
-def stats(request):
-    if request.method == "POST":
-        template_name = "statistiques.html"
-        classroom_id = int(request.POST['clsrm'])
-        evl = int(request.POST["evl"])
-        seuil = float(request.POST["seuil"])
-        trim = ((("du premier trimestre", "du deuxième trimesre")[evl == 2], "du troisième trimeste")[evl == 3],
-                "annuelles")[evl == 4]
-        evl_in = ((([1, 2], [3, 4])[evl == 2], [5, 6])[evl == 3], [1, 2, 3, 4, 5, 6])[evl == 4]
-        data = None
-        if classroom_id:
-            classroom = (
-                ClassRoom.objects.select_related('classe').
-                prefetch_related('students', 'matieres__sujet').
-                get(pk=classroom_id)
-            )
-            rapport = "Certaines notes de "
-            checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
-            for status in checks:
-                i = 0
-                for elt in status[1]:
-                    if not elt["status"]:
-                        i = 1
-                        break
-                if i:
-                    rapport += f"l'évaluation n° {status[0]}"
-                if rapport != "Certaines notes de " and status != checks[-1]:
-                    rapport += ", "
-            if rapport != "Certaines notes de ":
-                status = False
-                rapport += f" n'ont pas été remplies en {classroom.code}."
-            else:
-                rapport = None
-                status = True
-                data = classroom.marks_report_data(evl_in, for_stats=True, seuil=seuil)
-        # Statistiques Établissement
-        else:
-            classrooms = list(
-                ClassRoom.objects.select_related('classe').
-                prefetch_related('students', 'matieres__sujet').order_by_niveau()
-            )
-            rapport = checks_notes(classrooms, evl_in)
-            status = False if rapport else True
-            if status:
-                data = school_stats(classrooms, evl_in, seuil=seuil)
-        context = {'status': status, 'rapport': rapport, 'trim': trim, 'data': data,
-                   'global_stats': False if classroom_id else True}
-        return render(request, template_name, context)
-
-
 # Attribution des enseignants pour une salle de classe
 class ClassRoomTeachers(LoggedAdminView):
     template_name = "classroom_config.html"
@@ -1006,11 +881,401 @@ class MarksSheet(LoggedUserView):
         return pdf_response(result, filename)
 
 
+class StatsCheck(LoggedAdminView):
+    template_name = "stats.html"
+    title = "Statistiques"
+
+    def get(self, *args, **kwargs):
+        check_form = CheckForm(context={'transcript': True, 'stats': True, 'all':True})
+        context = {"title": self.title, "check_form": check_form, "stats": False}
+        return render(self.request, self.template_name, context)
+
+    def post(self, *args, **kwargs):
+        check_form = CheckForm(self.request.POST or None, context={'transcript': True, 'stats': True, 'all':True})
+        context = {"title": self.title, "check_form": check_form, "stats": False}
+        return render(self.request, self.template_name, context)
+
+
+class Stats(LoggedAdminView):
+    template_name = "statistiques.html"
+
+    def get(self, *args, **kwargs):
+        classroom_id = 0 if self.request.GET['clsrm'] == "__all__" else int(self.request.GET['clsrm'])
+        evl = int(self.request.GET["evl"])
+        seuil = float(self.request.GET["seuil"])
+        trim = ((("du premier trimestre", "du deuxième trimesre")[evl == 2], "du troisième trimeste")[evl == 3],
+                "annuelles")[evl == 4]
+        evl_in = ((([1, 2], [3, 4])[evl == 2], [5, 6])[evl == 3], [1, 2, 3, 4, 5, 6])[evl == 4]
+        data = None
+        if classroom_id:
+            classroom = (
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('students', 'matieres__sujet').
+                get(pk=classroom_id)
+            )
+            rapport = "Certaines notes de "
+            checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
+            for status in checks:
+                i = 0
+                for elt in status[1]:
+                    if not elt["status"]:
+                        i = 1
+                        break
+                if i:
+                    rapport += f"l'évaluation n° {status[0]}"
+                if rapport != "Certaines notes de " and status != checks[-1]:
+                    rapport += ", "
+            if rapport != "Certaines notes de ":
+                status = False
+                rapport += f" n'ont pas été remplies en {classroom.code}."
+            else:
+                rapport = None
+                status = True
+                data = classroom.marks_report_data(evl_in, for_stats=True, seuil=seuil)
+        # Statistiques Établissement
+        else:
+            classrooms = list(
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('students', 'matieres__sujet').order_by_niveau()
+            )
+            rapport = checks_notes(classrooms, evl_in)
+            status = False if rapport else True
+            if status:
+                data = self.school_stats(classrooms, evl_in, seuil=seuil)
+        context = {'status': status, 'rapport': rapport, 'trim': trim, 'data': data,
+                   'global_stats': False if classroom_id else True}
+        return render(self.request, self.template_name, context)
+
+    @staticmethod
+    def school_stats(classrooms, evals, seuil=10.0, download=False):
+        result = [classroom.marks_report_data(evals, for_stats=True, for_global_stats=True, seuil=seuil) for classroom
+                  in classrooms]
+        effectif = nbfe = nbfr = nbge = nbgr = nbe = nbr = total_moyenne = nbft = nbgt = 0
+        if download:
+            redoublants = 0
+        min_std, max_std, minim, maxim = None, None, float("inf"), float("-inf")
+        min_clst, max_clst, mint, maxt = None, None, float("inf"), float("-inf")
+        min_clsmg, max_clmg, min_mg, max_mg = None, None, float("inf"), float("-inf")
+        for classroom_data in result:
+            effectif += classroom_data["effectif"]
+            nbfe += classroom_data["nbfe"]
+            nbfr += classroom_data["nbfr"]
+            nbge += classroom_data["nbge"]
+            nbgr += classroom_data["nbgr"]
+            nbr += classroom_data["nbr"]
+            nbe += classroom_data["nbe"]
+            nbft += classroom_data["filles"]
+            nbgt += classroom_data["garcons"]
+            total_moyenne += classroom_data["moyenne_generale"] * classroom_data['nbe']
+            if minim > classroom_data["min"]:
+                minim = classroom_data["min"]
+                min_std = f"{classroom_data['min_std']} - {classroom_data['label']}"
+            if maxim < classroom_data["max"]:
+                maxim = classroom_data["max"]
+                max_std = f"{classroom_data['max_std']} - {classroom_data['label']}"
+            if mint > classroom_data["taux"]:
+                mint = classroom_data["taux"]
+                min_clst = classroom_data['label']
+            if maxt < classroom_data["taux"]:
+                maxt = classroom_data["taux"]
+                max_clst = classroom_data['label']
+            if min_mg > classroom_data["moyenne_generale"]:
+                min_mg = classroom_data["moyenne_generale"]
+                min_clsmg = classroom_data['label']
+            if max_mg < classroom_data["moyenne_generale"]:
+                max_mg = classroom_data["moyenne_generale"]
+                max_clsmg = classroom_data['label']
+            if download:
+                redoublants += classroom_data["redoublants"]
+        data = {
+            'effectif': effectif,
+            'nbfe': nbfe,
+            'nbfr': nbfr,
+            'pcf': formated_float((nbfr / nbfe) * 100),
+            'nbge': nbge,
+            'nbgr': nbgr,
+            'pcg': formated_float((nbgr / nbge) * 100),
+            'nbe': nbe,
+            'nbr': nbr,
+            'taux': formated_float((nbr / nbe) * 100),
+            'filles': nbft,
+            'garcons': nbgt,
+            'ppf': formated_float((nbfe / nbft) * 100),
+            'ppg': formated_float((nbge / nbgt) * 100),
+            'ppt': formated_float((nbe / effectif) * 100),
+            'min': minim,
+            'max': maxim,
+            'min_std': min_std,
+            'max_std': max_std,
+            'min_max': f"[{minim} - {maxim}]",
+            'min_clsmg': f"{min_mg} - {min_clsmg}",
+            'min_clst': f"{mint}% - {min_clst}",
+            'max_clsmg': f"{max_mg} - {max_clsmg}",
+            'max_clst': f"{maxt}% - {max_clst}",
+            'moyenne_generale': formated_float(total_moyenne / nbe),
+            'classrooms_data': result
+        }
+        if download:
+            data['redoublants'] = redoublants
+            data['label'] = "Global"
+        return data
+
+    def build_pdf_or_reason(self, classroom, evl_in, seuil, annee, school, trimestre):
+        if classroom is None:
+            classrooms = list(
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('students', 'matieres__sujet').order_by_niveau()
+            )
+            rapport = checks_notes(classrooms, evl_in)
+            if rapport:
+                return rapport
+            data = self.school_stats(classrooms, evl_in, seuil=seuil, download=True)
+        else:
+            reason = check_notes(classroom, evl_in)
+            if reason is not None:
+                return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+            data = classroom.marks_report_data(evl_in, for_stats=True, seuil=seuil)
+        data['school_data'], data['trimestre'], data['annee'], data['seuil'] = (
+            school, trimestre, annee, seuil
+        )
+        return Statistiques(data=data)
+
+    def post(self, *args, **kwargs):
+        scope = self.request.POST.get('scope')  # 'pdf' ou 'zip'
+        clsrm = self.request.POST.get('clsrm')  # '__all__' ou 'classroom.id'
+        evl = int(self.request.POST['evl'])
+        seuil = float(self.request.POST.get('seuil', 10))
+        annee = school_year()
+        trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
+                      "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUELLES")[evl == 4]
+        evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+
+        if scope == 'zip':
+            # stats de TOUTES les classes + global -> ZIP (réutilise zip_pdfs_response)
+            classrooms = list(
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('students', 'matieres__sujet').order_by_niveau()
+            )
+            classrooms.insert(0, None)
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, evl_in, seuil, annee, school, trimestre)
+
+            def namer(clsrm):
+                return f"{'' if clsrm is None else clsrm.code + ' '}Statistiques {'Globales' if clsrm is None else ''} {trimestre.title()}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Statistques {trimestre.title()} - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        elif scope == 'pdf':
+            if clsrm == '__all__':
+                # stats GLOBALES établissement -> PDF unique
+                classroom = None
+            else:
+                # stats d'UNE classe précise -> PDF unique
+                classroom = (
+                    ClassRoom.objects.select_related('classe').
+                    prefetch_related('students', 'matieres__sujet').
+                    get(pk=int(clsrm))
+                )
+            filename = f"Statistiques {'Globales' if classroom is None else ''} {trimestre.title()}{'' if classroom is None else ' ' + classroom.code}.pdf"
+            result = self.build_pdf_or_reason(classroom, evl_in, seuil, annee, school, trimestre)
+            if isinstance(result, str):
+                return JsonResponse({'success': False, 'message': result})
+            return pdf_response(result, filename)
+        else:
+            return JsonResponse({'success': False, 'message': "Action inconnue."})
+
+
 def add_fonts(pdf):
     pdf.add_font('inter', '', settings.INTER_REGULAR)
     pdf.add_font('inter', 'I', settings.INTER_ITALIC)
     pdf.add_font('inter', 'B', settings.INTER_BOLD)
     pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
+
+
+class Statistiques(FPDF):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(orientation='L')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
+        self.alias_nb_pages()
+        self.set_margins(6, 6, 6)
+        self.set_auto_page_break(auto=True, margin=6)
+        self.set_font('inter', '', 8)
+        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
+        self.data = kwargs.pop('data')
+        self.school = self.data['school_data']
+        self.add_page()
+        base_header(self, mode='Pa')
+        base_infos(self, f"STATISTIQUES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
+                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa')
+        self.stats_table()
+        self.stats_summary()
+
+    def stats_summary(self):
+        """Bloc de synthèse affiché sous le tableau principal"""
+        self.ln(3)
+
+        is_global = self.data['label'] == "Global"
+
+        # Données selon le mode
+        if is_global:
+            items_left = [
+                ("Meilleur élève", self.data.get('max_std'), self.data.get('max')),
+                ("Élève le plus faible", self.data.get('min_std'), self.data.get('min')),
+            ]
+            items_mid = [
+                ("Moyenne la plus élevée", self.data.get('max_clsmg')),
+                ("Moyenne la plus faible", self.data.get('min_clsmg')),
+            ]
+            items_right = [
+                ("Taux de réussite le plus élevé", self.data.get('max_clst')),
+                ("Taux de réussite le plus faible", self.data.get('min_clst')),
+            ]
+        else:
+            items_left = [
+                ("Premier de la classe", self.data.get('max_std'), self.data.get('max')),
+                ("Dernier de la classe", self.data.get('min_std'), self.data.get('min')),
+            ]
+            items_mid = None
+            items_right = None
+
+        col_widths_global = (95, 95, 95)
+        col_widths_class = (142.5, 142.5)
+        col_widths = col_widths_global if is_global else col_widths_class
+
+        # Alternatives couleurs de fond :
+        # (230, 245, 235) → vert menthe très doux
+        # (245, 235, 255) → lavande très pâle
+        # (255, 243, 230) → pêche très doux
+        # (235, 245, 255) → bleu ciel très pâle  ← recommandé
+        BG_COLOR = (245, 235, 255)
+
+        table = Table(self, line_height=4, col_widths=col_widths, text_align="LEFT", markdown=True)
+
+        def make_cell(tr, label_top, value):
+            self.set_fill_color(*BG_COLOR)
+            text = f"__{label_top}__\n**{value}**"
+            tr.cell(text, padding=(0, 2))
+
+        if is_global:
+            # Ligne 1 : meilleurs
+            tr = table.row()
+            make_cell(tr,
+                      "Meilleur élève", f"{items_left[0][1]} ({items_left[0][2]})")
+            make_cell(tr,
+                      "Moyenne générale la plus élevée", items_mid[0][1])
+            make_cell(tr,
+                      "Taux de réussite le plus élevé", items_right[0][1])
+
+            # Ligne 2 : plus faibles
+            tr = table.row()
+            make_cell(tr,
+                      "Élève le plus faible", f"{items_left[1][1]} ({items_left[1][2]})")
+            make_cell(tr,
+                      "Moyenne générale la plus faible", items_mid[1][1])
+            make_cell(tr,
+                      "Taux de réussite le plus faible", items_right[1][1])
+        else:
+            tr = table.row()
+            make_cell(tr, "Premier de la classe", f"{items_left[0][1]} - Moyenne : {items_left[0][2]}")
+            make_cell(tr, "Dernier de la classe", f"{items_left[1][1]} - Moyenne : {items_left[1][2]}")
+
+        table.render()
+
+    def stats_table(self):
+        self.set_font_size(8)
+        self.ln()
+        col_widths = (70, 27, 27, 27, 31, 22, 27, 27, 27)
+
+        table = Table(self, line_height=4, col_widths=col_widths, text_align="CENTER", markdown=True,
+                      repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
+
+        th = table.row()
+        self.set_fill_color(220)
+        cls_or_mat = "CLASSE" if self.data['label'] == "Global" else "MATIÈRE"
+        ens_or_tit = "\nTITULAIRE" if self.data['label'] == "Global" else "\nENSEIGNANT"
+        th.cell(f"**{cls_or_mat}**__{ens_or_tit}__", rowspan=2, padding=(0.5, 0), align="L")
+        th.cell("**TAUX DE RÉUSSITE**", colspan=3, padding=(0.5, 0))
+        th.cell("**[MIN - MAX]**", rowspan=2, padding=(0.5, 0))
+        th.cell("**MOY GEN**", rowspan=2, padding=(0.5, 0))
+        th.cell("**TAUX DE PARTICIPATION**", colspan=3, padding=(0.5, 0))
+
+        th = table.row()
+        th.cell("**FILLES**", padding=(0.5, 0))
+        th.cell("**GARÇONS**", padding=(0.5, 0))
+        th.cell("**TOTAL**", padding=(0.5, 0))
+        th.cell("**FILLES**", padding=(0.5, 0))
+        th.cell("**GARÇONS**", padding=(0.5, 0))
+        th.cell("**TOTAL**", padding=(0.5, 0))
+
+        tr = table.row()
+        self.set_fill_color(255, 248, 200)
+        tr.cell("**Global**", align="L")
+        self.colored_cell(tr, value=self.data['pcf'],
+                          text=f"**{self.data['pcf']}%**\n{self.data['nbfr']} / {self.data['nbfe']}", percent=True)
+        self.colored_cell(tr, value=self.data['pcg'],
+                          text=f"**{self.data['pcg']}%**\n{self.data['nbgr']} / {self.data['nbge']}", percent=True)
+        self.colored_cell(tr, value=self.data['taux'],
+                          text=f"**{self.data['taux']}%**\n{self.data['nbr']} / {self.data['nbe']}", percent=True)
+        tr.cell(f"**{self.data['min_max']}**")
+        self.colored_cell(tr, value=self.data['moyenne_generale'],
+                          text=f"**{self.data['moyenne_generale']}**", percent=False)
+        self.colored_cell(tr, value=self.data['pcf'],
+                          text=f"{self.data['ppf']}%\n{self.data['nbfe']} / {self.data['filles']}", percent=True)
+        self.colored_cell(tr, value=self.data['pcg'],
+                          text=f"{self.data['ppg']}%\n{self.data['nbge']} / {self.data['garcons']}", percent=True)
+        self.colored_cell(tr, value=self.data['ppt'],
+                          text=f"{self.data['ppt']}%\n{self.data['nbe']} / {self.data['effectif']}", percent=True)
+
+        self.set_fill_color(230, 238, 245)
+        stats = self.data['classrooms_data'] if self.data['label'] == "Global" else self.data['matieres_data']
+
+        for stat in stats:
+            tr = table.row()
+            tr.cell(f"**{stat['label']}**\n__{stat['titulaire'] if self.data['label'] == 'Global' else stat['enseignant']}__", align="L")
+            self.colored_cell(tr, value=stat['pcf'],
+                              text=f"**{stat['pcf']}%**\n{stat['nbfr']} / {stat['nbfe']}", percent=True)
+            self.colored_cell(tr, value=stat['pcg'],
+                              text=f"**{stat['pcg']}%**\n{stat['nbgr']} / {stat['nbge']}", percent=True)
+            taux = stat['taux'] if self.data['label'] == "Global" else stat['pct']
+            nbe = stat['nbe'] if self.data['label'] == "Global" else stat['nbte']
+            nbr = stat['nbr'] if self.data['label'] == "Global" else stat['nbtr']
+            self.colored_cell(tr, value=taux,
+                              text=f"**{taux}%**\n{nbr} / {nbe}", percent=True)
+            tr.cell(f"**{stat['min_max']}**")
+            moyenne_generale = stat['moyenne_generale'] if self.data['label'] == "Global" else stat['moyenne']
+            self.colored_cell(tr, value=moyenne_generale, text=f"**{moyenne_generale}**", percent=False)
+            self.colored_cell(tr, value=stat['pcf'],
+                              text=f"{stat['ppf']}%\n{stat['nbfe']} / {self.data['filles']}", percent=True)
+            self.colored_cell(tr, value=stat['pcg'],
+                              text=f"{stat['ppg']}%\n{stat['nbge']} / {self.data['garcons']}", percent=True)
+            self.colored_cell(tr, value=stat['ppt'],
+                              text=f"{stat['ppt']}%\n{nbe} / {self.data['effectif']}", percent=True)
+        table.render()
+
+    def colored_cell(self, tr, value, text, percent, **kwargs):
+        if type(value) in [int, float]:
+            if (percent and value < 50) or (not percent and value < 10):
+                self.set_text_color(255, 0, 0)
+        tr.cell(text, **kwargs)
+        self.set_text_color(0)
+
+    def footer(self):
+        self.set_y(-6)
+        self.line(6, 204, 291, 204)
+        self.set_font('inter', 'I', 7)
+        self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
+        self.cell(142.5, 6, f"STATISTIQUES {self.data['trimestre'].title()} ({self.data['label']}) - Page "
+                             f"{self.page_no()}/{{nb}}", align='R')
 
 
 class PDFMarksSheet(FPDF):

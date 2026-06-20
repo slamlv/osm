@@ -44,7 +44,7 @@
       </a>
       {% elif programmations %}
       <form method="post" enctype="multipart/form-data" id="download-form"
-            action="{% url 'staff-timetable' id=4 %}" class="d-inline-flex align-items-center m-0">
+            action="{% url 'staff-timetable' id=0 %}" class="d-inline-flex align-items-center m-0">
         {% csrf_token %}
         <button class="btn btn-danger btn-sm fw-semibold d-inline-flex align-items-center"
                 type="submit" data-bs-toggle="tooltip"

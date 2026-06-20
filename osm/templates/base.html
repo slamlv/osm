@@ -853,7 +853,12 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
         showError('Erreur lors de la communication avec le serveur.');
         console.error(err);
       })
-      .finally(hideSpinner);
+      .finally(function () {
+        hideSpinner();
+        // Signale la fin du téléchargement aux scripts de page (ex. stats :
+        // spinner par bouton) pour qu'ils coupent leur propre indicateur.
+        document.dispatchEvent(new CustomEvent('osm:download-done'));
+      });
     });
   }
 
@@ -863,9 +868,13 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
     if (form) bindDownloadForm(form);
   });
 
-  // Après injection HTMX
+  // Après injection HTMX : on cherche le #download-form dans TOUT le document
+  // (pas seulement e.target), car selon la cible HTMX (#result) et le niveau
+  // d'émission de l'événement, e.target ne contient pas toujours le formulaire.
+  // Sans ça, bindDownloadForm ne s'attache pas au 1er affichage -> 1er clic
+  // sans spinner et sans le bon comportement.
   document.addEventListener('htmx:afterSwap', function (e) {
-    const form = e.target.querySelector ? e.target.querySelector('#download-form') : null;
+    const form = document.getElementById('download-form');
     if (form) bindDownloadForm(form);
   });
 })();

@@ -654,7 +654,10 @@ def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename, per_fil
     skipped = []          # (classe, raison)
 
     for classroom in classrooms:
-        code = classroom.code if isinstance(classroom, ClassRoom) else classroom.short_name
+        if classroom is None:
+            code = "Global"
+        else:
+            code = classroom.code if isinstance(classroom, ClassRoom) else classroom.short_name
         try:
             result = build_pdf_for_classroom(classroom)
         except Exception as exc:

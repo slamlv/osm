@@ -9,14 +9,19 @@
   .form-card label { font-size:0.82rem; margin-bottom:4px; }
 </style>
 
-<div class="container py-3" style="max-width:960px;">
+{% comment %}
+  Conteneur élargi (1200px) pour que le tableau de stats profite de la largeur.
+  Le formulaire reste centré et étroit (max-width:580px) ; seule la zone
+  #result bénéficie de l'espace supplémentaire.
+{% endcomment %}
+<div class="container py-3" style="max-width:1200px;">
   <div class="form-card mb-4" style="max-width:580px;margin-left:auto;margin-right:auto;">
     <div class="form-card-header d-flex align-items-center gap-2">
       <i class="bi bi-bar-chart text-warning fs-5"></i>
       <h6 class="text-white fw-bold mb-0">Statistiques</h6>
     </div>
     <div class="p-3 p-sm-4">
-      <form method="post" enctype="multipart/form-data" id="choices" hx-post="{% url 'stats' %}" hx-target="#result">
+      <form method="post" enctype="multipart/form-data" id="choices" hx-get="{% url 'stats' %}" hx-target="#result">
         {% csrf_token %}
         <div class="row g-3 mb-4">
           <div class="col-sm-6"><label class="text-white control-label">Classe</label>{{ check_form.clsrm }}</div>
@@ -33,4 +38,124 @@
   </div>
   <div id="result"></div>
 </div>
+
+<script>
+(function () {
+  function choicesField(name) {
+    var src = document.getElementById('choices');
+    return src ? src.querySelector('[name="' + name + '"]') : null;
+  }
+
+  // Valeurs FIGÉES de la dernière soumission de #choices (= stats affichées).
+  // Le téléchargement et le libellé s'appuient sur CELLES-CI, pas sur la
+  // sélection courante du select (qui peut avoir changé sans soumettre).
+  var submitted = null;   // { clsrm, evl, seuil, clsrmLabel }
+
+  function captureSubmitted() {
+    var clsrm = choicesField('clsrm');
+    var evl   = choicesField('evl');
+    var seuil = choicesField('seuil');
+    var clsrmLabel = '';
+    if (clsrm) {
+      if (clsrm.selectedOptions && clsrm.selectedOptions.length) {
+        clsrmLabel = clsrm.selectedOptions[0].text.trim();
+      } else if (clsrm.options && clsrm.selectedIndex >= 0) {
+        clsrmLabel = clsrm.options[clsrm.selectedIndex].text.trim();
+      }
+    }
+    submitted = {
+      clsrm: clsrm ? (clsrm.value || '').trim() : '',
+      evl:   evl   ? (evl.value   || '').trim() : '',
+      seuil: seuil ? (seuil.value || '').trim() : '10',
+      clsrmLabel: clsrmLabel || 'Cette classe'
+    };
+  }
+
+  // Applique le libellé du bouton PDF d'après les valeurs FIGÉES.
+  function refreshPdfLabel() {
+    var label = document.getElementById('btn-pdf-text');
+    if (!label || !submitted) return;
+    if (submitted.clsrm === '__all__') {
+      label.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i>Stats globales (PDF)';
+    } else {
+      var span = document.createElement('span');
+      span.textContent = submitted.clsrmLabel + ' (PDF)';
+      label.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i>' + span.innerHTML;
+    }
+  }
+
+  // --- Spinner par bouton ---------------------------------------------------
+  var activeBtn = null;
+  function btnSpinner(btn, on) {
+    if (!btn) return;
+    var txt = btn.querySelector('.btn-text');
+    var spin = btn.querySelector('.spinner-border');
+    if (on) {
+      if (txt)  txt.classList.add('d-none');
+      if (spin) spin.classList.remove('d-none');
+      // NE PAS faire btn.disabled = true ICI : un bouton submit désactivé
+      // pendant son propre onclick EMPÊCHE la soumission du formulaire.
+    } else {
+      if (txt)  txt.classList.remove('d-none');
+      if (spin) spin.classList.add('d-none');
+      btn.disabled = false;
+    }
+  }
+  function stopActiveSpinner() {
+    if (activeBtn) { btnSpinner(activeBtn, false); activeBtn = null; }
+  }
+  window.addEventListener('focus', stopActiveSpinner);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) stopActiveSpinner();
+  });
+  document.addEventListener('osm:download-done', stopActiveSpinner);
+
+  // Capture les valeurs au moment où #choices déclenche sa requête HTMX.
+  // On écoute htmx:beforeRequest (déclenché juste avant l'envoi par HTMX),
+  // plus fiable que 'submit' selon le câblage hx-get/hx-include.
+  var choicesForm = document.getElementById('choices');
+  if (choicesForm) {
+    choicesForm.addEventListener('submit', captureSubmitted);
+    choicesForm.addEventListener('htmx:beforeRequest', captureSubmitted);
+  }
+  // Repli : certains montages déclenchent la requête depuis le bouton.
+  document.body.addEventListener('htmx:beforeRequest', function (e) {
+    var el = e.target;
+    if (el && (el.id === 'choices' || (el.closest && el.closest('#choices')))) {
+      captureSubmitted();
+    }
+  });
+
+  // Prépare le téléchargement à partir des valeurs FIGÉES (pas du select courant).
+  window.prepareStatsDownload = function (scope, btn) {
+    var ez = document.getElementById('error-zone');
+
+    // Si rien n'a encore été soumis, on ne peut pas télécharger.
+    if (!submitted || !submitted.evl) {
+      if (ez) { ez.textContent = "Veuillez d'abord soumettre pour afficher les statistiques."; ez.classList.remove('d-none'); }
+      return false;
+    }
+    if (ez) { ez.textContent = ''; ez.classList.add('d-none'); }
+
+    var dlC = document.getElementById('dl-clsrm');
+    var dlE = document.getElementById('dl-evl');
+    var dlS = document.getElementById('dl-seuil');
+    var dlScope = document.getElementById('dl-scope');
+    if (dlC) dlC.value = submitted.clsrm;
+    if (dlE) dlE.value = submitted.evl;
+    if (dlS) dlS.value = submitted.seuil;
+    if (dlScope) dlScope.value = scope || 'pdf';
+
+    activeBtn = btn || null;
+    btnSpinner(activeBtn, true);
+    setTimeout(stopActiveSpinner, 60000);
+    return true;
+  };
+
+  // Après chaque injection HTMX (nouveau #result avec le bouton), on applique
+  // le libellé correspondant aux valeurs FIGÉES de la soumission.
+  document.body.addEventListener('htmx:afterSwap', refreshPdfLabel);
+})();
+</script>
+
 {% endblock %}

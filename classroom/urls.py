@@ -1,9 +1,9 @@
 from django.urls import path
 from .views import ClassroomAdd, ClassRooms, ClassroomDelete, ClassRoomStudents, SubjectDelete, ClassRoomTeachers,\
-    classroom_form_reload, ClassroomEdit, Subjects, SubjectAdd, SubjectEdit, stats, StatsCheck, MarksSheet,\
+    classroom_form_reload, ClassroomEdit, Subjects, SubjectAdd, SubjectEdit, StatsCheck, MarksSheet,\
     classroom_list, ClassMatieres, MatiereAdd, reload, RemoveMatiere, TimeTable, TimeTableForm, SetProgrammation,\
     reload_teachers, ClassRoomProgression, ClassRoomProgressionSelectForm, TitulaireAssignment,\
-    ClassPhotosPage, StudentPhotoUpload, ClassroomsLists
+    ClassPhotosPage, StudentPhotoUpload, ClassroomsLists, Stats
 
 urlpatterns = [
     path("classroom-add", ClassroomAdd.as_view(), name="classroom-add"),
@@ -31,7 +31,7 @@ urlpatterns = [
     path("time_table", TimeTable.as_view(), name="time_table"),
     path("set_programmation", SetProgrammation.as_view(), name="set_programmation"),
     path("reload_teachers", reload_teachers, name="reload_teachers"),
-    path("stats", stats, name="stats"),
+    path("stats", Stats.as_view(), name="stats"),
     path("stats-check", StatsCheck.as_view(), name="stats-check"),
     path("titulaire_assignment", TitulaireAssignment.as_view(), name="titulaire_assignment"),
     path("class_photos_update-<int:id>", ClassPhotosPage.as_view(), name="class_photos_update"),
