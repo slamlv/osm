@@ -439,9 +439,9 @@ class ClassRoom(models.Model):
                     data_matiere['nbte'], data_matiere['nbtr'], data_matiere['pct'] = len(notes_moyennes), nbtr,\
                         formated_float((nbtr / len(notes_moyennes)) * 100)
                     data_matiere['ppf'], data_matiere['ppg'], data_matiere['ppt'] = (
-                        formated_float((data_matiere['nbfe'] / self.nb_filles) * 100),
-                        formated_float((data_matiere['nbge'] / self.nb_garcons) * 100),
-                        formated_float((data_matiere['nbte'] / self.effectif) * 100)
+                        formated_float((data_matiere['nbfe'] / self.nb_filles) * 100) if self.nb_filles else 0,
+                        formated_float((data_matiere['nbge'] / self.nb_garcons) * 100) if self.nb_garcons else 0,
+                        formated_float((data_matiere['nbte'] / self.effectif) * 100 if self.effectif else 0,)
                     )
                     data_matiere['min_max'] = f"[{min(notes_moyennes)} - {max(notes_moyennes)}]"
                     data_matiere['moyenne'] = formated_float(sum(notes_moyennes) / len(notes_moyennes))
@@ -466,9 +466,9 @@ class ClassRoom(models.Model):
                     result['nbgr'], result['pcf'], result['pcg'], result['min_std'], result['max_std'], result['min'],\
                     result['max'] = self.set_rang(students_data, for_stats=True, seuil=seuil)
                 result['ppf'], result['ppg'], result['ppt'], result['titulaire'] = (
-                    formated_float((result['nbfe']/ result['filles']) * 100),
-                    formated_float((result['nbge']/ result['garcons']) * 100),
-                    formated_float((nb / result['effectif']) * 100),
+                    formated_float((result['nbfe'] / result['filles']) * 100) if result['filles'] else 0,
+                    formated_float((result['nbge'] / result['garcons']) * 100) if result['garcons'] else 0,
+                    formated_float((nb / result['effectif']) * 100) if result['effectif'] else 0,
                     self.titulaire.short_name if self.titulaire else "/"
                 )
             elif pv:
@@ -541,12 +541,12 @@ class ClassRoom(models.Model):
                     if moy >= seuil:
                         nbgr += 1
         if cle_moyenne == "moyenne":
-            moyenne_generale = formated_float(total_moyennes / nb)
-            taux = f"{formated_float((nb_admis / nb) * 100)}%"
+            moyenne_generale = formated_float(total_moyennes / nb) if nb else 0
+            taux = f"{formated_float((nb_admis / nb) * 100) if nb else 0}%"
             min_max = f"[{minim} - {maxim}]"
             if for_stats:
-                return moyenne_generale, formated_float((nb_admis / nb) * 100), min_max, nb, nb_admis, nbfe, nbfr,\
-                    nbge, nbgr, formated_float((nbfr / nbfe) * 100) if nbfe else 0,\
+                return moyenne_generale, formated_float((nb_admis / nb) * 100) if nb else 0, min_max, nb, nb_admis,\
+                    nbfe, nbfr, nbge, nbgr, formated_float((nbfr / nbfe) * 100) if nbfe else 0,\
                     formated_float((nbgr / nbge) * 100) if nbge else 0, min_std, max_std, minim, maxim
             if pv_orderd:
                 return ordered_data, moyenne_generale, taux, min_max, nb, nb_admis
