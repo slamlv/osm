@@ -2,60 +2,51 @@
 
 {% block content %}
 <style>
-  .form-card {
-    background: linear-gradient(145deg, #1b3a57, #172e45);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  .form-card-header {
-    background: linear-gradient(135deg, #152f45, #1e4266);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 1rem 1.5rem;
-  }
-  .form-section-title {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255,255,255,0.35);
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-  }
-  .form-card input,
-  .form-card select,
-  .form-card textarea {
-    background-color: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: #fff !important;
-    border-radius: 10px !important;
-  }
-  .form-card input:focus,
-  .form-card select:focus,
-  .form-card textarea:focus {
-    background-color: rgba(255,255,255,0.11) !important;
-    border-color: #0d6efd !important;
-    box-shadow: 0 0 0 3px rgba(13,110,253,0.2) !important;
-    color: #fff !important;
-  }
-  .form-card input::placeholder { color: rgba(255,255,255,0.3) !important; }
-  .form-card label { font-size: 0.82rem; margin-bottom: 4px; }
-  .form-check-input { cursor: pointer; }
-  .option-block {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-section-title { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.35); font-weight:700; margin-bottom:0.75rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .form-card input, .form-card select, .form-card textarea { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus, .form-card select:focus, .form-card textarea:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card input::placeholder { color:rgba(255,255,255,0.3)!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+  .form-check-input { cursor:pointer; }
+  .option-block { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:0.75rem 1rem; display:flex; align-items:flex-start; gap:12px; }
+
+  /* colonne images : sticky sur grand écran pour rester visible au scroll */
+  .images-col { position:sticky; top:1rem; }
+  /* grille des cartes images : 2 par ligne -> 3 images = 2 lignes (2 + 1) */
+  .img-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.85rem; }
+  @media (max-width:575px){ .img-grid{ grid-template-columns:1fr; } }
+  .img-grid > * { min-width:0; }   /* autorise les colonnes à rétrécir (anti-débordement) */
+  /* carte d'une image (logo / cachet / visa) */
+  .img-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:0.85rem; min-width:0; overflow:hidden; }
+  .img-card .ic-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5); font-weight:700; margin-bottom:0.5rem; }
+  /* zone d'aperçu : cadre à ratio, fond damier léger pour voir la transparence */
+  .img-preview { min-height:96px; max-height:150px; display:flex; align-items:center; justify-content:center; border-radius:10px; margin-bottom:0.6rem; padding:8px; overflow:hidden;
+    background:
+      linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%) 0 0/16px 16px,
+      linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%) 8px 8px/16px 16px,
+      rgba(255,255,255,0.02);
+    border:1px dashed rgba(255,255,255,0.12); }
+  .img-preview .empty-hint { font-size:0.74rem; color:rgba(255,255,255,0.3); text-align:center; }
+  .img-card input[type=file] { font-size:0.78rem; max-width:100%; }
+  .img-card .small-note { font-size:0.7rem; color:rgba(255,255,255,0.35); margin-top:4px; }
+  /* Le widget Django insère des noeuds TEXTE bruts ("Actuellement:",
+     "Modification:") non ciblables individuellement. Astuce : on met
+     font-size:0 sur le conteneur du widget (masque ces textes) et on RESTAURE
+     la taille sur les vrais éléments. On masque aussi le lien et le <br>. */
+  .file-wrap { font-size:0; line-height:0; max-width:100%; }
+  .file-wrap a, .file-wrap input, .file-wrap label, .file-wrap span { font-size:0.78rem; line-height:1.4; }
+  .file-wrap a[href] { display:none; }
+  .file-wrap br { display:none; }
+  .file-wrap input[type=checkbox] { width:auto; margin:0 4px 0 0; vertical-align:middle; }
+  .file-wrap label { color:rgba(255,255,255,0.5); margin-left:2px; }
+  /* l'input file ne doit jamais dépasser la carte (nom de fichier long inclus) */
+  .file-wrap input[type=file] { max-width:100%; box-sizing:border-box; }
 </style>
 
-<div class="container py-3" style="max-width: 720px;">
+<div class="container py-3" style="max-width:1320px;">
   <div class="form-card">
-
     <div class="form-card-header d-flex align-items-center gap-2">
       <i class="bi bi-house-door text-warning fs-5"></i>
       <h6 class="text-white fw-bold mb-0">Informations établissement</h6>
@@ -65,87 +56,76 @@
       <form method="post" enctype="multipart/form-data" class="client-image-form">
         {% csrf_token %}
 
-        <p class="form-section-title">Identité</p>
-        <div class="row g-3 mb-4">
-          <div class="col-sm-6">
-            <label class="text-white control-label">Nom</label>
-            {{ form.nom }}
+        <div class="row g-4">
+          {# ====== COLONNE GAUCHE : champs texte ====== #}
+          <div class="col-lg-6">
+            <p class="form-section-title">Identité</p>
+            <div class="row g-3 mb-4">
+              <div class="col-sm-6"><label class="text-white control-label">Nom</label>{{ form.nom }}</div>
+              <div class="col-sm-6"><label class="text-white control-label">Name</label>{{ form.name }}</div>
+              <div class="col-sm-6"><label class="text-white control-label">Type d'établissement</label>{{ form.type_ets }}</div>
+              <div class="col-sm-6"><label class="text-white control-label">Immatriculation</label>{{ form.immatriculation }}</div>
+            </div>
+
+            <p class="form-section-title">Contact &amp; localisation</p>
+            <div class="row g-3 mb-4">
+              <div class="col-sm-6"><label class="text-white control-label">Contact</label>{{ form.contact }}</div>
+              <div class="col-sm-6"><label class="text-white">Contact optionnel</label>{{ form.contact1 }}</div>
+              <div class="col-sm-6"><label class="text-white control-label">Localité</label>{{ form.localite }}</div>
+              <div class="col-sm-6"><label class="text-white control-label">Boîte postale</label>{{ form.pobox }}</div>
+              <div class="col-sm-6"><label class="text-white">Email</label>{{ form.email }}</div>
+              <div class="col-sm-6"><label class="text-white">Devise</label>{{ form.motto }}</div>
+            </div>
+
+            <p class="form-section-title">Options pédagogiques</p>
+            <div class="d-flex flex-column gap-2">
+              <div class="option-block">
+                {{ form.with_competences }}
+                <label class="text-info small mb-0" style="line-height:1.5;">Inclure les compétences évaluées lors du remplissage des notes</label>
+              </div>
+              <div class="option-block">
+                {{ form.mergedprogrammations }}
+                <label class="text-info small mb-0" style="line-height:1.5;">Possibilité de programmer un enseignant pour plusieurs classes à la même heure</label>
+              </div>
+            </div>
           </div>
-          <div class="col-sm-6">
-            <label class="text-white control-label">Name</label>
-            {{ form.name }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white control-label">Type d'établissement</label>
-            {{ form.type_ets }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white control-label">Immatriculation</label>
-            {{ form.immatriculation }}
+
+          {# ====== COLONNE DROITE : images avec aperçus (grille 2 col) ====== #}
+          <div class="col-lg-6">
+            <div class="images-col">
+              <p class="form-section-title">Images de l'établissement</p>
+              <div class="img-grid">
+
+              <div class="img-card">
+                <div class="ic-title"><i class="bi bi-image me-1"></i>Logo</div>
+                <div class="img-preview" id="preview-logo"><span class="empty-hint">Aucun logo</span></div>
+                <div class="file-wrap">{{ form.logo }}</div>
+              </div>
+
+              <div class="img-card">
+                <div class="ic-title"><i class="bi bi-patch-check me-1"></i>Cachet établissement</div>
+                <div class="img-preview" id="preview-cachet"><span class="empty-hint">Aucun cachet</span></div>
+                <div class="file-wrap">{{ form.cachet }}</div>
+                <div class="small-note">Tampon rond officiel, fond clair.</div>
+              </div>
+
+              <div class="img-card">
+                <div class="ic-title"><i class="bi bi-pen me-1"></i>Cachet nominatif + Signature</div>
+                <div class="img-preview" id="preview-visa"><span class="empty-hint">Aucune signature</span></div>
+                <div class="file-wrap">{{ form.visa }}</div>
+                <div class="small-note">Cachet du signataire + signature, fond clair.</div>
+              </div>
+
+              </div>
+            </div>
           </div>
         </div>
 
-        <p class="form-section-title">Contact & localisation</p>
-        <div class="row g-3 mb-4">
-          <div class="col-sm-6">
-            <label class="text-white control-label">Contact</label>
-            {{ form.contact }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white">Contact optionnel</label>
-            {{ form.contact1 }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white control-label">Localité</label>
-            {{ form.localite }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white control-label">Boîte postale</label>
-            {{ form.pobox }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white">Email</label>
-            {{ form.email }}
-          </div>
-          <div class="col-sm-6">
-            <label class="text-white">Devise</label>
-            {{ form.motto }}
-          </div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.07);">
+          <button class="btn btn-success fw-semibold" type="submit" data-with-spinner><i class="bi bi-save me-2"></i>Sauvegarder</button>
+          <button class="btn btn-outline-danger" type="reset"><i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser</button>
+          <a class="btn btn-outline-secondary" href="{% url 'school_details' %}"><i class="bi bi-x-circle me-2"></i>Annuler</a>
         </div>
-
-        <p class="form-section-title">Logo</p>
-        <div class="mb-4">
-          {{ form.logo }}
-        </div>
-
-        <p class="form-section-title">Options pédagogiques</p>
-        <div class="d-flex flex-column gap-2 mb-4">
-          <div class="option-block">
-            {{ form.with_competences }}
-            <label class="text-info small mb-0" style="line-height:1.5;">
-              Inclure les compétences évaluées lors du remplissage des notes
-            </label>
-          </div>
-          <div class="option-block">
-            {{ form.mergedprogrammations }}
-            <label class="text-info small mb-0" style="line-height:1.5;">
-              Possibilité de programmer un enseignant pour plusieurs classes à la même heure
-            </label>
-          </div>
-        </div>
-
-        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-          <button class="btn btn-success fw-semibold" type="submit" data-with-spinner>
-            <i class="bi bi-save me-2"></i>Sauvegarder
-          </button>
-          <button class="btn btn-outline-danger" type="reset">
-            <i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser
-          </button>
-          <a class="btn btn-outline-secondary" href="{% url 'school_details' %}">
-            <i class="bi bi-x-circle me-2"></i>Annuler
-          </a>
-        </div>
-
       </form>
     </div>
   </div>

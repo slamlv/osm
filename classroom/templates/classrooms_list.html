@@ -19,10 +19,11 @@
     <span>{{ info }}</span>
     {% if search %}<a class="btn btn-secondary btn-sm" href="{% url 'classrooms' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
     {% elif programmations %}
-    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}">
+    <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}"
+          class="d-inline-flex align-items-center m-0">
       {% csrf_token %}
       <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
-      <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger tous les emplois du temps en PDF">
+      <button class="btn btn-danger fw-semibold d-inline-flex align-items-center btn-sm" type="submit" data-bs-toggle="tooltip" title="Télécharger tous les emplois du temps en PDF">
         <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Emplois du temps</span>
         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
       </button>

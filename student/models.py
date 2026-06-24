@@ -57,9 +57,8 @@ class Sexe(models.TextChoices):
 class StudentQuerySet(models.QuerySet):
     def order_by_classroom_level(self):
         order = {
-            None: 0,
-            'Sixième': 1, 'Cinquième': 2, 'Quatrième': 3, 'Troisième': 4,
-            'Seconde': 5, 'Première': 6, 'Terminale': 7,
+            'Sixième': 0, 'Cinquième': 1, 'Quatrième': 2, 'Troisième': 3,
+            'Seconde': 4, 'Première': 5, 'Terminale': 6, None: 7
         }
         return self.order_by(
             Case(
@@ -136,6 +135,15 @@ class Student(models.Model):
             'matricule': self.unique_id,
             'statut': self.redoublant,
         }
+
+    @property
+    def contacts_parent(self):
+        contacts = list()
+        if self.pere and self.pere.contact:
+            contacts.append(self.pere.contact)
+        if self.mere and self.mere.contact:
+            contacts.append(self.mere.contact)
+        return contacts
 
     @property
     def csi_number(self):

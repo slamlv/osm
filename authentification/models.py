@@ -4,6 +4,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from datetime import time
 
+from fontTools.ttx import process
+
+
 # Create your models here.
 
 
@@ -111,6 +114,8 @@ class School(TenantMixin):
     pobox = models.CharField(max_length=50, verbose_name="Boîte Postale", blank=True)
     immatriculation = models.CharField(max_length=30, verbose_name="N° Immatriculation", blank=True)
     logo = models.ImageField(upload_to="image/school/", verbose_name="Logo", blank=True, null=True)
+    cachet = models.ImageField(upload_to="image/school/", verbose_name="Cachet", blank=True, null=True)
+    visa = models.ImageField(upload_to="image/school/", verbose_name="Visa", blank=True, null=True)
     code = models.CharField(max_length=10, verbose_name="Code")
     motto = models.CharField(blank=True, null=True, verbose_name="Devise", max_length=40)
     licence = models.DateField(verbose_name="Autorisé Jusqu'au", blank=True)
@@ -125,12 +130,41 @@ class School(TenantMixin):
     mergedprogrammations = models.BooleanField(default=False, verbose_name="Programmations Combinées")
     last_schoolyear_closed = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, null=True, blank=True, related_name="school_closed")
 
+    # pour ne retraiter QUE si le fichier a changé
+    __original_cachet = None
+    __original_visa = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__original_cachet = self.cachet
+        self.__original_visa = self.visa
+
     auto_create_schema = True
 
     class Meta:
         db_table = '"School"'
         verbose_name = "Etablissement"
         verbose_name_plural = "Etablissements"
+
+    def save(self, *args, **kwargs):
+        # Traite chaque image (détourage + autocrop) UNIQUEMENT si elle a changé.
+        self._process_stamp_field('cachet', self.__original_cachet)
+        self._process_stamp_field('visa', self.__original_visa)
+        super().save(*args, **kwargs)
+        self.__original_cachet = self.cachet
+        self.__original_visa = self.visa
+
+    def _process_stamp_field(self, field_name, original):
+        from osm.utils import prepare_cachet
+        from django.core.files.base import ContentFile
+        field = getattr(self, field_name)
+        if field and field != original:
+            try:
+                prepared = prepare_cachet(field)  # BytesIO PNG transparent
+                base = field.name.rsplit('.', 1)[0]
+                field.save(f"{base}.png", ContentFile(prepared.read()), save=False)
+            except Exception:
+                pass  # en cas d'échec, on garde l'upload brut
 
     @property
     def is_year_closed(self):
@@ -157,6 +191,8 @@ class School(TenantMixin):
             'nom': self.nom,
             'name': self.name,
             'logo': self.logo if self.logo else "static/image/no_image.jpg",
+            'cachet': self.cachet,
+            'visa': self.visa,
             'motto': self.motto if self.motto else "",
             'immatriculation': self.immatriculation,
             'region': self.region,

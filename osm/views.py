@@ -130,13 +130,21 @@ class SchoolInformations(LoggedAdminView):
     def post(self, *args, **kwargs):
         from .utils import message, delete_image
         old_logo = self.request.user.school.logo
+        old_cachet = self.request.user.school.cachet
+        old_visa = self.request.user.school.visa
         school_form = SchoolForm(self.request.POST, self.request.FILES, instance=self.request.user.school,
                                  context={'request': self.request})
         if school_form.is_valid():
             school_form.save()
-            logo = school_form.cleaned_data["logo"]
+            logo = school_form.cleaned_data['logo']
+            cachet = school_form.cleaned_data['cachet']
+            visa = school_form.cleaned_data['visa']
             if old_logo and old_logo != logo:
                 delete_image(old_logo)
+            if old_cachet and old_cachet != cachet:
+                delete_image(old_cachet)
+            if old_visa and old_visa != visa:
+                delete_image(old_visa)
             message(self.request, 'Informations sauvegardées avec succès')
             return redirect("school_details")
         context = {'form': school_form, 'title': self.title}

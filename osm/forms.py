@@ -33,7 +33,7 @@ class SearchForm(DynamicFormMixin, forms.Form):
 class SchoolForm(DynamicFormMixin, forms.ModelForm):
     class Meta:
         fields = ['nom', 'name', 'type_ets', 'immatriculation', 'contact', 'contact1', 'pobox', 'motto', 'localite',
-                  'with_competences', 'mergedprogrammations', 'logo', 'email']
+                  'with_competences', 'mergedprogrammations', 'logo', 'email', 'cachet', 'visa']
         model = School
         widgets = {
             'nom': forms.TextInput(attrs={'class': "form-control fw-bold", 'id': "nom", 'placeholder': "Nom de l'établissement"}),
@@ -48,7 +48,9 @@ class SchoolForm(DynamicFormMixin, forms.ModelForm):
             'email': forms.TextInput(attrs={'class': "form-control fw-bold", 'id': "email", 'placeholder': "Adresse email", 'type': 'email'}),
             'with_competences': forms.CheckboxInput(attrs={'class': "form-check-input", 'id': "competences"}),
             'mergedprogrammations': forms.CheckboxInput(attrs={'class': "form-check-input", 'id': "programmations"}),
-            'logo': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold client-image", 'id': "logo", 'accept': "image/*"})
+            'logo': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold client-image", 'id': "logo", 'accept': "image/*", 'data-preview-target': '#preview-logo'}),
+            'cachet': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold client-image", 'id': "cachet", 'accept': "image/*", 'data-preview-target': '#preview-cachet'}),
+            'visa': forms.ClearableFileInput(attrs={'class': "form-control w-auto bg-dark text-white fw-bold client-image", 'id': "visa", 'accept': "image/*", 'data-no-compress': '', 'data-preview-target': '#preview-visa'})
         }
 
     def clean(self):

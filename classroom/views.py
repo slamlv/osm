@@ -1122,7 +1122,7 @@ class Statistiques(FPDF):
 
     def stats_summary(self):
         """Bloc de synthèse affiché sous le tableau principal"""
-        self.ln(3)
+        self.ln(2)
 
         is_global = self.data['label'] == "Global"
 
@@ -1156,10 +1156,10 @@ class Statistiques(FPDF):
         # (230, 245, 235) → vert menthe très doux
         # (245, 235, 255) → lavande très pâle
         # (255, 243, 230) → pêche très doux
-        # (235, 245, 255) → bleu ciel très pâle  ← recommandé
+        # (235, 245, 255) → bleu ciel très pâle
         BG_COLOR = (245, 235, 255)
 
-        table = Table(self, line_height=4, col_widths=col_widths, text_align="LEFT", markdown=True)
+        table = Table(self, line_height=3.7, col_widths=col_widths, text_align="LEFT", markdown=True)
 
         def make_cell(tr, label_top, value):
             self.set_fill_color(*BG_COLOR)
@@ -1196,7 +1196,7 @@ class Statistiques(FPDF):
         self.ln()
         col_widths = (70, 27, 27, 27, 31, 22, 27, 27, 27)
 
-        table = Table(self, line_height=4, col_widths=col_widths, text_align="CENTER", markdown=True,
+        table = Table(self, line_height=3.7, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
 
         th = table.row()

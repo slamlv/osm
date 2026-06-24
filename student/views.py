@@ -31,7 +31,7 @@ from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes
+    check_notes, stamp_bytes, paste_stamp
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
@@ -46,7 +46,7 @@ from os import path
  VIEW — Téléchargement du MODÈLE d'import avec liste déroulante des classes
 =============================================================================
 Principe :
-  - on lit le modèle statique (static\document\Modèle_Liste_des_Élèves.xlsx) ;
+  - on lit le modèle statique (static/document/Modèle_Liste_des_Élèves.xlsx) ;
   - on injecte une VALIDATION DE DONNÉES (liste déroulante Excel) sur la
     colonne Classe (G), alimentée par les classes RÉELLES de l'établissement
     courant + une option "(Aucune)" ;
@@ -662,7 +662,7 @@ class EndYearAssignment(LoggedAdminOrTitulaireView):
 
 
 class StudentsIdCards(LoggedAdminView):
-    template_name = "edit_marks.html"
+    template_name = "students_id_cards.html"
     title = "Cartes d'Identité Scolaire"
 
     def get(self, *args, **kwargs):
@@ -677,7 +677,7 @@ class StudentsIdCards(LoggedAdminView):
         if reason is not None:
             return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
         data['students'] = list(classroom.students.order_by('nom', 'prenom'))
-        return StudentsIdentityCards(data=data)
+        return StudentsIdentityCards(data=data) if data['layout'] == "fold" else StudentsIdentityCardsCNI(data=data)
 
     def post(self, *args, **kwargs):
         empty_csi = True if 'csi_checkbox' in self.request.POST.keys() else False
@@ -687,6 +687,7 @@ class StudentsIdCards(LoggedAdminView):
         selected = self.request.POST.get("classroom")
         filename = self.title
         if not empty_csi:
+            data['layout'] = self.request.POST.get('layout', 'fold')
             # -------- Cas "Toutes les classes" -> ZIP --------
             if selected == "__all__":
                 classrooms = (
@@ -716,24 +717,6 @@ class StudentsIdCards(LoggedAdminView):
                 return JsonResponse({'success': False, 'message': result})
             return pdf_response(result, f"{filename} {classroom.code}.pdf")
         return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")
-
-    """def post(self, *args, **kwargs):
-        empty_csi = True if 'csi_checkbox' in self.request.POST.keys() else False
-        data = {'annee': school_year(), 'school_data': self.request.user.school.school_to_dict()}
-        filename = self.title
-        if not empty_csi:
-            classroom = (
-                ClassRoom.objects.prefetch_related('students__pere', 'students__mere').
-                get(pk=int(self.request.POST['classroom'])))
-            if classroom.students.exists():
-                data['students'] = list(classroom.students.order_by('nom', 'prenom'))
-                filename += f" {classroom.code}"
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'message': "Aucun élève dans cette salle de classe"
-                })
-        return pdf_response(StudentsIdentityCards(data=data), f"{filename}.pdf")"""
 
 
 # Exportation de la liste des élèves dans un fichier Excel
@@ -1215,6 +1198,323 @@ class Discipline(LoggedAdminView):
         return response
 
 
+# Dimensions normalisées de la carte (norme ISO/IEC 7810 ID-1).
+CARD_W, CARD_H = 85.6, 54.0
+
+# Couleurs de la charte (drapeau camerounais + bleu institutionnel).
+GREEN = (10, 125, 63)
+RED = (210, 31, 60)
+YELLOW = (249, 214, 22)
+INK = (21, 35, 59)       # texte principal
+BLUE = (10, 61, 98)      # valeurs mises en avant
+GREY = (138, 147, 163)   # labels secondaires
+
+
+class StudentsIdentityCardsCNI(FPDF):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(orientation='P', unit='mm', format='A4')
+        self.add_font('inter', '', settings.INTER_REGULAR)
+        self.add_font('inter', 'I', settings.INTER_ITALIC)
+        self.add_font('inter', 'B', settings.INTER_BOLD)
+        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
+        self.set_auto_page_break(auto=False)   # placement manuel précis
+        self.set_margins(0, 0, 0)
+        self.set_font('inter', '', 7)
+
+        self.data = kwargs.pop('data')
+        self.layout = self.data.get('layout', "sheet")
+
+        # Logo établissement (flux NEUF à chaque génération -> pas de partage).
+        self._logo = self._prepare_logo()
+        # Cachet (rond établissement) ET visa (nominatif + signature) préchargés
+        # EN BYTES une fois. On recrée un BytesIO neuf à chaque pose (jamais
+        # épuisé, même en mode ZIP toutes les classes). Voir utils.stamp_bytes.
+        self._cachet_bytes = stamp_bytes(self.data['school_data'].get('cachet'))  # noqa: F821
+        self._visa_bytes = stamp_bytes(self.data['school_data'].get('visa'))  # noqa: F821
+
+        students = self.data.get('students', [])
+        self.default_student_photo = resize_image("static/image/student.jpg", id_card=True, ratio=(26, 30))
+        if self.layout == 'single':
+            self._render_single(students)
+        else:
+            self._render_sheet(students)
+
+    # ------------------------------------------------------------------
+    # Préparation du logo : on récupère un flux exploitable (ou None).
+    # ------------------------------------------------------------------
+    def _prepare_logo(self):
+        logo = self.data['school_data'].get('logo')
+        if not logo or logo == "static/image/no_image.jpg":
+            return None
+        try:
+            # resize_image renvoie un BytesIO neuf -> sûr en génération en boucle.
+            return resize_image(logo, new_width=300)
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # MODE PLANCHE A4 : grille 2 colonnes x 5 rangées (10 cartes / page).
+    # Géométrie calculée pour des marges et gouttières régulières.
+    # ------------------------------------------------------------------
+    def _render_sheet(self, students):
+        cols, rows = 2, 5
+        per_page = cols * rows
+        gutter_x, gutter_y = 6.0, 2.0
+        margin_x = (self.w - cols * CARD_W - gutter_x) / 2 # 16.4 mm
+        margin_y = (self.h - rows * CARD_H - gutter_y * (rows - 1)) / 2 # 9.5 mm
+
+        for i, student in enumerate(students):
+            pos = i % per_page
+            if pos == 0:
+                self.add_page()
+            c = pos % cols
+            r = pos // cols
+            x = margin_x + c * (CARD_W + gutter_x)
+            y = margin_y + r * (CARD_H + gutter_y)
+            self._draw_card(student, x, y)
+            self._cut_marks(x, y) # traits de découpe autour de la carte
+
+    # ------------------------------------------------------------------
+    # MODE 1 CARTE / PAGE : page au format exact ID-1 (imprimante à cartes).
+    # ------------------------------------------------------------------
+    def _render_single(self, students):
+        for student in students:
+            self.add_page(format=(CARD_W, CARD_H))
+            self._draw_card(student, 0, 0)
+
+    # ------------------------------------------------------------------
+    # Traits de découpe : petits repères aux 4 coins de la carte (discrets,
+    # pour guider le massicot sans tracer de cadre complet).
+    # ------------------------------------------------------------------
+    def _cut_marks(self, x, y, m=2.0):
+        self.set_draw_color(150)
+        self.set_line_width(0.1)
+        # coin haut-gauche
+        self.line(x - m, y, x, y); self.line(x, y - m, x, y)
+        # haut-droit
+        self.line(x + CARD_W, y, x + CARD_W + m, y); self.line(x + CARD_W, y - m, x + CARD_W, y)
+        # bas-gauche
+        self.line(x - m, y + CARD_H, x, y + CARD_H); self.line(x, y + CARD_H, x, y + CARD_H + m)
+        # bas-droit
+        self.line(x + CARD_W, y + CARD_H, x + CARD_W + m, y + CARD_H)
+        self.line(x + CARD_W, y + CARD_H, x + CARD_W, y + CARD_H + m)
+
+    # ==================================================================
+    # DESSIN D'UNE CARTE à l'origine (x, y). Tout est en coordonnées
+    # RELATIVES à (x, y) pour pouvoir la placer n'importe où sur la planche.
+    # ==================================================================
+    def _draw_card(self, student, x, y):
+        sd = self.data['school_data']
+
+        # --- Cadre léger de la carte (coins NON arrondis : arrondi à la découpe) ---
+        self.set_draw_color(225)
+        self.set_line_width(0.2)
+        self.rect(x, y, CARD_W, CARD_H)
+
+        # ---------- EN-TÊTE bilingue + logo central ----------
+        self.set_xy(x + 2, y + 2.5)
+        self.set_text_color(*BLUE)
+        self.set_font('inter', 'B', 5.8)
+        self.multi_cell(31, 2.6, "RÉPUBLIQUE DU CAMEROUN", align='C', new_x="RIGHT", new_y="TOP")
+        self.set_xy(x + CARD_W - 33, y + 2.5)
+        self.multi_cell(31, 2.6, "REPUBLIC OF CAMEROON", align='C', new_x="RIGHT", new_y="TOP")
+
+        self.set_font('inter', '', 4.5)
+        self.set_text_color(*GREY)
+        self.set_xy(x + 2, y + 5.2)
+        self.cell(31, 2, "Paix - Travail - Patrie", align='C')
+        self.set_xy(x + CARD_W - 33, y + 5.2)
+        self.cell(31, 2, "Peace - Work - Fatherland", align='C')
+
+        # nom établissement (FR / EN) sous les devises
+        self.set_font('inter', 'B', 5.5)
+        self.set_text_color(*INK)
+        self.set_xy(x + 2, y + 7.4)
+        self.cell(31, 2.4, self._fit_shrink(sd.get('nom', ''), 31, 5.7, bold=True, min_size=4.8)[0], align='C')
+        self.set_xy(x + CARD_W - 33, y + 7.4)
+        self.cell(31, 2.4, self._fit_shrink(sd.get('name', ''), 31, 5.7, bold=True, min_size=4.8)[0], align='C')
+
+        # logo central (si dispo)
+        if self._logo:
+            self.image(self._logo, x=x + CARD_W / 2 - 6, y=y + 2, w=12, h=12,
+                       keep_aspect_ratio=True)
+
+        # ---------- TITRE ----------
+        #self.set_xy(x, y + 11.5)
+        self.set_xy(x, y + 13.5)
+        self.set_font('inter', 'B', 8)
+        self.set_text_color(*GREEN)
+        self.cell(CARD_W, 4, "CARTE D'IDENTITÉ SCOLAIRE / SCHOOl ID CARD", align='C')
+
+        # ---------- PHOTO (≈ 1/3 de la largeur) ----------
+        px, py = x + 3, y + 18.5
+        pw, ph = 26, 30          # ~1/3 de 85.6 ; ratio identité
+        photo = getattr(student, 'photo', None)
+        self.image(resize_image(photo, id_card=True, ratio=(26, 30)) if photo else self.default_student_photo, x=px, y=py, w=pw, h=ph)
+
+        # ---------- CHAMPS d'identité (à droite de la photo) ----------
+        fx = px + pw + 3
+        fw = x + CARD_W - fx - 3
+        fy = py - 0.5
+
+        def field(label_fr, label_en, value, fy_, value_color=INK, value_size=7.5):
+            self.set_xy(fx, fy_)
+            self.set_font('inter', '', 4.2)
+            self.set_text_color(*GREY)
+            self.cell(fw, 1.8, f"{label_fr}  /  {label_en}", align='L')
+            txt, used_size = self._fit_shrink(value, fw, value_size, bold=True, min_size=6.5)
+            self.set_xy(fx, fy_ + 1.9)
+            self.set_font('inter', 'B', used_size)
+            self.set_text_color(*value_color)
+            self.cell(fw, 2.6, txt, align='L')
+            return fy_ + 5.0  # hauteur d'un champ
+
+        # Noms & Prénoms (sur une ligne, valeur en bleu)
+        full_name = f"{student.nom} {student.prenom or ''}".strip()
+        fy = field("Noms & Prénoms", "Name & First Names", full_name, fy, BLUE, 7.5)
+
+        # Né(e) le + À (deux demi-colonnes)
+        born = format_date(student.date_naissance, format="short", locale="fr_FR") \
+            if student.date_naissance else "—"
+        self.set_xy(fx, fy)
+        self.set_font('inter', '', 4.2); self.set_text_color(*GREY)
+        self.cell(fw / 2, 1.8, "Né(e) le  /  Born", align='L')
+        self.cell(fw / 2, 1.8, "À  /  at", align='L')
+        lieu_txt, lieu_size = self._fit_shrink(student.lieu_naissance or "—", fw / 2, 6.5, bold=True)
+        self.set_xy(fx, fy + 1.9)
+        self.set_font('inter', 'B', 6.5); self.set_text_color(*INK)
+        self.cell(fw / 2, 2.4, born, align='L')
+        self.set_font('inter', 'B', lieu_size)
+        self.cell(fw / 2, 2.4, lieu_txt, align='L')
+        fy += 5.0
+
+        # Sexe + Classe
+        self.set_xy(fx, fy)
+        self.set_font('inter', '', 4.2); self.set_text_color(*GREY)
+        self.cell(fw / 2, 1.8, "Sexe  /  Sex", align='L')
+        self.cell(fw / 2, 1.8, "Classe  /  Class", align='L')
+        self.set_xy(fx, fy + 1.9)
+        self.set_font('inter', 'B', 6.5); self.set_text_color(*INK)
+        self.cell(fw / 2, 2.4, str(getattr(student, 'sexe', '') or "—"), align='L')
+        self.cell(fw / 2, 2.4, (student.classe.code if student.classe else "—"), align='L')
+        fy += 5.0
+
+        # Matricule
+        self.set_xy(fx, fy)
+        self.set_font('inter', '', 4.2); self.set_text_color(*GREY)
+        self.cell(fw, 1.8, "Matricule  /  ID", align='L')
+        self.set_xy(fx, fy + 1.9)
+        self.set_font('inter', 'B', 7)
+        #self.set_text_color(*RED)
+        self.set_text_color(*BLUE)
+        self.cell(fw, 2.6, str(student.unique_id or "—"), align='L')
+        fy += 5.0
+
+        # Contact d'urgence (en rouge)
+        contacts_list = getattr(student, 'contacts_parent')
+        contacts_list.append(sd.get('contact'))
+        contacts = str(contacts_list[0]) if len(contacts_list) == 1 else f"{contacts_list[0]} / {contacts_list[1]}"
+        self.set_xy(fx, fy)
+        self.set_font('inter', '', 4.2); self.set_text_color(*GREY)
+        self.cell(fw, 1.8, "Contact d'urgence  /  ICE", align='L')
+        self.set_xy(fx, fy + 1.9)
+        self.set_font('inter', 'B', 7)
+        self.set_text_color(*RED)
+        self.cell(fw, 2.6, contacts, align='L')
+
+        # --- Cachet (rond établissement) + Visa (nominatif + signature) ---
+        # Posés APRÈS les champs : peuvent chevaucher (authenticité). BytesIO
+        # neuf à chaque pose via paste_stamp -> sûr en boucle.
+        paste_stamp(self, self._cachet_bytes,  # noqa: F821
+                    x=x + CARD_W - 38, y=y + 30, w=18)
+        paste_stamp(self, self._visa_bytes,  # noqa: F821
+                    x=x + CARD_W - 25, y=y + 35, w=22)
+        """stamp_w = 19  # largeur discrète (mm)
+        stamp_x = x + CARD_W - stamp_w - 3  # ancré à droite, marge 3mm
+        stamp_y = y + 30"""
+
+        # ---------- BANDE TRICOLORE + année (en bas) ----------
+        self._footer_band(x, y)
+
+        # reset couleur
+        self.set_text_color(0)
+
+    # ------------------------------------------------------------------
+    # Bande tricolore en pied : vert (Année FR) | rouge+étoile | jaune (Year EN)
+    # ------------------------------------------------------------------
+    def _footer_band(self, x, y):
+        band_h = 5.0
+        by = y + CARD_H - band_h
+        third = CARD_W / 3
+        annee = self.data.get('annee', '')
+
+        # vert
+        self.set_fill_color(*GREEN)
+        self.rect(x, by, third, band_h, style='F')
+        # rouge (centre)
+        self.set_fill_color(*RED)
+        self.rect(x + third, by, third, band_h, style='F')
+        # jaune
+        self.set_fill_color(*YELLOW)
+        self.rect(x + 2 * third, by, third, band_h, style='F')
+
+        # textes année
+        self.set_font('inter', 'B', 5)
+        self.set_text_color(255)
+        self.set_xy(x, by + 1)
+        self.cell(third, band_h - 2, f"Année {annee}", align='C')
+        self.set_text_color(*INK)
+        self.set_xy(x + 2 * third, by + 1)
+        self.cell(third, band_h - 2, f"Year {annee}", align='C')
+
+        # étoile jaune au centre du bloc rouge
+        self.set_text_color(*YELLOW)
+        self.set_font('ZapfDingbats', '', 8)
+        self.set_xy(x + third, by + 0.6)
+        self.cell(third, band_h - 1.2, chr(72), align='C')
+
+    # ------------------------------------------------------------------
+    # Ajuste une chaîne à une largeur : on RÉDUIT d'abord la police (auto-shrink)
+    # jusqu'à un plancher, pour garder le texte COMPLET (essentiel pour un nom).
+    # Ce n'est qu'au plancher, si ça déborde encore (très rare), qu'on tronque.
+    # Renvoie (texte, taille_de_police_à_utiliser).
+    # ------------------------------------------------------------------
+    def _fit_shrink(self, text, max_w, size, bold=False, min_size=5.0):
+        if not text:
+            return "", size
+        family_style = 'B' if bold else ''
+        s = size
+        while s > min_size:
+            self.set_font('inter', family_style, s)
+            if self.get_string_width(text) <= max_w:
+                return text, s  # tient complet à cette taille
+            s -= 0.1
+        # Au plancher : si ça déborde toujours, troncature ultime de sécurité.
+        self.set_font('inter', family_style, min_size)
+        if self.get_string_width(text) <= max_w:
+            return text, min_size
+        ell = "…"
+        while text and self.get_string_width(text + ell) > max_w:
+            text = text[:-1]
+        return text + ell, min_size
+
+    # ------------------------------------------------------------------
+    # Réduit une chaîne pour qu'elle tienne dans une largeur donnée
+    # (sinon fpdf déborde). Tronque avec "…" si nécessaire.
+    # ------------------------------------------------------------------
+    def _fit(self, text, max_w, size, bold=False):
+        if not text:
+            return ""
+        self.set_font('inter', 'B' if bold else '', size)
+        if self.get_string_width(text) <= max_w:
+            return text
+        ell = "…"
+        while text and self.get_string_width(text + ell) > max_w:
+            text = text[:-1]
+        return text + ell
+
+
 class StudentsIdentityCards(FPDF):
 
     def __init__(self, *args, **kwargs):
@@ -1233,8 +1533,15 @@ class StudentsIdentityCards(FPDF):
         height = int((height * 25.4) / 300) + 20 if height else 65
         height = height if self.data['school_data']['motto'] else None
         if 'students' in self.data.keys():
+            # Cachet (rond établissement) ET visa (nominatif + signature) préchargés
+            # EN BYTES une fois. On recrée un BytesIO neuf à chaque pose (jamais
+            # épuisé, même en mode ZIP toutes les classes). Voir utils.stamp_bytes.
+            self._cachet_bytes = stamp_bytes(self.data['school_data'].get('cachet'))  # noqa: F821
+            self._visa_bytes = stamp_bytes(self.data['school_data'].get('visa'))  # noqa: F821
             self.id_cards(logo, height)
         else:
+            self._cachet_bytes = None
+            self._visa_bytes = None
             self.second_page()
             self.third_page((1, 2, 3))
             self.first_and_last_pages((1, 2, 3), logo, height)
@@ -1497,6 +1804,13 @@ class StudentsIdentityCards(FPDF):
             self.set_font_size(8)
             self.set_xy(x, y + 53)
             self.cell(w=95, h=3, text=f"__The Principal", align='C', markdown=True)
+            # --- Cachet (rond établissement) et Visa (nominatif + signature) ---
+            paste_stamp(self, self._cachet_bytes,  # noqa: F821
+                        x=x + 3, y=y + 32, w=42)
+            paste_stamp(self, self._visa_bytes,  # noqa: F821
+                        x=x + 45, y=y + 56, w=45)
+            """self.image(BytesIO(self._cachet_bytes), x=x + 50, y=y + 40,
+                       w=45, keep_aspect_ratio=True)"""
             self.set_font_size(7)
             self.line(x1=110, y1=y+77.5, x2=205, y2=y+77.5)
             self.set_xy(x, y + 78)

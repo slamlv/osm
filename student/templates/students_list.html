@@ -8,6 +8,9 @@
   .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
   .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
   .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  /* élève sans classe : liseré ambre à gauche (cohérent avec le bouton "À régulariser") */
+  .osm-table-outer tbody tr.no-class { box-shadow:inset 3px 0 0 #fd7e14; }
+  .badge-regul { background:rgba(253,126,20,0.18); color:#ffb066; font-size:0.7rem; font-weight:600; padding:2px 8px; border-radius:6px; }
   .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
   .toolbar { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:0.75rem 1rem; }
   .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
@@ -105,7 +108,7 @@
       </tr></thead>
       <tbody>
         {% for student in datas %}
-        <tr>
+        <tr {% if not student.classe %}class="no-class"{% endif %}>
           <td style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
           <td style="color:rgba(255,255,255,0.5)!important;font-size:0.82rem;">{% if not student.unique_id %}—{% else %}{{ student.unique_id }}{% endif %}</td>
           <td class="fw-semibold">{{ student }}</td>
@@ -115,7 +118,7 @@
             {% if student.classe %}
             <a class="text-info text-decoration-none" title="Liste des élèves" data-bs-toggle="tooltip"
                href="{% url 'classroom-students' id=student.classe_id %}">{{ student.classe.code }}</a>
-            {% else %}—{% endif %}
+            {% else %}<span class="badge-regul">À régulariser</span>{% endif %}
           </td>
           {% endif %}
           <td class="d-none d-xl-table-cell" style="color:rgba(255,255,255,0.5)!important;">{% if student.pere %}{{ student.pere.contact }}{% else %}—{% endif %}</td>

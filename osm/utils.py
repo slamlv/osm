@@ -597,19 +597,142 @@ def cote_and_appr(note):
     return cote, appr
 
 
-def resize_image(image_path, new_width=295, quality=80, return_height=False, id_card=False):
+def stamp_bytes(field):
+    """Lit le contenu d'un champ image (FieldFile / flux / chemin) en bytes,
+    une seule fois. Renvoie bytes | None. À recréer en BytesIO à chaque pose."""
+    if not field:
+        return None
+    try:
+        if hasattr(field, 'read'):
+            try:
+                field.seek(0)
+            except Exception:
+                pass
+            return field.read() or None
+        if hasattr(field, 'open'):
+            field.open('rb')
+            data = field.read()
+            field.close()
+            return data or None
+        with open(field, 'rb') as fh:
+            return fh.read() or None
+    except Exception:
+        return None
+
+
+def paste_stamp(pdf, data, x, y, w, opacity=0.9):
+    """Pose un tampon sur le pdf à (x, y), largeur w (mm), ratio préservé.
+    `data` = bytes du tampon (cf. stamp_bytes). BytesIO NEUF -> sûr en boucle.
+    Ne fait rien si data est None (champ non fourni)."""
+    if not data:
+        return
+    try:
+        with pdf.local_context(fill_opacity=opacity):
+            pdf.image(BytesIO(data), x=x, y=y, w=w, keep_aspect_ratio=True)
+    except Exception:
+        pass
+
+
+def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25):
+    import numpy as np
+    """Détoure le fond (couleur estimée depuis les coins) et rogne au contenu.
+
+    - tolerance : distance couleur en-deçà de laquelle un pixel est "fond"
+      (transparent). 50-70 convient pour un cachet coloré sur papier clair.
+      Plus haut = détoure plus agressivement (risque de manger le cachet) ;
+      plus bas = garde plus de fond.
+    - feather : largeur (en unités de distance) de la transition alpha -> bord
+      doux. Renvoie un BytesIO PNG transparent, serré sur le cachet.
+    """
+    img = Image.open(image_file).convert("RGBA")
+    arr = np.array(img).astype(np.int16)
+    h, w, _ = arr.shape
+    rgb = arr[:, :, :3]
+
+    # 1. Couleur du fond = médiane des 4 coins (25x25 px). Médiane = robuste au bruit.
+    def corner(a):
+        return a.reshape(-1, 3)
+    c = 25
+    corners = np.concatenate([
+        corner(rgb[0:c, 0:c]),     corner(rgb[0:c, w - c:w]),
+        corner(rgb[h - c:h, 0:c]), corner(rgb[h - c:h, w - c:w]),
+    ])
+    bg = np.median(corners, axis=0)
+
+    # 2. Distance euclidienne de chaque pixel à la couleur de fond.
+    dist = np.sqrt(((rgb - bg) ** 2).sum(axis=2))
+
+    # 3. Alpha progressif : 0 (transparent) sous tolerance, 255 (opaque) au-delà,
+    #    avec une transition douce de largeur `feather` -> bord anti-aliasé.
+    alpha = np.clip((dist - tolerance) / float(feather), 0, 1) * 255
+    out = arr.copy()
+    out[:, :, 3] = alpha.astype(np.uint8)
+    out_img = Image.fromarray(out.astype(np.uint8))
+
+    # 4. Autocrop sur les pixels suffisamment opaques (le cachet).
+    ys, xs = np.where(alpha > 30)
+    if len(xs) == 0:
+        # rien détecté (image trop uniforme) : on renvoie l'originale telle quelle.
+        buf = BytesIO(); img.save(buf, format="PNG"); buf.seek(0); return buf
+    x0, x1 = int(xs.min()), int(xs.max()) + 1
+    y0, y1 = int(ys.min()), int(ys.max()) + 1
+    cropped = out_img.crop((x0, y0, x1, y1))
+
+    # 5. Redimensionner à la largeur cible (garde le ratio).
+    cw, ch = cropped.size
+    new_h = max(1, int(target_width_px * ch / cw))
+    cropped = cropped.resize((target_width_px, new_h), Image.LANCZOS)
+
+    buf = BytesIO()
+    cropped.save(buf, format="PNG")   # PNG -> transparence préservée
+    buf.seek(0)
+    return buf
+
+def resize_image(image_path, new_width=295, quality=80, return_height=False,
+                 id_card=False, ratio=(35, 40), vertical_anchor=0.4):
+    """Redimensionne une image.
+
+    id_card=True : recadrage "cover" vers la boîte de ratio `ratio` (rogne le
+    surplus, sans bande blanche). `vertical_anchor` (0=haut, 0.5=centre) règle
+    le point de rognage vertical : 0.4 garde un peu plus le haut (visages).
+    Sinon : redimensionnement classique par largeur (comportement d'origine).
+    """
     img = Image.open(image_path)
+
     if id_card:
-        new_size = (413, 472)
-        new_img = img.copy()
-        new_img.thumbnail(new_size, Image.LANCZOS)
-        background = Image.new("RGB", new_size, (255, 255, 255))
-        offset = (int((new_size[0] - new_img.width) / 2), int((new_size[1] - new_img.height) / 2))
-        background.paste(new_img, offset)
+        img = img.convert("RGB")
+        # Boîte cible en pixels : on part du ratio demandé, mis à l'échelle sur
+        # une base nette (300 dpi). Ex ratio (35,40) -> 413 x 472 ; (26,30) -> 307 x 354.
+        base = 11.81  # ~ pixels par mm à 300 dpi (300/25.4)
+        tw = int(ratio[0] * base)
+        th = int(ratio[1] * base)
+
+        src_w, src_h = img.size
+        target_ar = tw / th
+        src_ar = src_w / src_h
+
+        # COVER : on choisit l'échelle qui REMPLIT la boîte (le plus grand facteur),
+        # puis on rogne ce qui dépasse.
+        if src_ar > target_ar:
+            # image trop large -> on cale sur la hauteur, on rogne les côtés
+            scale = th / src_h
+        else:
+            # image trop haute -> on cale sur la largeur, on rogne haut/bas
+            scale = tw / src_w
+        new_w = max(tw, int(src_w * scale + 0.5))
+        new_h = max(th, int(src_h * scale + 0.5))
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+
+        # Rognage centré horizontalement, ancré vers le haut verticalement.
+        left = int((new_w - tw) / 2)
+        top = int((new_h - th) * vertical_anchor)
+        img = img.crop((left, top, left + tw, top + th))
+
         buffer = BytesIO()
-        background.save(buffer, format="JPEG", dpi=(300, 300))
+        img.save(buffer, format="JPEG", dpi=(300, 300), quality=90)
         buffer.seek(0)
         return buffer
+
     img = img.convert("RGB")
     width, height = img.size
     aspect_ratio = height / width

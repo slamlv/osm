@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+
+  /* radios "layout" déplacés en tête de form, masqués visuellement mais
+     pilotables en CSS pur (:checked) -> aucune dépendance au JavaScript. */
+  .layout-radios { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
+
+  .model-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:575px){ .model-grid{ grid-template-columns:1fr; } }
+  .model-opt label {
+    display:flex; flex-direction:column; gap:6px; cursor:pointer; height:100%;
+    background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:0.9rem 0.85rem; transition:all .15s; margin:0;
+  }
+  .model-opt label:hover { background:rgba(255,255,255,0.08); border-color:rgba(13,110,253,0.4); }
+  .model-opt .mo-ico { font-size:1.4rem; color:#5aa2ff; }
+  .model-opt .mo-title { font-size:0.86rem; font-weight:700; color:#fff; line-height:1.15; }
+  .model-opt .mo-desc { font-size:0.72rem; color:rgba(255,255,255,0.55); line-height:1.25; }
+
+  /* état sélectionné : on stylise le label dont le radio (frère précédent) est coché */
+  #layout_fold:checked   ~ .model-grid label[for="layout_fold"],
+  #layout_sheet:checked  ~ .model-grid label[for="layout_sheet"],
+  #layout_single:checked ~ .model-grid label[for="layout_single"] {
+    background:rgba(13,110,253,0.12); border-color:#0d6efd; box-shadow:0 0 0 3px rgba(13,110,253,0.18);
+  }
+  #layout_fold:checked   ~ .model-grid label[for="layout_fold"] .mo-ico,
+  #layout_sheet:checked  ~ .model-grid label[for="layout_sheet"] .mo-ico,
+  #layout_single:checked ~ .model-grid label[for="layout_single"] .mo-ico { color:#7db4ff; }
+
+  /* option "cartes vierges" : gérée par JS via la classe .show.
+     IMPORTANT : Bootstrap applique .d-flex { display:flex !important }, qui
+     écrase un simple display:none. On force donc avec !important pour gagner. */
+  #blank-option { display:none !important; }
+  #blank-option.show { display:flex !important; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
+  <div class="form-card mb-4" style="max-width:660px;margin-left:auto;margin-right:auto;">
+
+    <div class="alert alert-info py-2 small rounded-3 mb-0 mx-3 mt-3">
+      <i class="bi bi-info-circle me-2"></i>La génération pour toutes les classes peut prendre quelques
+      instants selon le nombre de classes et les effectifs. Veuillez patienter le cas échéant.
+    </div>
+
+    <div class="form-card-header d-flex align-items-center gap-2 mt-3">
+      <i class="bi bi-person-vcard text-primary fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Cartes d'identité scolaire</h6>
+    </div>
+
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'students_id_cards' %}">
+        {% csrf_token %}
+
+        {# Radios layout EN TÊTE du form (frères de .model-grid et .actions-row) #}
+        <input class="layout-radios" type="radio" name="layout" value="fold"   id="layout_fold" checked>
+        <input class="layout-radios" type="radio" name="layout" value="sheet"  id="layout_sheet">
+        <input class="layout-radios" type="radio" name="layout" value="single" id="layout_single">
+
+        {# --- Sélection de la classe --- #}
+        <div class="row g-3 mb-4" id="classroom_form">
+          <div class="col-12">
+            <label class="text-white control-label">Classe</label>
+            {{ select_form.classroom }}
+          </div>
+        </div>
+
+        {# --- Choix du modèle (labels cliquables liés aux radios ci-dessus) --- #}
+        <label class="text-white control-label d-block mb-2">Modèle de carte</label>
+        <div class="model-grid mb-3">
+          <div class="model-opt">
+            <label for="layout_fold">
+              <span class="mo-ico"><i class="bi bi-file-earmark-text"></i></span>
+              <span class="mo-title">Modèle à plier</span>
+              <span class="mo-desc">Format papier recto-verso, 3 par page, à plier en deux.</span>
+            </label>
+          </div>
+          <div class="model-opt">
+            <label for="layout_sheet">
+              <span class="mo-ico"><i class="bi bi-grid-3x3-gap"></i></span>
+              <span class="mo-title">Modèle CNI — planche</span>
+              <span class="mo-desc">Format carte bancaire, 10 par page A4, à découper.</span>
+            </label>
+          </div>
+          <div class="model-opt">
+            <label for="layout_single">
+              <span class="mo-ico"><i class="bi bi-credit-card-2-front"></i></span>
+              <span class="mo-title">Modèle CNI — par carte</span>
+              <span class="mo-desc">Une carte par page, pour imprimante à cartes PVC.</span>
+            </label>
+          </div>
+        </div>
+
+        {# --- Boutons + option vierges (CSS affiche #blank-option seulement si fold) --- #}
+        <div class="actions-row d-flex justify-content-center align-items-center gap-3 flex-wrap mt-2">
+          <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+            <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+          </button>
+
+          <div class="align-items-center gap-2" id="blank-option">
+            <input type="checkbox" class="form-check-input" name="csi_checkbox" id="csi_checkbox_id">
+            <label for="csi_checkbox_id" class="text-white-50 small mb-0">Cartes scolaires vierges</label>
+          </div>
+        </div>
+
+        <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Affiche "cartes vierges" UNIQUEMENT pour le modèle à plier (fold).
+  // Page en rechargement complet -> ce script s'exécute normalement.
+  function sync() {
+    var fold = document.getElementById('layout_fold');
+    var zone = document.getElementById('blank-option');
+    var cb   = document.getElementById('csi_checkbox_id');
+    if (!zone) return;
+    if (fold && fold.checked) {
+      zone.classList.add('show');
+    } else {
+      zone.classList.remove('show');
+      if (cb) cb.checked = false;   // décoche pour ne pas envoyer la valeur
+    }
+  }
+  // réagit au changement de n'importe quel radio "layout" (délégation)
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'layout') sync();
+  });
+  // état initial : au chargement du DOM, et tout de suite si déjà prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', sync);
+  } else {
+    sync();
+  }
+})();
+</script>
+{% endblock %}
