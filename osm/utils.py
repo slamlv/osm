@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.db.models import Q, Model
-from PIL import Image
+from PIL import Image, ImageFile
 from django.contrib import messages
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -633,58 +633,87 @@ def paste_stamp(pdf, data, x, y, w, opacity=0.9):
         pass
 
 
+# Tolère les images légèrement tronquées (uploads mobiles parfois imparfaits).
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+# Largeur max de TRAVAIL : on réduit l'image à ça AVANT le traitement numpy.
+# 1000 px suffit largement pour un cachet rendu à 600 px, tout en gardant
+# assez de détail pour un détourage propre. Réduire la mémoire = priorité.
+WORK_MAX_WIDTH = 1000
+
+
 def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25):
     import numpy as np
-    """Détoure le fond (couleur estimée depuis les coins) et rogne au contenu.
+    """Détoure le fond (couleur des coins) + autocrop, optimisé mémoire.
 
-    - tolerance : distance couleur en-deçà de laquelle un pixel est "fond"
-      (transparent). 50-70 convient pour un cachet coloré sur papier clair.
-      Plus haut = détoure plus agressivement (risque de manger le cachet) ;
-      plus bas = garde plus de fond.
-    - feather : largeur (en unités de distance) de la transition alpha -> bord
-      doux. Renvoie un BytesIO PNG transparent, serré sur le cachet.
+    Étapes :
+      1. Ouvrir et RÉDUIRE l'image à WORK_MAX_WIDTH avant tout (clé mémoire).
+      2. Détourage adaptatif (fond = médiane des 4 coins).
+      3. Autocrop sur le contenu non transparent.
+      4. Redimensionner à target_width_px, sortie PNG transparent.
+    Renvoie un BytesIO PNG.
     """
-    img = Image.open(image_file).convert("RGBA")
-    arr = np.array(img).astype(np.int16)
+    # 1. Ouverture + réduction IMMÉDIATE (avant numpy) ----------------------
+    img = Image.open(image_file)
+    img = img.convert("RGBA")
+
+    # Réduit si plus large que la largeur de travail. thumbnail garde le ratio
+    # et travaille en place, sans créer une 2e grande image.
+    if img.width > WORK_MAX_WIDTH:
+        new_h = int(img.height * WORK_MAX_WIDTH / img.width)
+        img = img.resize((WORK_MAX_WIDTH, new_h), Image.LANCZOS)
+
+    # 2. Détourage adaptatif ------------------------------------------------
+    arr = np.asarray(img, dtype=np.int16)   # asarray : pas de copie inutile
     h, w, _ = arr.shape
     rgb = arr[:, :, :3]
 
-    # 1. Couleur du fond = médiane des 4 coins (25x25 px). Médiane = robuste au bruit.
-    def corner(a):
-        return a.reshape(-1, 3)
     c = 25
     corners = np.concatenate([
-        corner(rgb[0:c, 0:c]),     corner(rgb[0:c, w - c:w]),
-        corner(rgb[h - c:h, 0:c]), corner(rgb[h - c:h, w - c:w]),
+        rgb[0:c, 0:c].reshape(-1, 3),     rgb[0:c, w - c:w].reshape(-1, 3),
+        rgb[h - c:h, 0:c].reshape(-1, 3), rgb[h - c:h, w - c:w].reshape(-1, 3),
     ])
     bg = np.median(corners, axis=0)
+    del corners
 
-    # 2. Distance euclidienne de chaque pixel à la couleur de fond.
-    dist = np.sqrt(((rgb - bg) ** 2).sum(axis=2))
+    # distance au fond, en float32 (2x moins de mémoire que float64 par défaut)
+    diff = (rgb - bg).astype(np.float32)
+    dist = np.sqrt((diff * diff).sum(axis=2))
+    del diff
 
-    # 3. Alpha progressif : 0 (transparent) sous tolerance, 255 (opaque) au-delà,
-    #    avec une transition douce de largeur `feather` -> bord anti-aliasé.
     alpha = np.clip((dist - tolerance) / float(feather), 0, 1) * 255
+    del dist
+
+    # applique l'alpha calculé
     out = arr.copy()
     out[:, :, 3] = alpha.astype(np.uint8)
-    out_img = Image.fromarray(out.astype(np.uint8))
+    del arr
 
-    # 4. Autocrop sur les pixels suffisamment opaques (le cachet).
-    ys, xs = np.where(alpha > 30)
+    # 3. Autocrop sur les pixels assez opaques ------------------------------
+    mask = alpha > 30
+    del alpha
+    ys, xs = np.where(mask)
+    del mask
     if len(xs) == 0:
-        # rien détecté (image trop uniforme) : on renvoie l'originale telle quelle.
-        buf = BytesIO(); img.save(buf, format="PNG"); buf.seek(0); return buf
+        # rien détecté : on renvoie l'image réduite telle quelle
+        buf = BytesIO()
+        Image.fromarray(out.astype(np.uint8)).save(buf, format="PNG")
+        buf.seek(0)
+        return buf
     x0, x1 = int(xs.min()), int(xs.max()) + 1
     y0, y1 = int(ys.min()), int(ys.max()) + 1
-    cropped = out_img.crop((x0, y0, x1, y1))
 
-    # 5. Redimensionner à la largeur cible (garde le ratio).
+    cropped = Image.fromarray(out[y0:y1, x0:x1].astype(np.uint8))
+    del out
+
+    # 4. Redimensionner à la largeur cible + PNG ----------------------------
     cw, ch = cropped.size
-    new_h = max(1, int(target_width_px * ch / cw))
-    cropped = cropped.resize((target_width_px, new_h), Image.LANCZOS)
+    if cw > target_width_px:
+        new_h = max(1, int(target_width_px * ch / cw))
+        cropped = cropped.resize((target_width_px, new_h), Image.LANCZOS)
 
     buf = BytesIO()
-    cropped.save(buf, format="PNG")   # PNG -> transparence préservée
+    cropped.save(buf, format="PNG", optimize=True)
     buf.seek(0)
     return buf
 
