@@ -181,7 +181,32 @@
       const preview = document.createElement('img');
       preview.style = 'max-width:200px; margin-top:6px; border:1px solid #ddd; padding:4px; border-radius:4px;';
       preview.style.display = 'none';
-      input.insertAdjacentElement('afterend', preview);
+      // Zone d'aperçu dédiée : si l'input porte data-preview-target="#id",
+      // on place l'aperçu DANS ce conteneur (rendu maîtrisé, ex. carte image).
+      // Sinon, comportement d'origine : juste après l'input.
+      const targetSel = input.dataset.previewTarget;
+      const targetEl = targetSel ? document.querySelector(targetSel) : null;
+      if (targetEl) {
+        // dans une zone dédiée : l'aperçu remplit la carte, pas de bordure propre
+        preview.style = 'max-width:100%; max-height:140px; display:none; border-radius:8px;';
+        // helper : masque le placeholder (.empty-hint) quand une image est visible
+        const hint = targetEl.querySelector('.empty-hint');
+        preview._hint = hint;
+        targetEl.appendChild(preview);
+      } else {
+        input.insertAdjacentElement('afterend', preview);
+      }
+      // chaque fois qu'on change la visibilité de l'aperçu, on synchronise le hint
+      function syncHint() {
+        if (preview._hint) preview._hint.style.display = (preview.style.display === 'none') ? '' : 'none';
+      }
+      // robuste : observe tout changement de l'attribut style de l'aperçu
+      // -> le hint "Aucun ..." se masque/réaffiche automatiquement, où que le
+      // code change preview.style.display ensuite.
+      if (preview._hint) {
+        new MutationObserver(syncHint).observe(preview, { attributes: true, attributeFilter: ['style'] });
+        syncHint();
+      }
 
       // --- Aperçu de l'image existante (déjà enregistrée, ex. Cloudinary) ---
       // On cherche un data-current-url sur l'input, sinon on remonte au widget Django
@@ -210,12 +235,25 @@
       if (clearCb) {
         clearCb.addEventListener('change', function () {
           if (clearCb.checked) {
-            // L'utilisateur veut supprimer l'image : vide la sélection et masque l'aperçu
+            // Suppression demandée : on N'EFFACE PAS l'aperçu, on lui donne un
+            // aspect "marqué pour suppression" (estompé + grisé) -> l'utilisateur
+            // voit clairement quelle image sera retirée. Rien n'est supprimé tant
+            // que le form n'est pas soumis.
             input.value = '';
             compressedMap.delete(input);
             if (preview._url) { try { URL.revokeObjectURL(preview._url); } catch (e) {} preview._url = null; }
-            preview.src = '';
-            preview.style.display = 'none';
+            // revenir à l'image existante (au cas où un nouveau fichier était choisi)
+            if (currentUrl) { preview.src = currentUrl; preview.style.display = ''; }
+            preview.style.opacity = '0.35';
+            preview.style.filter = 'grayscale(1)';
+            preview.classList.add('marked-for-removal');
+            if (info) info.textContent = 'Sera supprimée à l’enregistrement';
+          } else {
+            // Annulation : l'image reprend son aspect normal.
+            preview.style.opacity = '';
+            preview.style.filter = '';
+            preview.classList.remove('marked-for-removal');
+            if (currentUrl) { preview.src = currentUrl; preview.style.display = ''; }
             if (info) info.textContent = '';
           }
         });
@@ -242,10 +280,30 @@
 
         // Un nouveau fichier est sélectionné : décocher la checkbox "clear" si présente
         if (clearCb) clearCb.checked = false;
+        // retirer un éventuel aspect "marqué pour suppression"
+        preview.style.opacity = '';
+        preview.style.filter = '';
+        preview.classList.remove('marked-for-removal');
 
         preview._url = URL.createObjectURL(f);
         preview.src = preview._url;
         preview.style.display = '';
+
+        // --- Exception : champs à NE PAS compresser (cachet, visa, etc.) -----
+        // Cible : id="cachet" OU attribut data-no-compress. On garde le fichier
+        // ORIGINAL (aperçu déjà affiché ci-dessus) et on NE met PAS l'input dans
+        // compressedMap -> à l'envoi, le fichier original est conservé tel quel.
+        if (input.id === 'cachet' || input.dataset.noCompress !== undefined) {
+          compressedMap.delete(input);
+          if (!info) {
+            info = document.createElement('div');
+            info.className = 'text-white';
+            info.style = 'font-size:12px; margin-top:8px; color:inherit';
+            input.insertAdjacentElement('afterend', info);
+          }
+          info.textContent = `Image prête (${ (f.size/1024).toFixed(1) }KB)`;
+          return;   // on saute la compression ci-dessous
+        }
 
         try {
           const blob = await resizeAndConvert(f);
@@ -271,7 +329,7 @@
           if (!info) {
             info = document.createElement('div');
             info.className = 'text-white';
-            info.style = 'font-size:12px; margin-top:4px; color:inherit';
+            info.style = 'font-size:12px; margin-top:8px; color:inherit';
             input.insertAdjacentElement('afterend', info);
           }
           info.textContent = `Prêt : ${ (f.size/1024).toFixed(1) }KB → ${ (blob.size/1024).toFixed(1) }KB`;
@@ -283,7 +341,7 @@
           if (!info) {
             info = document.createElement('div');
             info.className = 'text-white';
-            info.style = 'font-size:12px; margin-top:4px; color:inherit';
+            info.style = 'font-size:12px; margin-top:8px; color:inherit';
             input.insertAdjacentElement('afterend', info);
           }
           info.textContent = 'Erreur lors du traitement côté client';
