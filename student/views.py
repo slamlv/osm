@@ -1809,6 +1809,13 @@ class StudentsIdentityCards(FPDF):
                         x=x + 3, y=y + 32, w=42)
             paste_stamp(self, self._visa_bytes,  # noqa: F821
                         x=x + 45, y=y + 56, w=45)
+            if self._visa_bytes and self._cachet_bytes:
+                self.set_xy(x + 50, y + 43)
+                self.set_font_size(9)
+                self.set_text_color(255, 0, 0)
+                self.cell(w=45, h=3, text=f"**{format_date(datetime.now(), format="short", locale="fr_FR")}**",
+                          align='L', markdown=True)
+                self.set_text_color(0)
             """self.image(BytesIO(self._cachet_bytes), x=x + 50, y=y + 40,
                        w=45, keep_aspect_ratio=True)"""
             self.set_font_size(7)
