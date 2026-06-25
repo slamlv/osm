@@ -11,6 +11,8 @@
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     overflow: hidden;
     position: relative;
+    /* couleur du module par défaut (surchargée par les classes .accent-*) */
+    --c: #0d6efd; --rgb: 13,110,253;
   }
   .mod-card::before {
     content: '';
@@ -19,10 +21,20 @@
     background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
     pointer-events: none;
   }
+  /* barre d'accent colorée en haut de chaque carte (couleur du module) */
+  .mod-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--c);
+    opacity: 0.85;
+  }
   .mod-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
-    border-color: rgba(255,255,255,0.18);
+    /* halo teinté de la couleur du module + ombre sombre conservée */
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45), 0 6px 22px rgba(var(--rgb), 0.28);
+    border-color: rgba(var(--rgb), 0.45);
   }
   .mod-card .icon-wrap {
     width: 48px;
@@ -33,7 +45,63 @@
     justify-content: center;
     font-size: 1.4rem;
     flex-shrink: 0;
+    transition: transform 0.18s ease;
   }
+  /* micro-zoom de l'icône au survol de la carte */
+  .mod-card:hover .icon-wrap { transform: scale(1.08); }
+
+  /* animation d'entrée : fondu + léger glissement vers le haut, échelonné */
+  @keyframes modIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .mod-card { animation: modIn 0.4s ease both; }
+  /* délais échelonnés (nth-child sur la colonne parente) */
+  .row > div:nth-child(1) .mod-card { animation-delay: 0.00s; }
+  .row > div:nth-child(2) .mod-card { animation-delay: 0.05s; }
+  .row > div:nth-child(3) .mod-card { animation-delay: 0.10s; }
+  .row > div:nth-child(4) .mod-card { animation-delay: 0.15s; }
+  .row > div:nth-child(5) .mod-card { animation-delay: 0.20s; }
+  .row > div:nth-child(6) .mod-card { animation-delay: 0.25s; }
+  .row > div:nth-child(7) .mod-card { animation-delay: 0.30s; }
+  .row > div:nth-child(8) .mod-card { animation-delay: 0.35s; }
+  .row > div:nth-child(9) .mod-card { animation-delay: 0.40s; }
+  .row > div:nth-child(10) .mod-card { animation-delay: 0.45s; }
+  .row > div:nth-child(11) .mod-card { animation-delay: 0.50s; }
+  .row > div:nth-child(12) .mod-card { animation-delay: 0.55s; }
+  @media (prefers-reduced-motion: reduce) {
+    .mod-card { animation: none; }
+  }
+
+  /* compteur (badge chiffre en haut à droite de la carte) */
+  .mod-count {
+    position: absolute;
+    top: 12px; right: 14px;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--c);
+    line-height: 1;
+  }
+  .mod-count small { display:block; font-size:0.6rem; font-weight:600; color:rgba(255,255,255,0.4); text-align:right; margin-top:2px; }
+
+  .mod-card .icon-wrap {
+    /* le fond halo de l'icône reprend la couleur du module */
+    background: rgba(var(--rgb), 0.13);
+  }
+  .mod-card .icon-wrap i { color: var(--c); }
+  /* classes d'accent : posent la couleur du module sur TOUTE la carte */
+  .accent-eleves     { --c:#3b82f6; --rgb:59,130,246; }
+  .accent-personnel  { --c:#22c55e; --rgb:34,197,94; }
+  .accent-classes    { --c:#06b6d4; --rgb:6,182,212; }
+  .accent-stats      { --c:#f59e0b; --rgb:245,158,11; }
+  .accent-edt        { --c:#a855f7; --rgb:168,85,247; }
+  .accent-etab       { --c:#ef4444; --rgb:239,68,68; }
+  .accent-notes      { --c:#14b8a6; --rgb:20,184,166; }
+  .accent-notes-niv  { --c:#8b5cf6; --rgb:139,92,246; }
+  .accent-notes-trim { --c:#ec4899; --rgb:236,72,153; }
+  .accent-notes-term { --c:#f97316; --rgb:249,115,22; }
+  .accent-planning   { --c:#0ea5e9; --rgb:14,165,233; }
+  .accent-profil     { --c:#94a3b8; --rgb:148,163,184; }
   .hero-banner {
     background: linear-gradient(135deg, #152f45 0%, #1e4266 50%, #172e45 100%);
     border-radius: 18px;
@@ -80,9 +148,10 @@
   <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'students' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-primary bg-opacity-10 mb-3">
-            <i class="bi bi-people text-primary"></i>
+        <div class="mod-card accent-eleves p-3 h-100">
+          {% if nb_students is not None %}<div class="mod-count">{{ nb_students }}<small>élèves</small></div>{% endif %}
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-people"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Élèves</h6>
           <p class="text-white-50 small mb-0">Inscriptions et dossiers.</p>
@@ -91,9 +160,10 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'staff' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-success bg-opacity-10 mb-3">
-            <i class="bi bi-person-badge text-success"></i>
+        <div class="mod-card accent-personnel p-3 h-100">
+          {% if nb_staff is not None %}<div class="mod-count">{{ nb_staff }}<small>membres</small></div>{% endif %}
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-person-badge"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Personnel</h6>
           <p class="text-white-50 small mb-0">Fonctions et assignations.</p>
@@ -102,9 +172,10 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'classrooms' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-info bg-opacity-10 mb-3">
-            <i class="fa fa-chalkboard-teacher text-info"></i>
+        <div class="mod-card accent-classes p-3 h-100">
+          {% if nb_classes is not None %}<div class="mod-count">{{ nb_classes }}<small>classes</small></div>{% endif %}
+          <div class="icon-wrap mb-3">
+            <i class="fa fa-chalkboard-teacher"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Classes</h6>
           <p class="text-white-50 small mb-0">Matières et progressions.</p>
@@ -113,9 +184,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'stats-check' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-warning bg-opacity-10 mb-3">
-            <i class="bi bi-bar-chart text-warning"></i>
+        <div class="mod-card accent-stats p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-bar-chart"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Statistiques</h6>
           <p class="text-white-50 small mb-0">Résultats globaux et détaillés.</p>
@@ -124,9 +195,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'classroom_time_table' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-danger bg-opacity-10 mb-3">
-            <i class="bi bi-calendar-week text-danger"></i>
+        <div class="mod-card accent-edt p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-calendar-week"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Emploi du temps</h6>
           <p class="text-white-50 small mb-0">Programmation des cours.</p>
@@ -135,9 +206,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'school_details' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-warning bg-opacity-10 mb-3">
-            <i class="bi bi-house-door text-warning"></i>
+        <div class="mod-card accent-etab p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-house-door"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Établissement</h6>
           <p class="text-white-50 small mb-0">Infos de l'établissement.</p>
@@ -151,9 +222,9 @@
   <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'marks' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-primary bg-opacity-10 mb-3">
-            <i class="bi bi-file-text text-primary"></i>
+        <div class="mod-card accent-notes p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-file-text"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Notes</h6>
           <p class="text-white-50 small mb-0">Remplissage séquentiel par classe.</p>
@@ -162,9 +233,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'level-marks' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-success bg-opacity-10 mb-3">
-            <i class="bi bi-file-text text-success"></i>
+        <div class="mod-card accent-notes-niv p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-file-text"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Notes</h6>
           <p class="text-white-50 small mb-0">Remplissage séquentiel par niveau.</p>
@@ -173,9 +244,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'trimester-marks' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-info bg-opacity-10 mb-3">
-            <i class="bi bi-file-text text-info"></i>
+        <div class="mod-card accent-notes-trim p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-file-text"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Notes</h6>
           <p class="text-white-50 small mb-0">Remplissage trimestriel par classe.</p>
@@ -184,9 +255,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'tlevel-marks' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-warning bg-opacity-10 mb-3">
-            <i class="bi bi-file-text text-warning"></i>
+        <div class="mod-card accent-notes-term p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-file-text"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Notes</h6>
           <p class="text-white-50 small mb-0">Remplissage trimestriel par niveau.</p>
@@ -195,9 +266,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'user-timetable' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap bg-danger bg-opacity-10 mb-3">
-            <i class="bi bi-calendar-week text-danger"></i>
+        <div class="mod-card accent-planning p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-calendar-week"></i>
           </div>
           <h6 class="text-white fw-bold mb-1">Mon planning</h6>
           <p class="text-white-50 small mb-0">Mon emploi du temps.</p>
@@ -206,9 +277,9 @@
     </div>
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'user-details' %}" class="text-decoration-none">
-        <div class="mod-card p-3 h-100">
-          <div class="icon-wrap" style="background:rgba(255,255,255,0.07);">
-            <i class="bi bi-person-vcard text-white"></i>
+        <div class="mod-card accent-profil p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-person-vcard"></i>
           </div>
           <h6 class="text-white fw-bold mb-1 mt-3">Mon profil</h6>
           <p class="text-white-50 small mb-0">Mes informations.</p>

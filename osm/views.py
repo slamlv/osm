@@ -7,6 +7,9 @@ from authentification.views import anonymous_required
 from .forms import TranchesHorairesForm, SchoolForm
 from .utils import with_users_school_schema, ADetailView, LoggedAdminView, add_minutes, greet
 from authentification.models import School, TrancheHoraire
+from staff.models import Personnel
+from student.models import Student
+from classroom.models import ClassRoom
 from datetime import time, datetime
 from staff.models import Activities
 
@@ -36,7 +39,11 @@ def index(request):
             if len(activities) == 3:
                 break
     context = {'activities': activities, 'exists': exists,
-               'greet': f"{greet()} {request.user.staff_member.short_firstname}"}
+               'greet': f"{greet()} {request.user.staff_member.short_firstname}",
+               'nb_classes': ClassRoom.objects.count(),
+               'nb_staff': Personnel.objects.count(),
+               'nb_students': Student.objects.count(),
+    }
     return render(request, "index.html", context)
 
 

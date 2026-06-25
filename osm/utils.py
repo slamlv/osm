@@ -642,80 +642,114 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 WORK_MAX_WIDTH = 1000
 
 
-def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25):
+def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25,
+                   revive="auto", revive_strength=0.5):
     import numpy as np
-    """Détoure le fond (couleur des coins) + autocrop, optimisé mémoire.
+    """Détoure + (option) ravive un cachet/visa. Renvoie BytesIO PNG transparent.
 
-    Étapes :
-      1. Ouvrir et RÉDUIRE l'image à WORK_MAX_WIDTH avant tout (clé mémoire).
-      2. Détourage adaptatif (fond = médiane des 4 coins).
-      3. Autocrop sur le contenu non transparent.
-      4. Redimensionner à target_width_px, sortie PNG transparent.
-    Renvoie un BytesIO PNG.
+    revive : "auto" (détecte rouge/bleu dominant), "red", "blue" ou None.
+    revive_strength : 0 (rien) à 1 (ravivage fort).
     """
-    # 1. Ouverture + réduction IMMÉDIATE (avant numpy) ----------------------
-    img = Image.open(image_file)
-    img = img.convert("RGBA")
-
-    # Réduit si plus large que la largeur de travail. thumbnail garde le ratio
-    # et travaille en place, sans créer une 2e grande image.
+    # 1. Ouverture + réduction immédiate (mémoire) --------------------------
+    img = Image.open(image_file).convert("RGBA")
     if img.width > WORK_MAX_WIDTH:
-        new_h = int(img.height * WORK_MAX_WIDTH / img.width)
-        img = img.resize((WORK_MAX_WIDTH, new_h), Image.LANCZOS)
-
-    # 2. Détourage adaptatif ------------------------------------------------
-    arr = np.asarray(img, dtype=np.int16)   # asarray : pas de copie inutile
+        img = img.resize((WORK_MAX_WIDTH, int(img.height * WORK_MAX_WIDTH / img.width)),
+                         Image.LANCZOS)
+    arr = np.asarray(img, dtype=np.int16)
     h, w, _ = arr.shape
     rgb = arr[:, :, :3]
 
+    # 2. Estimation du fond SANS le pourtour (anti-bordure) -----------------
+    # on saute une marge de 3% sur chaque bord, puis on prend des patchs un peu
+    # en retrait : évite un liseré noir/cadre ajouté par une retouche.
+    m = max(3, int(min(h, w) * 0.03))
     c = 25
+    def patch(y, x):
+        return rgb[y:y + c, x:x + c].reshape(-1, 3)
     corners = np.concatenate([
-        rgb[0:c, 0:c].reshape(-1, 3),     rgb[0:c, w - c:w].reshape(-1, 3),
-        rgb[h - c:h, 0:c].reshape(-1, 3), rgb[h - c:h, w - c:w].reshape(-1, 3),
+        patch(m, m), patch(m, w - m - c),
+        patch(h - m - c, m), patch(h - m - c, w - m - c),
     ])
     bg = np.median(corners, axis=0)
     del corners
 
-    # distance au fond, en float32 (2x moins de mémoire que float64 par défaut)
+    # 3. Détourage adaptatif ------------------------------------------------
     diff = (rgb - bg).astype(np.float32)
     dist = np.sqrt((diff * diff).sum(axis=2))
     del diff
-
     alpha = np.clip((dist - tolerance) / float(feather), 0, 1) * 255
     del dist
 
-    # applique l'alpha calculé
+    # anti-bordure : on force transparent une fine bande sur tout le pourtour
+    # (là où des liserés parasites se logent), largeur = marge m.
+    if m > 0:
+        alpha[:m, :] = 0; alpha[-m:, :] = 0
+        alpha[:, :m] = 0; alpha[:, -m:] = 0
+
     out = arr.copy()
     out[:, :, 3] = alpha.astype(np.uint8)
     del arr
 
-    # 3. Autocrop sur les pixels assez opaques ------------------------------
+    # 4. Autocrop -----------------------------------------------------------
     mask = alpha > 30
-    del alpha
     ys, xs = np.where(mask)
     del mask
     if len(xs) == 0:
-        # rien détecté : on renvoie l'image réduite telle quelle
-        buf = BytesIO()
-        Image.fromarray(out.astype(np.uint8)).save(buf, format="PNG")
-        buf.seek(0)
-        return buf
+        buf = BytesIO(); Image.fromarray(out.astype(np.uint8)).save(buf, "PNG")
+        buf.seek(0); return buf
     x0, x1 = int(xs.min()), int(xs.max()) + 1
     y0, y1 = int(ys.min()), int(ys.max()) + 1
+    crop = out[y0:y1, x0:x1].astype(np.uint8)
+    alpha_crop = alpha[y0:y1, x0:x1]
+    del out, alpha
 
-    cropped = Image.fromarray(out[y0:y1, x0:x1].astype(np.uint8))
-    del out
+    # 5. RAVIVAGE couleur (optionnel) ---------------------------------------
+    if revive:
+        crop = _revive_color(crop, alpha_crop, mode=revive, strength=revive_strength)
+    del alpha_crop
 
-    # 4. Redimensionner à la largeur cible + PNG ----------------------------
-    cw, ch = cropped.size
+    # 6. Resize + PNG -------------------------------------------------------
+    im = Image.fromarray(crop)
+    cw, ch = im.size
     if cw > target_width_px:
-        new_h = max(1, int(target_width_px * ch / cw))
-        cropped = cropped.resize((target_width_px, new_h), Image.LANCZOS)
-
+        im = im.resize((target_width_px, max(1, int(target_width_px * ch / cw))),
+                       Image.LANCZOS)
     buf = BytesIO()
-    cropped.save(buf, format="PNG", optimize=True)
+    im.save(buf, format="PNG", optimize=True)
     buf.seek(0)
     return buf
+
+
+def _revive_color(rgba, alpha, mode="auto", strength=0.5):
+    import numpy as np
+    """Renforce la saturation et fonce légèrement les pixels colorés opaques.
+    Marche pour toute teinte (rouge cachet / bleu visa). Vectorisé, léger."""
+    a = rgba[:, :, :3].astype(np.float32) / 255.0
+    r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
+    mx = a.max(axis=2)
+    mn = a.min(axis=2)
+    rng = mx - mn
+
+    # ne traiter que les pixels assez opaques ET colorés (pas le bord flou)
+    opaque = alpha > 100
+
+    # détection auto de la dominante (utile surtout pour logguer / futur usage)
+    # red dominant si r>g et r>b ; blue dominant si b>r et b>g
+    # (on ne s'en sert pas pour forcer une couleur, juste pour info)
+    # Ravivage générique : augmenter la saturation = éloigner les canaux du gris.
+    # nouvelle valeur = gris + (valeur - gris) * (1 + strength)
+    gray = a.mean(axis=2, keepdims=True)
+    boosted = gray + (a - gray) * (1.0 + strength)
+    # assombrir légèrement pour un trait plus franc (×(1 - 0.15*strength))
+    boosted = boosted * (1.0 - 0.15 * strength)
+    boosted = np.clip(boosted, 0, 1)
+
+    # appliquer uniquement aux pixels opaques colorés
+    colored = (rng > 0.08) & opaque
+    a[colored] = boosted[colored]
+
+    rgba[:, :, :3] = (a * 255).astype(np.uint8)
+    return rgba
 
 def resize_image(image_path, new_width=295, quality=80, return_height=False,
                  id_card=False, ratio=(35, 40), vertical_anchor=0.4):
