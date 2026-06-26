@@ -10,6 +10,7 @@ from datetime import datetime, time
 from io import BytesIO
 from urllib.parse import quote
 
+import numpy as np
 from django.conf import settings
 from django.db.models import Q, Model
 from PIL import Image, ImageFile
@@ -644,7 +645,6 @@ WORK_MAX_WIDTH = 1000
 
 def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25,
                    revive="auto", revive_strength=0.5):
-    import numpy as np
     """Détoure + (option) ravive un cachet/visa. Renvoie BytesIO PNG transparent.
 
     revive : "auto" (détecte rouge/bleu dominant), "red", "blue" ou None.
@@ -721,7 +721,6 @@ def prepare_cachet(image_file, target_width_px=600, tolerance=60, feather=25,
 
 
 def _revive_color(rgba, alpha, mode="auto", strength=0.5):
-    import numpy as np
     """Renforce la saturation et fonce légèrement les pixels colorés opaques.
     Marche pour toute teinte (rouge cachet / bleu visa). Vectorisé, léger."""
     a = rgba[:, :, :3].astype(np.float32) / 255.0
@@ -751,22 +750,87 @@ def _revive_color(rgba, alpha, mode="auto", strength=0.5):
     rgba[:, :, :3] = (a * 255).astype(np.uint8)
     return rgba
 
+"""
+=============================================================================
+ resize_image : avec recadrage "cover" avec ANCRAGE VERTICAL ADAPTATIF
+=============================================================================
+ Avec un vertical_anchor FIXE (0.4), le sommet du crâne
+ peut être parfois coupé selon la prise de vue (impossible à contrôler à l'upload).
+
+ Solution : quand id_card=True, on DÉTECTE le sommet de la tête (passage du
+ fond uni au sujet) et on en déduit un ancrage qui ne coupe jamais la tête.
+   - pur numpy sur une image réduite à 120px -> ultra léger (Render OK)
+   - basé sur le CONTRASTE fond/sujet, PAS sur la couleur de peau
+     -> aucun biais selon le teint (essentiel)
+   - fallback sur 0.4 si rien n'est détecté de fiable.
+
+ vertical_anchor :
+   - None (défaut)  -> ancrage AUTO adaptatif
+   - une valeur 0..1 -> forçage manuel
+=============================================================================
+"""
+
+
+def _detect_head_anchor(img, fallback=0.4):
+    """Renvoie un vertical_anchor (0=haut..1=bas) calé sur le sommet de la tête.
+    Analyse une version réduite à 120px de large (coût mémoire négligeable)."""
+    try:
+        small = img.convert("RGB").resize((120, max(1, int(120 * img.height / img.width))))
+        a = np.asarray(small, dtype=np.float32)
+        h, w, _ = a.shape
+        if h < 10:
+            return fallback
+
+        # couleur du fond = médiane des 3 premières rangées (haut de l'image)
+        bg = np.median(a[0:3].reshape(-1, 3), axis=0)
+
+        dist_to_bg = np.sqrt(((a - bg) ** 2).sum(axis=2))   # éloignement au fond
+        row_dist = dist_to_bg.mean(axis=1)
+        row_var = np.abs(np.diff(a, axis=1)).sum(axis=2).mean(axis=1)  # texture horizontale
+
+        dist_thr = max(25.0, float(row_dist.max()) * 0.25)
+        var_thr = max(8.0, float(row_var.max()) * 0.20)
+
+        head_row = None
+        for y in range(h):
+            if row_dist[y] > dist_thr and row_var[y] > var_thr:
+                window = slice(y, min(h, y + 4))
+                if (row_dist[window] > dist_thr).mean() > 0.6:
+                    head_row = y
+                    break
+        del a, dist_to_bg, row_dist, row_var
+        if head_row is None:
+            return fallback
+        head_frac = head_row / h
+        # on veut garder ~4% d'air au-dessus du crâne -> ancrage = head_frac - 0.04
+        return float(min(0.55, max(0.0, head_frac - 0.04)))
+    except Exception:
+        return fallback
+
+
 def resize_image(image_path, new_width=295, quality=80, return_height=False,
-                 id_card=False, ratio=(35, 40), vertical_anchor=0.4):
+                 id_card=False, ratio=(35, 40), vertical_anchor=None):
     """Redimensionne une image.
 
-    id_card=True : recadrage "cover" vers la boîte de ratio `ratio` (rogne le
-    surplus, sans bande blanche). `vertical_anchor` (0=haut, 0.5=centre) règle
-    le point de rognage vertical : 0.4 garde un peu plus le haut (visages).
+    id_card=True : recadrage "cover" vers la boîte `ratio` (rogne le surplus,
+      sans bande blanche). L'ancrage vertical est AUTO par défaut
+      (vertical_anchor=None) : il détecte le sommet de la tête pour ne jamais
+      le couper. Passer une valeur 0..1 force un ancrage manuel.
     Sinon : redimensionnement classique par largeur (comportement d'origine).
     """
     img = Image.open(image_path)
 
     if id_card:
         img = img.convert("RGB")
-        # Boîte cible en pixels : on part du ratio demandé, mis à l'échelle sur
-        # une base nette (300 dpi). Ex ratio (35,40) -> 413 x 472 ; (26,30) -> 307 x 354.
-        base = 11.81  # ~ pixels par mm à 300 dpi (300/25.4)
+
+        # ancrage : auto adaptatif si non fourni, sinon valeur forcée
+        if vertical_anchor is None:
+            anchor = _detect_head_anchor(img, fallback=0.4)
+        else:
+            anchor = float(vertical_anchor)
+
+        # boîte cible en pixels (300 dpi). Ex (35,40)->413x472 ; (26,30)->307x354
+        base = 11.81
         tw = int(ratio[0] * base)
         th = int(ratio[1] * base)
 
@@ -774,21 +838,18 @@ def resize_image(image_path, new_width=295, quality=80, return_height=False,
         target_ar = tw / th
         src_ar = src_w / src_h
 
-        # COVER : on choisit l'échelle qui REMPLIT la boîte (le plus grand facteur),
-        # puis on rogne ce qui dépasse.
+        # COVER : échelle qui REMPLIT la boîte, puis rognage du surplus
         if src_ar > target_ar:
-            # image trop large -> on cale sur la hauteur, on rogne les côtés
-            scale = th / src_h
+            scale = th / src_h     # trop large -> cale hauteur, rogne côtés
         else:
-            # image trop haute -> on cale sur la largeur, on rogne haut/bas
-            scale = tw / src_w
+            scale = tw / src_w     # trop haute -> cale largeur, rogne haut/bas
         new_w = max(tw, int(src_w * scale + 0.5))
         new_h = max(th, int(src_h * scale + 0.5))
         img = img.resize((new_w, new_h), Image.LANCZOS)
 
-        # Rognage centré horizontalement, ancré vers le haut verticalement.
+        # rognage centré horizontalement, ancré selon `anchor` verticalement
         left = int((new_w - tw) / 2)
-        top = int((new_h - th) * vertical_anchor)
+        top = int((new_h - th) * anchor)
         img = img.crop((left, top, left + tw, top + th))
 
         buffer = BytesIO()
@@ -796,6 +857,7 @@ def resize_image(image_path, new_width=295, quality=80, return_height=False,
         buffer.seek(0)
         return buffer
 
+    # --- comportement d'origine (non id_card) ---
     img = img.convert("RGB")
     width, height = img.size
     aspect_ratio = height / width
@@ -816,7 +878,6 @@ def truncate_str(pdf, str_value: str, max_with: float):
         truncate_value = str_value[:i] + "."
         if pdf.get_string_width(truncate_value) <= max_with:
             return truncate_value
-
 
 
 def _safe_filename(name):
