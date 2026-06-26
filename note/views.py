@@ -1337,7 +1337,7 @@ class ReportCard(FPDF):
         self.set_title(data['filename'])
         school_data = data['school_data']
         school_data['logo'] = resize_image(school_data['logo'], new_width=308)
-        self.student_img = resize_image("static/image/student.jpg")
+        self.default_student_photo = resize_image("static/image/student.jpg", id_card=True, ratio=(26, 30))
         self.trimestre, annee = data.pop('trimestre'), data.pop('annee')
         moy_gen = data['moyenne_generale']
         min_max = data['min-max']
@@ -1512,9 +1512,9 @@ class ReportCard(FPDF):
         table = Table(pdf, line_height=4, col_widths=widths, text_align="LEFT", first_row_as_headings=False,
                       markdown=True)
         row = table.row()
-        row.cell(
-            img=resize_image(student_data['photo']) if student_data['photo'] else self.student_img,
-            padding=(2, 2, 2, 2), rowspan=4, border=CellBordersLayout.NONE)
+        photo = resize_image(student_data['photo'], id_card=True, ratio=(26, 30)) if student_data[
+            'photo'] else self.default_student_photo
+        row.cell(img=photo, padding=1, rowspan=4, border=CellBordersLayout.NONE)
         row.cell(f"Nom(s) et Prénom(s) de l'élève : **{student_data['nom']}**", colspan=3)
         row.cell(f"Classe : **{classroom_data['label']}**")
 
@@ -1655,107 +1655,6 @@ class ReportCard(FPDF):
         trn.cell(f"**MOYENNE : {moyenne if moyenne else '/'}**", align="L", colspan=3)
         table.render()
         # trim1 trim2 trim3
-
-    class TMarksReport(FPDF):
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(orientation='L')
-            self.add_font('inter', '', settings.INTER_REGULAR)
-            self.add_font('inter', 'I', settings.INTER_ITALIC)
-            self.add_font('inter', 'B', settings.INTER_BOLD)
-            self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
-            self.alias_nb_pages()
-            self.set_margins(6, 6, 6)
-            self.set_auto_page_break(auto=True, margin=6)
-            self.set_font('inter', '', 8)
-            self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
-            self.data = kwargs.pop('data')
-            self.school = self.data['school_data']
-            self.add_page()
-            base_header(self, mode='Pa')
-            base_infos(self, f"RELEVÉ DE NOTES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
-                       self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa')
-            self.marks_table()
-
-        def truncate_matiere_label(self, label_matiere, max_lines: int, max_width: int):
-            if int(self.get_string_width(label_matiere)) <= (max_width * max_lines) - 3:
-                return label_matiere
-            labels = label_matiere.split()
-            matiere_label = ""
-            i = 0
-            j = 1
-            while i < len(labels) and j <= max_lines:
-                label = labels[i]
-                if label in ('du', 'de', 'le', 'la', 'et'):
-                    if i + 1 < len(labels):
-                        label += f" {labels[i + 1]}"
-                        i += 1
-                matiere_label += truncate_str(self, label, max_with=max_width - 3)
-                i += 1
-                if j < max_lines:
-                    matiere_label += "\n"
-                j += 1
-            return matiere_label
-
-        def marks_table(self):
-            self.ln()
-            n = len(self.data['matieres_data'])
-            largeur = ((((12, 11)[n == 10], 10)[n == 11], 9)[14 > n >= 12], 8)[n >= 14]
-            w = 285 - 7 - (n * largeur * 2)
-            col_widths = [7, w]
-            header = list()
-            for matiere in self.data['matieres_data']:
-                header.append(self.truncate_matiere_label(
-                    matiere['label'], max_lines=self.data['max_words'] if self.data['max_words'] < 3 else 3,
-                    max_width=(largeur * 2) - 3)
-                )
-                col_widths.append(largeur)
-                col_widths.append(largeur)
-
-            table = Table(self, line_height=4, col_widths=col_widths, text_align="CENTER", markdown=True,
-                          repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
-            th = table.row()
-            self.set_fill_color(220)
-            th.cell("**N°**", rowspan=2)
-            th.cell("**Nom(s) et Prénom(s)**", rowspan=2)
-            for head in header:
-                th.cell(f"**{head}**", colspan=2)
-
-            th1 = table.row()
-
-            for _ in header:
-                th1.cell(f"**{self.data['evalx'][0]}**")
-                th1.cell(f"**{self.data['evalx'][1]}**")
-
-            self.set_fill_color(0)
-            students = self.data['students_data']
-            for i, student in enumerate(students):
-                row = table.row()
-                row.cell(f"{i + 1}")
-                nom = student['nom']
-                padding = 0
-                if int(self.get_string_width(nom)) <= w - 3:
-                    padding = (2, 0)
-                elif int(self.get_string_width(nom + ".")) >= (w * 2) - 4:
-                    nom = truncate_str(self, str_value=nom, max_with=(w * 2) - 5)
-                row.cell(nom, align='L', padding=padding)
-                student_notes = student['matieres_data']
-                for matiere in self.data['matieres_data']:
-                    note1 = "/" if not student_notes.get(matiere['id']) \
-                        else student_notes[matiere['id']].get('note1', '/')
-                    note2 = "/" if not student_notes.get(matiere['id']) \
-                        else student_notes[matiere['id']].get('note2', '/')
-                    row.cell(f"{note1}")
-                    row.cell(f"{note2}")
-            table.render()
-
-        def footer(self):
-            self.set_y(-6)
-            self.line(6, 204, 291, 204)
-            self.set_font('inter', 'I', 7)
-            self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-            self.cell(142.5, 6, f"RELEVÉ DE NOTES {self.data['trimestre'].title()} ({self.data['label']}) - Page "
-                                f"{self.page_no()}/{{nb}}", align='R')
 
     def student_notes_without_competences(self, pdf, matieres_data, total_coef, total_notes, student_notes, moyenne,
                                           groupes):

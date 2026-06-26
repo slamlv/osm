@@ -1806,18 +1806,18 @@ class StudentsIdentityCards(FPDF):
             self.cell(w=95, h=3, text=f"__The Principal", align='C', markdown=True)
             # --- Cachet (rond établissement) et Visa (nominatif + signature) ---
             paste_stamp(self, self._cachet_bytes,  # noqa: F821
-                        x=x + 3, y=y + 32, w=42)
+                        x=x + 3, y=y + 32, w=40)
             paste_stamp(self, self._visa_bytes,  # noqa: F821
                         x=x + 45, y=y + 56, w=45)
             if self._visa_bytes and self._cachet_bytes:
-                self.set_xy(x + 50, y + 43)
+                l = self.get_string_width(f"**Fait à {self.data['school_data']['localite']}, le ",
+                                      markdown=True)
+                self.set_xy(x + 39 + (l / 2), y + 44)
                 self.set_font_size(9)
                 self.set_text_color(255, 0, 0)
-                self.cell(w=45, h=3, text=f"**{format_date(datetime.now(), format="short", locale="fr_FR")}**",
+                self.cell(w=18, h=3, text=f"**{format_date(datetime.now(), format="short", locale="fr_FR")}**",
                           align='L', markdown=True)
                 self.set_text_color(0)
-            """self.image(BytesIO(self._cachet_bytes), x=x + 50, y=y + 40,
-                       w=45, keep_aspect_ratio=True)"""
             self.set_font_size(7)
             self.line(x1=110, y1=y+77.5, x2=205, y2=y+77.5)
             self.set_xy(x, y + 78)
