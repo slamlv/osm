@@ -1,4 +1,5 @@
 # Create your views here.
+import os
 from io import BytesIO
 
 from django.urls import reverse
@@ -8,7 +9,7 @@ from authentification.models import TrancheHoraire, School, User
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
     base_header, base_infos, delete_image, zip_pdfs_response, check_notes
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.forms import model_to_dict
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
@@ -28,6 +29,7 @@ import datetime
 from collections import OrderedDict
 from django.core import signing
 from django.forms import ValidationError
+from PIL import Image, ImageDraw, ImageFile
 
 
 """
@@ -1098,14 +1100,456 @@ def add_fonts(pdf):
     pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
 
 
+class ClassAlbum(LoggedAdminView):
+    template_name = "class_photo_album.html"
+    title = "Album Photo de Classe"
+
+    def get(self, *args, **kwargs):
+        select_form = SelectForm(context={
+            "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': None})
+        context = {'title': self.title, 'select_form': select_form}
+        return render(self.request, self.template_name, context)
+
+    @staticmethod
+    def build_pdf_or_reason(classroom, annee, school_data):
+        reason = check_notes(classroom, None, marks_sheet=True)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        data = classroom.class_album_data
+        data['school_year'] = annee
+        data['school_data'] = school_data
+        return ClassPhotoAlbum(data=data)
+
+    def post(self, *args, **kwargs):
+        classrooms = (
+            ClassRoom.objects.prefetch_related(
+                Prefetch(
+                    'enseignement',
+                    queryset=Enseignements.objects.select_related('matiere__sujet', 'enseignant')
+                ),
+                'students')
+            .select_related('titulaire')
+        )
+        annee = school_year()
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        principal = Personnel.objects.filter(poste="Chef d'Établissement").first()
+        school_data = {
+            'nom': school.nom,
+            'name': school.name,
+            'logo': school.logo,
+            'principal': principal
+        }
+        selected = self.request.POST.get("classroom")
+        filename = "Album Photo"
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, annee, school_data)
+
+            def namer(clsrm):
+                return f"{clsrm.code} {filename}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Albums Photos - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = classrooms.get(pk=int(selected))
+        result = self.build_pdf_or_reason(classroom, annee, school_data)
+        if isinstance(result, str):
+            return JsonResponse({'success': False, 'message': result})
+        return pdf_response(result, f"{filename} {classroom.code}.pdf")
+
+
+"""
+=============================================================================
+ ClassPhotoAlbum — Générateur PDF "Album de classe" (souvenir) pour OSM
+=============================================================================
+ Format : A4 PAYSAGE. Page 1 = équipe pédagogique (titulaire en vedette,
+ = teachers[0]), pages suivantes = élèves. Grille uniforme, photos en cover
+ à coins arrondis (clipping parfait), code couleur par genre (M=bleu, F=rose),
+ en-tête répété (logo établissement des DEUX côtés) + bande tricolore,
+ compteur d'élèves, pied de page paginé. Optimisé mémoire (pour Render).
+
+ ENTRÉE (dict) :
+   {
+     'school_data'   : {'nom','name','logo','principal', ...},
+     'classroom_data': {'nom','effectif','filles','garcons'},
+     'students_data' : [{'nom','prenom','sexe'('M'/'F'),'photo'(url), ...}, ...],
+     'school_year'   : année scolaire courante,
+     'teachers'      : [{'nom','prenom','matiere','sexe','photo'(url), ...}, ...],
+                        # teachers[0] = professeur titulaire
+   }
+
+
+ DÉPENDANCES :
+   - resize_image(...) : cover + ancrage visage auto (id_card=True)
+   - settings.INTER_REGULAR / INTER_BOLD / INTER_ITALIC : chemins .ttf
+   - 4 silhouettes par défaut dans static
+=============================================================================
+"""
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+# --- Couleurs (RGB) ----------------------------------------------------------
+GREEN  = (10, 125, 63)
+RED    = (210, 31, 60)
+YELLOW = (249, 214, 22)
+NAVY   = (10, 61, 98)
+DARK   = (21, 35, 59)
+GREY   = (122, 134, 148)
+LIGHTG = (200, 222, 210)
+BLUEB  = (47, 111, 176)    # bordure garçon / homme
+PINKB  = (214, 88, 143)    # bordure fille / femme
+PHBG   = (205, 214, 226)
+
+
+class ClassPhotoAlbum(FPDF):
+    # ----- disposition -----
+    TEACHERS_COLS, TEACHERS_ROWS = 5, 3   # 15 / page
+    STUDENTS_COLS, STUDENTS_ROWS = 6, 3   # 18 / page
+
+    def __init__(self, data):
+        super().__init__(orientation="L", unit="mm", format="A4")
+        self.alias_nb_pages()
+        self.data = data
+        self.static_root = os.path.join(settings.BASE_DIR, 'static')
+        self.resize_func = resize_image
+        self._inter_bold_path = settings.INTER_BOLD
+        self.set_auto_page_break(False)
+        self.set_margins(0, 0, 0)
+
+        add_fonts(self)
+
+        # caches
+        self._logo_bytes = None       # logo établissement préchargé une fois
+        self._default_cache = {}      # silhouettes par défaut préchargées
+
+        # géométrie page A4 paysage
+        self.PW, self.PH = 297.0, 210.0
+        self.MX = 12.0                # marge latérale
+        self.TOP = 8.0
+        self.build()
+
+    # =====================================================================
+    #  API PUBLIQUE
+    # =====================================================================
+    def build(self):
+        """Génère tout l'album"""
+        teachers = self.data.get("teachers", []) or []
+        students = self.data.get("students_data", []) or []
+
+        # --- pages enseignants ---
+        per = self.TEACHERS_COLS * self.TEACHERS_ROWS
+        t_pages = [teachers[i:i+per] for i in range(0, max(1, len(teachers)), per)] or [[]]
+        # --- pages élèves ---
+        pers = self.STUDENTS_COLS * self.STUDENTS_ROWS
+        s_pages = [students[i:i+pers] for i in range(0, len(students), pers)] or [[]]
+
+        if teachers:
+            for chunk in t_pages:
+                self.add_page()
+                self._render_header(section="L'ÉQUIPE PÉDAGOGIQUE", show_count=False)
+                self._render_grid(chunk, kind="teacher")
+                self._render_footer()
+
+        for chunk in s_pages:
+            self.add_page()
+            self._render_header(section="LES ÉLÈVES", show_count=True)
+            self._render_grid(chunk, kind="student")
+            self._render_footer()
+
+    # =====================================================================
+    #  EN-TÊTE
+    # =====================================================================
+    def _render_header(self, section, show_count):
+        sd = self.data.get("school_data", {})
+        cd = self.data.get("classroom_data", {})
+        cx = self.PW / 2
+        y = self.TOP
+
+        # logos établissement des DEUX côtés
+        logo = self._get_logo_bytes()
+        lw = 20
+        if logo:
+            try:
+                self.image(logo, x=self.MX, y=y, w=lw, h=lw)
+                self.image(logo, x=self.PW - self.MX - lw, y=y, w=lw, h=lw)
+            except Exception:
+                pass
+
+        # textes centrés
+        self.set_text_color(*NAVY)
+        self.set_font("inter", "B", 16)
+        self._centered(sd.get("nom", ""), y+1, cx)
+        self.set_font("inter", "B", 9)
+        self.set_text_color(*GREY)
+        self._centered(sd.get("name", ""), y+7.5, cx)
+        principal = sd.get("principal", "")
+        if principal:
+            self.set_font("inter", "", 8)
+            self._centered(f"Le Chef d'établissement / The Principal : {principal}", y+12, cx)
+
+        # nom de classe (vert) + année scolaire dessous
+        self.set_font("inter", "B", 22)
+        self.set_text_color(*GREEN)
+        cls = cd.get("nom", "")
+        self._centered(cls, y+18, cx, h=10)
+        self.set_font("inter", "B", 8)
+        self.set_text_color(*GREY)
+        yr = self.data.get("school_year", "")
+        self._centered(f"ANNÉE SCOLAIRE {yr}".upper(), y+26, cx)
+
+        # bande tricolore (rallongée)
+        fy = y + 31
+        fw = 95.0
+        fx = cx - fw/2
+        seg = fw/3
+        self.set_fill_color(*GREEN);  self.rect(fx, fy, seg, 1.8, "F")
+        self.set_fill_color(*RED);    self.rect(fx+seg, fy, seg, 1.8, "F")
+        self.set_fill_color(*YELLOW); self.rect(fx+2*seg, fy, seg, 1.8, "F")
+
+        # compteur d'élèves (page élèves)
+        if show_count:
+            eff = cd.get("effectif", len(self.data.get("students_data", [])))
+            self.set_font("inter", "B", 20)
+            self.set_text_color(*GREEN)
+            self.set_xy(self.PW - self.MX - 22.5, y+21)
+            self.cell(25, 8, str(eff), align="C")
+            self.set_font("inter", "", 8)
+            self.set_text_color(*GREY)
+            self.set_xy(self.PW - self.MX - 22.5, y+28)
+            self.cell(25, 4, "Élèves / Students", align="C")
+
+        # titre de section + filet décoratif
+        self.set_font("inter", "B", 12)
+        self.set_text_color(*GREEN)
+        self._centered(section, fy+4, cx)
+        self.set_draw_color(*LIGHTG)
+        self.set_line_width(0.3)
+        sw = self.get_string_width(section) + 30
+        self.line(cx - sw/2, fy+10.5, cx + sw/2, fy+10.5)
+
+        # mémorise le Y de départ de la grille
+        self._grid_top = fy + 14
+
+    # =====================================================================
+    #  GRILLE
+    # =====================================================================
+    def _render_grid(self, items, kind):
+        if kind == "teacher":
+            cols, rows, gut = self.TEACHERS_COLS, self.TEACHERS_ROWS, 6.0
+            cap_h = 11.0
+        else:
+            cols, rows, gut = self.STUDENTS_COLS, self.STUDENTS_ROWS, 5.0
+            cap_h = 9.0
+
+        gx = self.MX
+        gy = self._grid_top
+        gw = self.PW - 2*self.MX
+        cell_w = (gw - (cols-1)*gut) / cols
+        avail_h = self.PH - 10.0 - gy
+        cell_h = (avail_h - (rows-1)*4.0) / rows
+
+        # photo en portrait 3:4, centrée dans la cellule
+        ph_h = cell_h - cap_h
+        ph_w = ph_h * 3/4
+        if ph_w > cell_w:
+            ph_w = cell_w
+            ph_h = ph_w * 4/3
+
+        for i, item in enumerate(items):
+            r, c = divmod(i, cols)
+            x = gx + c*(cell_w+gut) + (cell_w-ph_w)/2
+            yy = gy + r*(cell_h+4.0)
+            is_titulaire = (self.data['has_titulaire'] and kind == "teacher" and self.page_no() == 1 and i == 0)
+            self._render_cell(item, x, yy, ph_w, ph_h, kind, is_titulaire)
+            # légende
+            self._render_caption(item, x+ph_w/2, yy+ph_h+1.5, ph_w+gut, kind, is_titulaire)
+
+    def _render_cell(self, item, x, y, w, h, kind, is_titulaire):
+        sexe = (item.get("sexe") or "M").upper()
+        if is_titulaire:
+            border = GREEN; bw = 8
+        else:
+            border = PINKB if sexe == "F" else BLUEB; bw = 6
+
+        # charge la photo (url) ou le placeholder
+        img = self._load_photo(item, kind, sexe)
+        # cover au ratio 3:4 via ta resize_func (ancrage visage auto)
+        px_w, px_h = int(w*11.81), int(h*11.81)   # ~300 dpi
+        try:
+            if self.resize_func:
+                buf = self.resize_func(img, id_card=True, ratio=(30, 40))
+                src = Image.open(buf)
+            else:
+                src = Image.open(img) if isinstance(img, str) else Image.open(BytesIO(img))
+        except Exception:
+            src = self._placeholder_image(kind, sexe)
+
+        rounded = self._rounded_image(src, px_w, px_h, radius=int(px_w*0.09),
+                                      border_col=border, border_w=bw,
+                                      badge=("TITULAIRE" if is_titulaire else None))
+        bio = BytesIO(); rounded.save(bio, format="PNG"); bio.seek(0)
+        self.image(bio, x=x, y=y, w=w, h=h)
+
+    def _render_caption(self, item, cx, y, maxw, kind, is_titulaire):
+        nom = (item.get("nom") or "").strip()
+        prenom = (item.get("prenom") or "").strip()
+        # NOM en gras (auto-shrink si trop long), puis prénom / matière
+        self.set_text_color(*(GREEN if is_titulaire else DARK))
+        size = self._fit_size(nom, maxw, base=9, min_size=6, style="B")
+        self.set_font("inter", "B", size)
+        self.set_xy(cx-maxw/2, y)
+        self.cell(maxw, 4, nom, align="C")
+        if kind == "teacher":
+            mat = (item.get("matiere") or "").strip()
+            if mat:
+                self.set_text_color(*GREEN)
+                s2 = self._fit_size(mat, maxw, base=8, min_size=6)
+                self.set_font("inter", "B", s2)
+                self.set_xy(cx-maxw/2, y+4.2)
+                self.cell(maxw, 3.5, mat, align="C")
+        else:
+            if prenom:
+                self.set_text_color(*GREY)
+                s2 = self._fit_size(prenom, maxw, base=8, min_size=6)
+                self.set_font("inter", "", s2)
+                self.set_xy(cx-maxw/2, y+4.2)
+                self.cell(maxw, 3.5, prenom, align="C")
+
+    # =====================================================================
+    #  PIED DE PAGE
+    # =====================================================================
+    def _render_footer(self):
+        cd = self.data.get("classroom_data", {})
+        yr = self.data.get("school_year", "")
+        self.set_draw_color(230, 235, 240)
+        self.set_line_width(0.2)
+        self.line(self.MX, self.PH-8, self.PW-self.MX, self.PH-8)
+        self.set_font("inter", "", 7)
+        self.set_text_color(*GREY)
+        left = f"Omega School Manager • Album de classe • {cd.get('nom','')} {yr}"
+        self.set_xy(self.MX, self.PH-7)
+        self.cell(150, 4, left, align="L")
+        right = f"Page {self.page_no()} / {{nb}}"
+        self.set_xy(self.PW-self.MX-50, self.PH-7)
+        self.cell(50, 4, right, align="R")
+
+    # =====================================================================
+    #  HELPERS IMAGE
+    # =====================================================================
+    def _rounded_image(self, src_img, w_px, h_px, radius, border_col, border_w, badge=None):
+        """Coins arrondis + bordure SANS débord d'image (photo masquée EN RETRAIT
+        de la bordure) + badge optionnel en police Inter. Renvoie une Image RGBA."""
+        photo = src_img.convert("RGB").resize((w_px, h_px), Image.LANCZOS)
+
+        out = Image.new("RGBA", (w_px, h_px), (0, 0, 0, 0))
+        od = ImageDraw.Draw(out)
+        # 1) bordure = rectangle arrondi PLEIN (tout le cadre, couleur de bordure)
+        od.rounded_rectangle([0, 0, w_px-1, h_px-1], radius=radius, fill=border_col)
+        # 2) photo collée EN RETRAIT de border_w, masque de rayon réduit
+        inset = border_w
+        inner_w, inner_h = w_px-2*inset, h_px-2*inset
+        inner_r = max(1, radius-inset)
+        photo_in = photo.resize((inner_w, inner_h), Image.LANCZOS)
+        mask = Image.new("L", (inner_w, inner_h), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, inner_w-1, inner_h-1], radius=inner_r, fill=255)
+        out.paste(photo_in, (inset, inset), mask)
+        # 3) masque global arrondi -> coins extérieurs transparents (voient le fond)
+        gmask = Image.new("L", (w_px, h_px), 0)
+        ImageDraw.Draw(gmask).rounded_rectangle([0, 0, w_px-1, h_px-1], radius=radius, fill=255)
+        out.putalpha(gmask)
+
+        if badge:
+            bh = int(h_px*0.13)
+            band = Image.new("RGBA", (w_px, bh), (GREEN[0], GREEN[1], GREEN[2], 235))
+            bd = ImageDraw.Draw(band)
+            try:
+                from PIL import ImageFont
+                fnt = ImageFont.truetype(self._inter_bold_path, int(bh*0.46)) \
+                      if self._inter_bold_path else ImageFont.load_default()
+            except Exception:
+                from PIL import ImageFont
+                fnt = ImageFont.load_default()
+            bb = bd.textbbox((0, 0), badge, font=fnt)
+            bd.text(((w_px-(bb[2]-bb[0]))//2, (bh-(bb[3]-bb[1]))//2 - bb[1]), badge, font=fnt, fill="white")
+            bm = Image.new("L", (w_px, bh), 0)
+            ImageDraw.Draw(bm).rounded_rectangle([0, -radius, w_px-1, bh-1], radius=inner_r, fill=255)
+            out.paste(band, (0, h_px-bh), bm)
+        return out
+
+    def _load_photo(self, item, kind, sexe):
+        """Renvoie une source image exploitable par resize_func.
+        Photo via URL (déjà gérée par resize_image dans OSM) sinon placeholder."""
+        url = item.get("photo")
+        if url:
+            return url   # resize_image sait ouvrir une URL (comme dans le reste d'OSM)
+        return self._placeholder_path(kind, sexe)
+
+    def _placeholder_path(self, kind, sexe):
+        if kind == "teacher":
+            name = "default_enseignant_f.png" if sexe == "F" else "default_enseignant_h.png"
+        else:
+            name = "default_eleve_fille.png" if sexe == "F" else "default_eleve_garcon.png"
+        return os.path.join(self.static_root, "image", "album", name)
+
+    def _placeholder_image(self, kind, sexe):
+        p = self._placeholder_path(kind, sexe)
+        try:
+            return Image.open(p)
+        except Exception:
+            return Image.new("RGB", (300, 400), PHBG)
+
+    def _get_logo_bytes(self):
+        if self._logo_bytes is not None:
+            return self._logo_bytes or None
+        sd = self.data.get("school_data", {})
+        url = sd.get("logo")
+        if not url:
+            self._logo_bytes = b""
+            return None
+        try:
+            # logo via URL : on précharge une fois en bytes (évite "seek of closed file")
+            if self.resize_func:
+                buf = self.resize_func(url, new_width=200)   # léger
+                self._logo_bytes = buf.getvalue()
+            else:
+                self._logo_bytes = url   # laisser fpdf gérer si chemin local
+        except Exception:
+            self._logo_bytes = b""
+        return self._logo_bytes or None
+
+    # =====================================================================
+    #  HELPERS TEXTE
+    # =====================================================================
+    def _centered(self, txt, y, cx, h=5):
+        if not txt:
+            return
+        w = self.get_string_width(txt)
+        self.set_xy(cx - w/2, y)
+        self.cell(w, h, txt, align="C")
+
+    def _fit_size(self, text, max_w, base, min_size, style=""):
+        """Réduit la taille de police jusqu'à ce que le texte tienne dans max_w."""
+        if not text:
+            return base
+        size = base
+        self.set_font("inter", style, size)
+        while self.get_string_width(text) > max_w - 2 and size > min_size:
+            size -= 0.1
+            self.set_font("inter", style, size)
+        return size
+
+
 class Statistiques(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__(orientation='L')
-        self.add_font('inter', '', settings.INTER_REGULAR)
-        self.add_font('inter', 'I', settings.INTER_ITALIC)
-        self.add_font('inter', 'B', settings.INTER_BOLD)
-        self.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
+        add_fonts(self)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
@@ -1277,7 +1721,7 @@ class Statistiques(FPDF):
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(142.5, 6, f"STATISTIQUES {self.data['trimestre'].title()} ({self.data['label']}) - Page "
+        self.cell(142.5, 6, f"STATISTIQUES {self.data['trimestre'].title()} • {self.data['label']} • Page "
                              f"{self.page_no()}/{{nb}}", align='R')
 
 
@@ -1349,7 +1793,7 @@ class PDFMarksSheet(FPDF):
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(99, 6, f"FICHE DE NOTES ({self.classroom.code}) - Page {self.page_no()}/{{nb}}", align='R')
+        self.cell(99, 6, f"FICHE DE NOTES • {self.classroom.code} • Page {self.page_no()}/{{nb}}", align='R')
 
 
 class ClassroomsLists(LoggedAdminView):
@@ -1456,7 +1900,7 @@ class ClassroomList(FPDF):
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(100, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(98, 6, f"LISTE DES ÉLÈVES ({self.classroom.code}) - Page {self.page_no()}/{{nb}}", align='R')
+        self.cell(98, 6, f"LISTE DES ÉLÈVES • {self.classroom.code} • Page {self.page_no()}/{{nb}}", align='R')
 
 
 class ClassroomTimeTable(FPDF):
@@ -1542,7 +1986,7 @@ class ClassroomTimeTable(FPDF):
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le"
                              f" {datetime.datetime.now().strftime('%d-%m-%Y à %H:%M')}", align='L')
-        title = "EMPLOI DU TEMPS" + f" - {self.data['classroom']}" if 'classroom' in self.data.keys() else ""
+        title = "EMPLOI DU TEMPS" + f" • {self.data['classroom']}" if 'classroom' in self.data.keys() else ""
         self.cell(142.5, 6, f"{title}", align='R')
 
 

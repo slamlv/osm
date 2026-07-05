@@ -338,6 +338,7 @@
                 {% endif %}
                 {% if user.is_admin or user.is_titulaire %}
                 <li><a class="dropdown-item" href="{% url 'end_year_assignment' %}"><i class="bi bi-signpost-2 me-2 text-info"></i>Décisions de fin d'année</a></li>
+                <li><a class="dropdown-item" href="{% url 'class_album' %}"><i class="bi bi-image me-2 text-info"></i>Album Photo de Classe</a></li>
                 {% endif %}
                 </ul>
             </li>
@@ -461,7 +462,7 @@
             <div class="d-flex align-items-center gap-2 mb-2">
               <img src="{% static 'image/logo.png' %}" alt="OSM" width="28" height="28"
                    style="border-radius:6px;">
-              <span class="footer-brand">OmegaSchoolManager</span>
+              <span class="footer-brand">Oméga School Manager</span>
             </div>
             <p class="footer-tagline mb-0">Un outil de gestion au service de l'éducation.</p>
           </div>
@@ -506,7 +507,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        © 2025-{% now "Y" %} <strong class="text-warning">OmegaSchoolManager</strong>. Tous droits réservés.
+        © 2025-{% now "Y" %} <strong class="text-warning">Oméga School Manager</strong>. Tous droits réservés.
       </div>
     </footer>
     {% endblock %}

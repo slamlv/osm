@@ -1217,7 +1217,7 @@ class ExamRecord(FPDF):
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(99, 6, f"PROCÈS VERBAL {self.data['trimestre'].title()} ({self.data['label']}) - Page "
+        self.cell(99, 6, f"PROCÈS VERBAL {self.data['trimestre'].title()} • {self.data['label']} • Page "
                           f"{self.page_no()}/{{nb}}", align='R')
 
 
@@ -1319,7 +1319,7 @@ class TMarksReport(FPDF):
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(142.5, 6, f"RELEVÉ DE NOTES {self.data['trimestre'].title()} ({self.data['label']}) - Page "
+        self.cell(142.5, 6, f"RELEVÉ DE NOTES {self.data['trimestre'].title()} • {self.data['label']} • Page "
                              f"{self.page_no()}/{{nb}}", align='R')
 
 
@@ -1393,10 +1393,10 @@ class ReportCard(FPDF):
         if self.nb_pages > 1:
             page = (self.nb_pages, self.page_no() % self.nb_pages)[self.page_no() % self.nb_pages != 0]
             if page != 1:
-                self.cell(98, 6, f"BULLETIN {self.trimestre.title()} ({self.nom}) - Page {page}/{self.nb_pages}",
+                self.cell(98, 6, f"BULLETIN {self.trimestre.title()} • {self.nom} • Page {page}/{self.nb_pages}",
                           align='R')
             else:
-                self.cell(98, 6, f"BULLETIN {self.trimestre.title()} - Page {page}/{self.nb_pages}", align='R')
+                self.cell(98, 6, f"BULLETIN {self.trimestre.title()} • Page {page}/{self.nb_pages}", align='R')
         else:
             self.cell(98, 6, f"BULLETIN {self.trimestre.title()}", align='R')
 

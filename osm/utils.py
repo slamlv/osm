@@ -358,7 +358,7 @@ class BaseStaffMemberTimetable(View):
         return StaffMemberTimeTable(data=data)
 
     def post(self, *args, **kwargs):
-        if 'signed' not in self.request.POST.keys():
+        if int(self.kwargs.get('id', 0)) == 0:
             staff_members = (
                 Personnel.objects.prefetch_related('programmations')
             )

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .form-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:20px; overflow:hidden; }
+  .form-card-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); padding:1rem 1.5rem; }
+  .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .form-card label { font-size:0.82rem; margin-bottom:4px; }
+
+  .model-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:575px){ .model-grid{ grid-template-columns:1fr; } }
+  .model-opt label {
+    display:flex; flex-direction:column; gap:6px; cursor:pointer; height:100%;
+    background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:0.9rem 0.85rem; transition:all .15s; margin:0;
+  }
+  .model-opt label:hover { background:rgba(255,255,255,0.08); border-color:rgba(13,110,253,0.4); }
+  .model-opt .mo-ico { font-size:1.4rem; color:#5aa2ff; }
+  .model-opt .mo-title { font-size:0.86rem; font-weight:700; color:#fff; line-height:1.15; }
+  .model-opt .mo-desc { font-size:0.72rem; color:rgba(255,255,255,0.55); line-height:1.25; }
+
+  /* état sélectionné : on stylise le label dont le radio (frère précédent) est coché */
+  #layout_fold:checked   ~ .model-grid label[for="layout_fold"],
+  #layout_sheet:checked  ~ .model-grid label[for="layout_sheet"],
+  #layout_single:checked ~ .model-grid label[for="layout_single"] {
+    background:rgba(13,110,253,0.12); border-color:#0d6efd; box-shadow:0 0 0 3px rgba(13,110,253,0.18);
+  }
+  #layout_fold:checked   ~ .model-grid label[for="layout_fold"] .mo-ico,
+  #layout_sheet:checked  ~ .model-grid label[for="layout_sheet"] .mo-ico,
+  #layout_single:checked ~ .model-grid label[for="layout_single"] .mo-ico { color:#7db4ff; }
+
+  /* option "cartes vierges" : gérée par JS via la classe .show.
+     IMPORTANT : Bootstrap applique .d-flex { display:flex !important }, qui
+     écrase un simple display:none. On force donc avec !important pour gagner. */
+  #blank-option { display:none !important; }
+  #blank-option.show { display:flex !important; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
+  <div class="form-card mb-4" style="max-width:660px;margin-left:auto;margin-right:auto;">
+
+    <div class="alert alert-info py-2 small rounded-3 mb-0 mx-3 mt-3">
+      <i class="bi bi-info-circle me-2"></i>La génération pour toutes les classes peut prendre quelques
+      instants selon le nombre de classes et les effectifs. Veuillez patienter le cas échéant.
+    </div>
+
+    <div class="form-card-header d-flex align-items-center gap-2 mt-3">
+      <i class="bi bi-image text-primary fs-5"></i>
+      <h6 class="text-white fw-bold mb-0">Album Photo de classe</h6>
+    </div>
+
+    <div class="p-3 p-sm-4">
+      <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'class_album' %}">
+        {% csrf_token %}
+
+        {# --- Sélection de la classe --- #}
+        <div class="row g-3 mb-4" id="classroom_form">
+          <div class="col-12">
+            <label class="text-white control-label">Classe</label>
+            {{ select_form.classroom }}
+          </div>
+        </div>
+        {# --- Boutons) --- #}
+        <div class="actions-row d-flex justify-content-center align-items-center gap-3 flex-wrap mt-2">
+          <button class="btn btn-danger fw-semibold" type="submit" data-bs-toggle="tooltip" title="Télécharger en PDF">
+            <span class="btn-text" id="btn-text"><i class="bi bi-file-earmark-pdf me-2"></i>Télécharger</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner"></span>
+          </button>
+        </div>
+
+        <div id="error-zone" class="alert alert-warning d-none mt-3 py-2 small rounded-3"></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

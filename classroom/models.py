@@ -377,6 +377,71 @@ class ClassRoom(models.Model):
     def effectif(self):
         return self.students.count()
 
+    @property
+    def class_teachers(self):
+        values = []
+        data = []
+        data_has_titulaire = False
+        enseignements = self.enseignement.order_by_domain_and_coef(self.classe.serie)
+        for enseignement in enseignements:
+            if enseignement.enseignant:
+                enseignant = enseignement.enseignant
+                if enseignant not in values:
+                    matiere = enseignement.matiere.sujet.matiere if enseignement.matiere.sujet.matiere in ["Français", "Informatique", "Histoire/Géographie"]\
+                        else enseignement.matiere.sujet.label
+                    if matiere == "LVII":
+                        matiere = self.lv2
+                    elif matiere == "LVIII":
+                        matiere = self.lv3
+                    staff_member = {
+                        'nom': f"{enseignant.nom.split()[0]} {enseignant.prenom.split()[0]}" if enseignant.prenom else enseignant.nom,
+                        'prenom': "",
+                        'photo': enseignant.photo,
+                        'sexe': "M" if enseignant.civilite == "Monsieur" else "F",
+                        'matiere': matiere
+                    }
+                    if enseignant == self.titulaire:
+                        data_has_titulaire = True
+                        data.insert(0,staff_member)
+                    else:
+                        data.append(staff_member)
+                values.append(enseignant)
+        if not data_has_titulaire and self.titulaire is not None:
+            titulaire = self.titulaire
+            data.insert(0, {
+                'nom': f"{titulaire.nom.split()[0]} {titulaire.prenom.split()[0]}" if titulaire.prenom else titulaire.nom,
+                'prenom': "",
+                'photo': titulaire.photo,
+                'sexe': "M" if titulaire.civilite == "Monsieur" else "F",
+                'matiere': None
+            })
+        return data
+
+    @property
+    def class_album_data(self):
+        classroom_data = {
+            'nom': self.code,
+            'effectif': self.effectif,
+            'filles': self.nb_filles,
+            'garcons': self.nb_garcons,
+            'has_titulaire': self.titulaire is not None
+        }
+        students_data = []
+        for student in self.students.order_by('nom', 'prenom'):
+            students_data.append({
+                'nom': student.nom,
+                'prenom': student.prenom,
+                'photo': student.photo,
+                'sexe': "M" if student.sexe == "Garçon" else "F",
+            })
+        data = {
+            'classroom_data': classroom_data,
+            'students_data': students_data,
+            'teachers': self.class_teachers,
+            'has_titulaire': self.titulaire is not None,
+        }
+        return data
+
     def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False, seuil=10.0):
         from note.models import Note
         from osm.utils import formated_float
