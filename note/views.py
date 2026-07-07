@@ -1354,7 +1354,9 @@ class ReportCard(FPDF):
             self.i = i
             if i == 0:
                 if self.trimestre != "ANNUEL" and with_competences:
-                    from pypdf import PdfReader
+                    """
+                    PDF jetable : on dessine le 1er bulletin uniquement pour MESURER combien de pages il occupe. page_no()
+                    donne ce nombre directement -> ni output(), ni pypdf (plus rapide, et une dépendance de moins dans ce chemin)."""
                     pdf = FPDF()
                     self.add_fonts(pdf)
                     pdf.set_margins(6, 6, 6)
@@ -1363,11 +1365,7 @@ class ReportCard(FPDF):
                     self.draw_student_reportcard(pdf, data, 0, school_data, self.trimestre, annee, classroom_data,
                                                  matieres_data, total_coef, min_max, moy_gen, taux, nb, nb_admis,
                                                  chef=school_data['chef'])
-                    buffer = BytesIO()
-                    pdf.output(buffer)
-                    buffer.seek(0)
-                    reader = PdfReader(buffer)
-                    self.nb_pages = len(reader.pages)
+                    self.nb_pages = pdf.page_no()
             # TODO
             if self.nb_pages > 1:
                 self.nom = data['students_data'][0]['student']['short_name'] if i ==0 else\

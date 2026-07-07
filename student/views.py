@@ -582,7 +582,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
                 continue
 
             # Décisions sans classe cible -> on neutralise next_id.
-            if decision in (EnrollmentStatus.TRANSFERE, EnrollmentStatus.SORTI):
+            if decision in (EnrollmentStatus.TRANSFERE, EnrollmentStatus.SORTI, EnrollmentStatus.EXCLU):
                 next_id = None
             # Décisions avec classe cible -> on vérifie la cohérence de la liste.
             elif decision == EnrollmentStatus.PROMU:

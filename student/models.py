@@ -534,7 +534,8 @@ class EnrollmentStatus(models.TextChoices):
     PROMU = "Promu", "Promu (classe supérieure)"
     REDOUBLE = "Redoublant", "Redoublant"
     TRANSFERE = "Transféré", "Transféré (autre établissement)"
-    SORTI = "Sorti", "A terminé son cursus ou est exclu"
+    SORTI = "Sorti", "A terminé son cursus"
+    EXCLU = "Exclu", "Exclu"
     NON_STATUE = "Non statué", "Décision non saisie"
 
 

@@ -187,6 +187,9 @@
   // Valeurs de décision qui exigent une classe + quelle liste utiliser.
   const PROMU    = "{{ promote_value }}";   // ex. "Promu"
   const REDOUBLE = "{{ repeat_value }}";    // ex. "Redoublant"
+  // Classe actuellement sélectionnée : classe par défaut d'un Redoublant
+  // (un redoublant reste dans sa classe, sauf choix contraire).
+  const CURRENT_CLASS = "{{ classroom.id|default_if_none:'' }}";
 
   const promoteSrc = document.getElementById('promote-src');
   const repeatSrc  = document.getElementById('repeat-src');
@@ -211,7 +214,13 @@
     }
     nextSel.disabled = false;
     nextSel.innerHTML = src.innerHTML;     // clone des options de la bonne liste
-    if (savedVal) nextSel.value = savedVal;
+    if (savedVal) {
+      nextSel.value = savedVal;            // valeur déjà enregistrée : prime
+    } else if (decision === REDOUBLE && CURRENT_CLASS) {
+      // Redoublant sans valeur enregistrée : la classe ACTUELLE par défaut
+      // (présente dans la liste "même niveau"). Reste modifiable.
+      nextSel.value = CURRENT_CLASS;
+    }
   }
 
   function init() {

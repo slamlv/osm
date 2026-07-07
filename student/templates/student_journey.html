@@ -118,6 +118,8 @@
                 Redoublant{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
             {% elif enr.decision == "Transféré" %}
               <span class="badge text-bg-info">Transféré</span>
+            {% elif enr.decision == "Exclu" %}
+              <span class="badge text-bg-danger">Exclu</span>
             {% elif enr.decision == "Sorti" %}
               <span class="badge text-bg-secondary">Sorti</span>
             {% elif enr.decision == "Non statué" %}

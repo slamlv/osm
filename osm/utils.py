@@ -1692,6 +1692,8 @@ def base_header(pdf, mode='P', y_img=0):
         else:
             # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
             logo = logo_src
+            # Logo RÉDUIT avant insertion
+            logo = resize_image(logo, new_width=308)
         pdf.image(logo, x=x_img, y=y_img + 6, w=26, keep_aspect_ratio=True)
     except Exception:
         # En cas de souci de logo, on n'interrompt pas la génération du PDF.

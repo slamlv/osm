@@ -1226,7 +1226,7 @@ class ClassPhotoAlbum(FPDF):
 
         # caches
         self._logo_bytes = None       # logo établissement préchargé une fois
-        self._default_cache = {}      # silhouettes par défaut préchargées
+        self._default_cache = {}      # silhouettes par défaut : image FINALE prête
 
         # géométrie page A4 paysage
         self.PW, self.PH = 297.0, 210.0
@@ -1276,8 +1276,8 @@ class ClassPhotoAlbum(FPDF):
         lw = 20
         if logo:
             try:
-                self.image(logo, x=self.MX, y=y, w=lw, h=lw)
-                self.image(logo, x=self.PW - self.MX - lw, y=y, w=lw, h=lw)
+                self.image(BytesIO(logo), x=self.MX, y=y, w=lw, h=lw)
+                self.image(BytesIO(logo), x=self.PW - self.MX - lw, y=y, w=lw, h=lw)
             except Exception:
                 pass
 
@@ -1373,28 +1373,47 @@ class ClassPhotoAlbum(FPDF):
     def _render_cell(self, item, x, y, w, h, kind, is_titulaire):
         sexe = (item.get("sexe") or "M").upper()
         if is_titulaire:
-            border = GREEN; bw = 8
+            border = GREEN; bw = 6
         else:
-            border = PINKB if sexe == "F" else BLUEB; bw = 6
+            border = PINKB if sexe == "F" else BLUEB; bw = 4
 
-        # charge la photo (url) ou le placeholder
-        img = self._load_photo(item, kind, sexe)
-        # cover au ratio 3:4 via ta resize_func (ancrage visage auto)
-        px_w, px_h = int(w*11.81), int(h*11.81)   # ~300 dpi
+        url = item.get("photo")
+
+        # --- PLACEHOLDER EN CACHE ------------------------------------------
+        # Sans photo, l'image finale (arrondie + bordure) est calculée UNE fois
+        # par (kind, sexe, bordure) puis réutilisée telle quelle. En plus,
+        # fpdf2 déduplique les images au contenu identique : le PDF ne stocke
+        # cette silhouette qu'UNE seule fois même répétée 15 fois.
+        # -> gros gain de taille ET de temps.
+        cache_key = None
+        if not url:
+            cache_key = (kind, sexe, border)
+            cached = self._default_cache.get(cache_key)
+            if cached:
+                self.image(BytesIO(cached), x=x, y=y, w=w, h=h)
+                return
+
+        # 200 dpi : largement suffisant pour ~3 cm imprimés.
+        # (300 dpi était surdimensionné : x2.25 de pixels pour rien)
+        px_w, px_h = int(w*7.87), int(h*7.87)
+        img = url or self._placeholder_path(kind, sexe)
         try:
-            if self.resize_func:
-                buf = self.resize_func(img, id_card=True, ratio=(30, 40))
-                src = Image.open(buf)
-            else:
-                src = Image.open(img) if isinstance(img, str) else Image.open(BytesIO(img))
+            buf = self.resize_func(img, id_card=True, ratio=(30, 40))
+            src = Image.open(buf)
         except Exception:
             src = self._placeholder_image(kind, sexe)
 
         rounded = self._rounded_image(src, px_w, px_h, radius=int(px_w*0.09),
                                       border_col=border, border_w=bw,
                                       badge=("TITULAIRE" if is_titulaire else None))
-        bio = BytesIO(); rounded.save(bio, format="PNG"); bio.seek(0)
-        self.image(bio, x=x, y=y, w=w, h=h)
+        bio = BytesIO()
+        # JPEG (photo aplatie sur fond blanc = fond de page) : ~15x plus léger
+        # que le PNG précédent, à qualité visuelle égale.
+        rounded.save(bio, format="JPEG", quality=82, optimize=True)
+        data = bio.getvalue()
+        if cache_key:
+            self._default_cache[cache_key] = data
+        self.image(BytesIO(data), x=x, y=y, w=w, h=h)
 
     def _render_caption(self, item, cx, y, maxw, kind, is_titulaire):
         nom = (item.get("nom") or "").strip()
@@ -1443,10 +1462,9 @@ class ClassPhotoAlbum(FPDF):
     #  HELPERS IMAGE
     # =====================================================================
     def _rounded_image(self, src_img, w_px, h_px, radius, border_col, border_w, badge=None):
-        """Coins arrondis + bordure SANS débord d'image (photo masquée EN RETRAIT
-        de la bordure) + badge optionnel en police Inter. Renvoie une Image RGBA."""
-        photo = src_img.convert("RGB").resize((w_px, h_px), Image.LANCZOS)
-
+        """Cadre arrondi + bordure sans débord, APLATI SUR FOND BLANC (couleur
+        du fond de page) -> exportable en JPEG léger. Renvoie une Image RGB.
+        Un seul resize, directement à la taille intérieure (gain de temps)."""
         out = Image.new("RGBA", (w_px, h_px), (0, 0, 0, 0))
         od = ImageDraw.Draw(out)
         # 1) bordure = rectangle arrondi PLEIN (tout le cadre, couleur de bordure)
@@ -1455,11 +1473,11 @@ class ClassPhotoAlbum(FPDF):
         inset = border_w
         inner_w, inner_h = w_px-2*inset, h_px-2*inset
         inner_r = max(1, radius-inset)
-        photo_in = photo.resize((inner_w, inner_h), Image.LANCZOS)
+        photo_in = src_img.convert("RGB").resize((inner_w, inner_h), Image.LANCZOS)
         mask = Image.new("L", (inner_w, inner_h), 0)
         ImageDraw.Draw(mask).rounded_rectangle([0, 0, inner_w-1, inner_h-1], radius=inner_r, fill=255)
         out.paste(photo_in, (inset, inset), mask)
-        # 3) masque global arrondi -> coins extérieurs transparents (voient le fond)
+        # 3) masque global arrondi (coins extérieurs nets)
         gmask = Image.new("L", (w_px, h_px), 0)
         ImageDraw.Draw(gmask).rounded_rectangle([0, 0, w_px-1, h_px-1], radius=radius, fill=255)
         out.putalpha(gmask)
@@ -1480,7 +1498,12 @@ class ClassPhotoAlbum(FPDF):
             bm = Image.new("L", (w_px, bh), 0)
             ImageDraw.Draw(bm).rounded_rectangle([0, -radius, w_px-1, bh-1], radius=inner_r, fill=255)
             out.paste(band, (0, h_px-bh), bm)
-        return out
+
+        # 4) APLATIR sur fond blanc (= fond de page) : les coins deviennent
+        # blancs opaques, invisibles sur la page blanche -> JPEG possible.
+        flat = Image.new("RGB", (w_px, h_px), (255, 255, 255))
+        flat.paste(out, (0, 0), out)
+        return flat
 
     def _load_photo(self, item, kind, sexe):
         """Renvoie une source image exploitable par resize_func.
