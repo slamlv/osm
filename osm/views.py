@@ -16,12 +16,6 @@ from staff.models import Activities
 
 @anonymous_required
 def offline_index(request):
-    schools = School.objects.all()
-    from osm.utils import finance_defaults
-    from django_tenants.utils import schema_context
-    for school in schools:
-        with schema_context(school.schema_name):
-            finance_defaults(school)
     schools_infos = [
         {
             'nom': school.nom,
