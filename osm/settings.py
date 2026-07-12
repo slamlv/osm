@@ -64,6 +64,7 @@ TENANT_APPS = (
     'classroom',
     'student',
     'note',
+    'finance',
 )
 
 INSTALLED_APPS = SHARED_APPS + TENANT_APPS

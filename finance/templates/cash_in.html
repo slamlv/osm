@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus { border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .status-pill { font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:8px; }
+  .pill-ok   { background:rgba(25,149,72,0.2);  color:#5dd48e; }
+  .pill-due  { background:rgba(253,126,20,0.18); color:#ffb066; }
+  .pill-late { background:rgba(220,53,69,0.2);  color:#ff8a95; }
+  .amount    { font-variant-numeric:tabular-nums; }
+</style>
+
+<div class="container py-3" style="max-width:1100px;">
+
+  {# ================= RECHERCHE ÉLÈVE ================= #}
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <p class="fin-title mb-2"><i class="bi bi-cash-coin me-1"></i>Encaissement — rechercher un élève</p>
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
+             placeholder="Nom, prénom ou matricule..." autofocus>
+      <button class="btn btn-success"><i class="bi bi-search"></i></button>
+    </form>
+
+    {% if results %}
+    <div class="table-responsive mt-3 osm-table-outer">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Matricule</th><th>Élève</th><th>Classe</th><th></th></tr></thead>
+        <tbody>
+          {% for st in results %}
+          <tr>
+            <td class="text-white-50">{{ st.unique_id|default:"—" }}</td>
+            <td class="fw-semibold">{{ st }}</td>
+            <td>{{ st.classe.code|default:"—" }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-info" href="?student={{ st.pk }}">
+                <i class="bi bi-arrow-right-circle me-1"></i>Situation</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif q %}
+      <p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} ».</p>
+    {% endif %}
+  </div>
+
+  {% if student %}
+  {# ================= SITUATION FINANCIÈRE ================= #}
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div>
+        <h6 class="text-white fw-bold mb-0">{{ student }}</h6>
+        <span class="text-white-50 small">{{ student.unique_id }} • {{ student.classe.code|default:"Sans classe" }} • {{ year }}</span>
+      </div>
+      {% if new_receipt %}
+      <a class="btn btn-warning btn-sm fw-semibold" target="_blank"
+         href="{% url 'finance:payment_receipt' new_receipt %}">
+        <i class="bi bi-printer me-1"></i>Imprimer le reçu</a>
+      {% endif %}
+    </div>
+
+    <div class="table-responsive osm-table-outer">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Frais</th><th class="text-end">Dû net</th><th class="text-end">Payé</th>
+          <th class="text-end">Reste</th><th class="text-center">État</th>
+        </tr></thead>
+        <tbody>
+          {% for r in status %}
+          <tr>
+            <td>{{ r.fee_type }}{% if not r.affects_cashbox %}
+                <i class="bi bi-bank ms-1 text-white-50" title="Reversé à l'État (hors caisse)"></i>{% endif %}</td>
+            <td class="text-end amount">{{ r.du_net }}{% if r.remise %} <span class="text-white-50 small">(-{{ r.remise }})</span>{% endif %}</td>
+            <td class="text-end amount">{{ r.paye }}</td>
+            <td class="text-end amount fw-bold">{{ r.reste }}</td>
+            <td class="text-center">
+              {% if r.solde %}<span class="status-pill pill-ok">Soldé</span>
+              {% elif r.retard %}<span class="status-pill pill-late">Retard {{ r.retard }}</span>
+              {% else %}<span class="status-pill pill-due">Reste {{ r.reste }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ================= NOUVEAU PAIEMENT ================= #}
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <p class="fin-title mb-3"><i class="bi bi-plus-circle me-1"></i>Nouveau paiement</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="student" value="{{ student.pk }}">
+      <div class="row g-3">
+        <div class="col-sm-4"><label class="text-white small mb-1">Type de frais</label>{{ form.fee_type }}</div>
+        <div class="col-sm-3"><label class="text-white small mb-1">Montant (FCFA)</label>{{ form.amount }}</div>
+        <div class="col-sm-3"><label class="text-white small mb-1">Mode</label>{{ form.method }}</div>
+        <div class="col-sm-2"><label class="text-white small mb-1">Date</label>{{ form.date }}</div>
+        <div class="col-12"><label class="text-white small mb-1">Note</label>{{ form.note }}</div>
+      </div>
+      {% if form.errors %}<div class="text-danger small mt-2">{{ form.errors }}</div>{% endif %}
+      <button class="btn btn-success fw-semibold mt-3">
+        <i class="bi bi-cash-coin me-1"></i>Encaisser & générer le reçu</button>
+    </form>
+  </div>
+
+  {# ================= HISTORIQUE DES PAIEMENTS ================= #}
+  <div class="fin-card p-3 p-sm-4">
+    <p class="fin-title mb-2"><i class="bi bi-clock-history me-1"></i>Paiements {{ year }}</p>
+    <div class="table-responsive osm-table-outer">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Reçu</th><th>Date</th><th>Frais</th>
+          <th class="text-end">Montant</th><th>Mode</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for p in history %}
+          <tr {% if p.cancelled %}style="opacity:0.45;"{% endif %}>
+            <td class="text-white-50">{{ p.receipt_number }}</td>
+            <td>{{ p.date|date:"d/m/Y" }}</td>
+            <td>{{ p.fee_type }}</td>
+            <td class="text-end amount">{{ p.amount }}</td>
+            <td>{{ p.method }}</td>
+            <td class="text-end">
+              {% if p.cancelled %}
+                <span class="status-pill pill-late" title="{{ p.cancel_reason }}">Annulé</span>
+              {% else %}
+                <a class="btn btn-sm btn-outline-secondary" target="_blank"
+                   href="{% url 'finance:payment_receipt' p.pk %}" title="Reçu">
+                  <i class="bi bi-printer"></i></a>
+                <form method="post" action="{% url 'finance:cancel_payment' p.pk %}"
+                      class="d-inline"
+                      onsubmit="var m=prompt('Motif de l\'annulation ?');
+                                if(!m)return false;
+                                this.reason.value=m; return true;">
+                  {% csrf_token %}<input type="hidden" name="reason" value="">
+                  <button class="btn btn-sm btn-outline-danger" title="Annuler (tracé)">
+                    <i class="bi bi-x-circle"></i></button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-white-50">Aucun paiement cette année.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

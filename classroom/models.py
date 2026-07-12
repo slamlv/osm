@@ -188,6 +188,23 @@ class ClassRoom(models.Model):
     class Meta:
         db_table = '"ClassRoom"'
 
+    def classroom_defaulters(self, school_year, fee_type=None, on_installments=False):
+        """Liste des élèves de la classe n'ayant pas soldé.
+          fee_type=None        -> tous les frais confondus
+          on_installments=True -> retard sur les tranches échues seulement
+                                  (sinon : reste à payer global)
+        Renvoie [(student, [lignes en défaut]), ...] trié par nom."""
+        result = []
+        for student in self.students.all().order_by("nom", "prenom"):
+            rows = student.student_fee_status(school_year)
+            if fee_type:
+                rows = [r for r in rows if r["fee_type"].id == fee_type.id]
+            key = "retard" if on_installments else "reste"
+            bad = [r for r in rows if r[key] > 0]
+            if bad:
+                result.append((student, bad))
+        return result
+
     @property
     def active_students(self):
         """

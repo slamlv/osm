@@ -1713,3 +1713,120 @@ def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode
     pdf.cell(w, 5, f"**Classe : {classroom}**", align='L', markdown=True)
     info = f"Effectif : {effectif}, Filles : {filles}, Garçons : {garcons}, Redoublants : {redoublants}"
     pdf.cell(w, 5, f"__{info}__", align='R', markdown=True)
+
+
+##############################################################################################
+"""Conversion d'un montant en toutes lettres (français) pour les reçus.
+Gère les règles françaises : et-un, soixante-dix, quatre-vingt(s), cent(s),
+mille invariable, million(s)/milliard(s)."""
+
+_UNITS = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit",
+          "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze",
+          "seize", "dix-sept", "dix-huit", "dix-neuf"]
+
+
+def _under_100(n, followed=False):
+    """`followed=True` si un mot de nombre suit (mille...) :
+    'quatre-vingts' mais 'quatre-vingt mille' (s supprimé)."""
+    if n < 20:
+        return _UNITS[n]
+    tens, unit = divmod(n, 10)
+    if tens == 7 or tens == 9:          # 70-79 / 90-99 : base 60 / 80 + 10..19
+        base = "soixante" if tens == 7 else "quatre-vingt"
+        rest = n - (60 if tens == 7 else 80)
+        if rest == 11 and tens == 7:
+            return "soixante et onze"
+        return f"{base}-{_UNITS[rest]}"
+    names = {2: "vingt", 3: "trente", 4: "quarante", 5: "cinquante",
+             6: "soixante", 8: "quatre-vingt"}
+    base = names[tens]
+    if unit == 0:
+        return base + ("s" if tens == 8 and not followed else "")
+    if unit == 1 and tens != 8:
+        return f"{base} et un"                       # vingt et un... (pas 81)
+    return f"{base}-{_UNITS[unit]}"
+
+
+def _under_1000(n, followed=False):
+    """`followed=True` si un mot de nombre suit :
+    'deux cents' mais 'deux cent mille' (s supprimé)."""
+    if n < 100:
+        return _under_100(n, followed)
+    hundreds, rest = divmod(n, 100)
+    if hundreds == 1:
+        head = "cent"
+    else:
+        # s sur "cents" seulement si RIEN ne suit (ni reste, ni mille...)
+        head = f"{_UNITS[hundreds]} cent" + ("s" if rest == 0 and not followed else "")
+    return head if rest == 0 else f"{head} {_under_100(rest)}"
+
+
+def number_to_words_fr(n):
+    """Entier positif -> toutes lettres. Ex: 120000 -> 'cent vingt mille'."""
+    n = int(n)
+    if n == 0:
+        return "zéro"
+    parts = []
+    billions, n = divmod(n, 1_000_000_000)
+    millions, n = divmod(n, 1_000_000)
+    thousands, rest = divmod(n, 1000)
+    if billions:
+        parts.append(f"{_under_1000(billions)} milliard" + ("s" if billions > 1 else ""))
+    if millions:
+        parts.append(f"{_under_1000(millions)} million" + ("s" if millions > 1 else ""))
+    if thousands:
+        # mille est INVARIABLE ; "mille" tout court (pas "un mille") ;
+        # le bloc qui précède "mille" perd son s (deux cent mille)
+        parts.append("mille" if thousands == 1
+                     else f"{_under_1000(thousands, followed=True)} mille")
+    if rest:
+        parts.append(_under_1000(rest))
+    return " ".join(parts)
+
+
+def amount_in_words(n):
+    """Montant FCFA en lettres pour reçu : 'cent vingt mille (120 000) FCFA'."""
+    return f"{number_to_words_fr(n)} ({n:,} ) FCFA".replace(",", " ").replace("(", "(").replace(" )", ")")
+##############################################################################################
+
+
+def finance_defaults(school):
+    from finance.models import FeeType, TransactionCategory, CashBox
+
+    # --- Types de frais courants (l'établissement adapte ensuite) -----------
+    #  affects_cashbox=False : collecté puis REVERSÉ À L'ÉTAT (suivi hors caisse)
+    fee_types = [
+        ("Frais d'Inscription", True),
+        ("Frais de Laboratoire", True),
+        ("Frais Exigibles", False),
+        ("Frais d'Examen", False),
+    ]
+    if school.type_ets == School.Type.COL:
+        fee_types.insert(0, ("Frais de Scolarité", True))
+    else:
+        fee_types.insert(0, ("Frais d'APEE", True))
+
+    for nom, cash in fee_types:
+        FeeType.objects.get_or_create(nom=nom,
+                                      defaults={"affects_cashbox": cash})
+
+    # --- Catégories de transactions -------------------------------------------
+    K = TransactionCategory.Kind
+    categories = [
+        ("Salaires Vacataires", K.EXPENSE),
+        ("Fournitures & Matériel", K.EXPENSE),
+        ("Entretien & Réparations", K.EXPENSE),
+        ("Eau", K.EXPENSE),
+        ("Électricité", K.EXPENSE),
+        ("Transport & Missions", K.EXPENSE),
+        ("Autres dépenses", K.EXPENSE),
+        ("Subvention", K.INCOME),
+        ("Don", K.INCOME),
+        ("Autres Recettes", K.INCOME),
+    ]
+    for nom, kind in categories:
+        TransactionCategory.objects.get_or_create(nom=nom,
+                                                  defaults={"kind": kind})
+
+    # --- Caisse (solde de départ à renseigner par l'établissement) ----------
+    CashBox.objects.get_or_create(pk=1, defaults={"opening_balance": 0})

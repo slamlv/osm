@@ -4,12 +4,14 @@ from authentification.models import User
 from staff.models import Personnel
 from django.db.models import Max
 from django_tenants.utils import schema_context
+from django.db import transaction
 
 
 def _get_linked_staff(user):
     """Personnel lié au compte, ou None (OneToOne -> objet unique)."""
     try:
-        return user.staff_member
+        with transaction.atomic():
+            return user.staff_member
     except Personnel.DoesNotExist:
         return None
     except Exception:
@@ -24,17 +26,20 @@ def _get_linked_user(staff):
 @receiver(post_save, sender=User, dispatch_uid="sync_user_to_staff")
 def sync_user_to_staff(sender, instance, **kwargs):
     """User.is_active -> Personnel.en_poste (si différent)."""
-    staff = _get_linked_staff(instance)
-    if staff is None:
+    if instance.is_superuser:
         return
+    with schema_context(instance.school.schema_name):
+        staff = _get_linked_staff(instance)
+        if staff is None:
+            return
 
-    if instance.is_active and not staff.en_poste:
-        staff.en_poste = True
-        staff.save(update_fields=["en_poste"])      # déclenchera l'autre signal,
-                                                    # qui ne fera RIEN (déjà alignés)
-    elif not instance.is_active and staff.en_poste:
-        staff.en_poste = False
-        staff.save(update_fields=["en_poste"])
+        if instance.is_active and not staff.en_poste:
+            staff.en_poste = True
+            staff.save(update_fields=["en_poste"])      # déclenchera l'autre signal,
+                                                        # qui ne fera RIEN (déjà alignés)
+        elif not instance.is_active and staff.en_poste:
+            staff.en_poste = False
+            staff.save(update_fields=["en_poste"])
 
 
 @receiver(post_save, sender=Personnel, dispatch_uid="sync_staff_to_user")

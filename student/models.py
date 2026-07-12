@@ -1,11 +1,9 @@
 # Create your models here.
 import django.db.models
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Sum, Q, When, Case, Value, IntegerField
 from classroom.models import ClassRoom
 from authentification.models import Civilite, SchoolYear
-from django.db.models import Q
-from django.db.models import When, Case, Value, IntegerField, F
 from collections import defaultdict
 
 
@@ -499,6 +497,87 @@ class Student(models.Model):
             results['moyenne3'] = formated_float(moyenne3)
 
         return results
+
+    @property
+    def student_level(self):
+        """(niveau, serie) de l'élève, ex. ("Terminale", "C") — serie peut être
+        None/'' — ou (None, None) si l'élève est sans classe."""
+        if not self.classe:
+            return None, None
+        cls = self.classe.classe  # ClassRoom -> Class
+        return cls.niveau, (cls.serie or None)
+
+    def applicable_fees(self, school_year):
+        from finance.models import SchoolFee
+        """Lignes de grille applicables à l'élève pour l'année.
+        CASCADE DE SPÉCIFICITÉ par type de frais : (niveau+série) > (niveau) >
+        (tous niveaux). Ex. frais de labo : ligne "Terminale"+"C" -> ne touche
+        que les Tle C ; un élève de Tle A4 n'a AUCUNE ligne labo -> pas concerné."""
+        niveau, serie = self.student_level
+        qs = (SchoolFee.objects
+              .filter(school_year=school_year, fee_type__is_active=True)
+              .filter(Q(level__isnull=True)
+                      | Q(level=niveau, serie__isnull=True)
+                      | Q(level=niveau, serie=serie))
+              .select_related("fee_type")
+              .prefetch_related("installments"))
+        by_type = {}
+        for fee in qs:
+            cur = by_type.get(fee.fee_type_id)
+            if cur is None or fee.specificity > cur.specificity:
+                by_type[fee.fee_type_id] = fee
+        return list(by_type.values())
+
+    def student_fee_status(self, school_year, today=None):
+        from datetime import date as _date
+        from finance.models import StudentPayment, FeeDiscount
+        """Situation complète de l'élève : une entrée par type de frais applicable.
+
+        Chaque entrée :
+          fee_type, du_brut, remise, du_net, paye, reste,
+          jalons_echus (cumul des tranches dont la date est passée, plafonné au dû net),
+          retard (ce qui aurait dû être payé à ce jour et ne l'est pas),
+          solde (True si reste == 0)
+
+        Les paiements étant LIBRES (avances), le retard se calcule par cumul :
+          retard = max(0, min(jalons_echus, du_net) - paye)
+        Sans jalons définis (cas APEE), jalons_echus = du_net dès le 1er jour ?
+        NON : sans jalons, on considère le dû exigible à l'année -> retard = 0
+        tant que l'année n'est pas close ; l'insolvabilité se juge sur `reste`.
+        """
+        today = today or _date.today()
+
+        # paiements et remises de l'année, agrégés en 2 requêtes
+        payments = dict(
+            StudentPayment.objects
+            .filter(student=self, school_year=school_year, cancelled=False)
+            .values_list("fee_type").annotate(total=Sum("amount")))
+        discounts = dict(
+            FeeDiscount.objects
+            .filter(student=self, school_year=school_year)
+            .values_list("fee_type").annotate(total=Sum("amount")))
+
+        rows = []
+        for fee in self.applicable_fees(school_year):
+            du_brut = fee.amount
+            remise = discounts.get(fee.fee_type_id, 0)
+            du_net = max(0, du_brut - remise)
+            paye = payments.get(fee.fee_type_id, 0)
+            reste = max(0, du_net - paye)
+
+            jalons = [i for i in fee.installments.all() if i.due_date <= today]
+            jalons_echus = min(sum(i.amount for i in jalons), du_net) if jalons else 0
+            retard = max(0, jalons_echus - paye)
+
+            rows.append({
+                "fee_type": fee.fee_type,
+                "affects_cashbox": fee.fee_type.affects_cashbox,
+                "du_brut": du_brut, "remise": remise, "du_net": du_net,
+                "paye": paye, "reste": reste,
+                "jalons_echus": jalons_echus, "retard": retard,
+                "solde": reste == 0,
+            })
+        return rows
 
 
 class StudentDiscipline(models.Model):

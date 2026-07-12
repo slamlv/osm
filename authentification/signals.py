@@ -205,5 +205,7 @@ def insert_default_data(sender, instance, created, **kwargs):
                                 if count_periods == 0:
                                     cursor.execute("""INSERT INTO "Period"(id, evalx) VALUES
                                         (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6);""")
+                        from osm.utils import finance_defaults
+                        finance_defaults(instance)
                 except Exception as e:
                     print(f"Erreur lors de l'insertion des données par défaut : {e}")

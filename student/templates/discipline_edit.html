@@ -7,36 +7,45 @@
 </style>
 
 {% if show %}
-<div class="mt-3">
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <fieldset class="disc-fieldset">
-      <legend>{{ std_info }}</legend>
-      <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-4">
-          <label>Absences (heures)</label>{{ form.abs }}
-        </div>
-        <div class="col-6 col-lg-4">
-          <label>Absences justifiées (h)</label>{{ form.absj }}
-        </div>
-        <div class="col-6 col-lg-4">
-          <label>Retards</label>{{ form.retards }}
-        </div>
-        <div class="col-6 col-lg-4">
-          <label>Consignes (heures)</label>{{ form.cons }}
-        </div>
-        <div class="col-6 col-lg-4">
-          <label>Exclusion définitive</label>{{ form.excl_def }}
-        </div>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <fieldset class="disc-fieldset">
+    <legend>{{ std_info }}</legend>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-4">
+        <label>Absences (heures)</label>{{ form.abs }}
       </div>
-      <div class="d-flex justify-content-center">
-        <a class="btn btn-success fw-semibold px-5" type="submit"
-           hx-post="{% url 'discipline-edit' id=sid trim=trim %}"
-           hx-target="#edit" data-with-spinner>
-          <i class="bi bi-save me-2"></i>Enregistrer
-        </a>
+      <div class="col-6 col-lg-4">
+        <label>Absences justifiées (h)</label>{{ form.absj }}
       </div>
-    </fieldset>
-  </form>
-</div>
+      <div class="col-6 col-lg-4">
+        <label>Retards</label>{{ form.retards }}
+      </div>
+      <div class="col-6 col-lg-4">
+        <label>Consignes (heures)</label>{{ form.cons }}
+      </div>
+      <div class="col-6 col-lg-4">
+        <label>Exclusion définitive</label>{{ form.excl_def }}
+      </div>
+    </div>
+    <div class="d-flex justify-content-center">
+      <a class="btn btn-success fw-semibold px-5" type="submit"
+         hx-post="{% url 'discipline-edit' id=sid trim=trim %}"
+         hx-target="#edit" data-with-spinner>
+        <i class="bi bi-save me-2"></i>Enregistrer
+      </a>
+    </div>
+  </fieldset>
+</form>
+
+{% else %}
+<script>
+  (function () {
+    var modalEl = document.getElementById('disciplineModal');
+    if (modalEl) {
+      var inst = bootstrap.Modal.getInstance(modalEl);
+      if (inst) inst.hide();
+    }
+  })();
+</script>
 {% endif %}
