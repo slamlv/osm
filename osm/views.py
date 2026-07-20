@@ -19,7 +19,7 @@ def offline_index(request):
     from django_tenants.utils import schema_context
     from osm.utils import finance_defaults
     from authentification.models import School
-    for school in School.objects.all():
+    for school in School.objects.exclude(schema_name='public'):
         with schema_context(school.schema_name):
             finance_defaults(school)
 
