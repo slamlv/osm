@@ -70,7 +70,7 @@
       <div class="d-flex gap-2 flex-wrap">
         {% if has_previous %}
         <form method="post" action="{% url 'fee_duplicate' %}"
-              onsubmit="return confirm('Copier la grille {{ previous_year }} vers {{ year }} ?');">
+              data-confirm="Copier la grille {{ previous_year }} vers {{ year }} ?">
           {% csrf_token %}
           <input type="hidden" name="from_year" value="{{ previous_year }}">
           <input type="hidden" name="to_year" value="{{ year }}">
@@ -78,7 +78,7 @@
             <i class="bi bi-copy me-1"></i>Dupliquer {{ previous_year }}</button>
         </form>
         {% endif %}
-        <button class="btn btn-success btn-sm fw-semibold" onclick="openFeeModal()">
+        <button type="button" class="btn btn-success btn-sm fw-semibold" data-fee-open="">
           <i class="bi bi-plus-circle me-1"></i>Nouvelle ligne</button>
       </div>
     </div>
@@ -116,10 +116,10 @@
               {% empty %}—{% endfor %}
             </td>
             <td class="text-end" style="white-space:nowrap;">
-              <button class="btn btn-sm btn-outline-secondary" onclick="openFeeModal({{ f.id }})" title="Modifier">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-fee-open="{{ f.id }}" title="Modifier">
                 <i class="bi bi-pencil"></i></button>
               <form method="post" action="{% url 'fee_delete' f.id %}" class="d-inline"
-                    onsubmit="return confirm('Supprimer cette ligne de grille ?');">
+                    data-confirm="Supprimer cette ligne de grille ?">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
               </form>
@@ -195,7 +195,7 @@
           <hr style="border-color:rgba(255,255,255,0.1);" class="my-3">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <label class="mb-0 fw-semibold text-white">Tranches (jalons) — facultatif</label>
-            <button type="button" class="btn btn-sm btn-outline-info" onclick="addInstRow()">
+            <button type="button" class="btn btn-sm btn-outline-info" id="inst-add">
               <i class="bi bi-plus"></i> Tranche</button>
           </div>
           <p class="text-white-50" style="font-size:0.75rem;">
@@ -214,45 +214,7 @@
   </div>
 </div>
 
-<script>
-  const FEES = JSON.parse('{{ fees_json|escapejs }}');
-  const feeModal = new bootstrap.Modal(document.getElementById('feeModal'));
-
-  function addInstRow(label, amount, date) {
-    const row = document.createElement('div');
-    row.className = 'inst-row';
-    row.innerHTML =
-      '<input type="text" name="inst_label" class="form-control form-control-sm" placeholder="Libellé" value="' + (label || '') + '">' +
-      '<input type="number" name="inst_amount" class="form-control form-control-sm inst-amt" placeholder="Montant" min="1" value="' + (amount || '') + '" oninput="updateSum()">' +
-      '<input type="date" name="inst_date" class="form-control form-control-sm" value="' + (date || '') + '">' +
-      '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentNode.remove();updateSum()"><i class="bi bi-x"></i></button>';
-    document.getElementById('inst-rows').appendChild(row);
-  }
-
-  function updateSum() {
-    let s = 0;
-    document.querySelectorAll('.inst-amt').forEach(i => s += (parseInt(i.value) || 0));
-    const total = parseInt(document.getElementById('ff-amount').value) || 0;
-    const el = document.getElementById('inst-sum');
-    if (!document.querySelectorAll('.inst-amt').length) { el.textContent = ''; return; }
-    el.textContent = 'Somme des tranches : ' + s + ' / ' + total;
-    el.style.color = (s === total) ? '#5dd48e' : '#ff8a95';
-  }
-  document.getElementById('ff-amount').addEventListener('input', updateSum);
-
-  function openFeeModal(feeId) {
-    const f = feeId ? FEES[feeId] : null;
-    document.getElementById('feeModalTitle').textContent =
-      f ? 'Modifier la ligne de grille' : 'Nouvelle ligne de grille';
-    document.getElementById('ff-id').value = feeId || '';
-    document.getElementById('ff-type').value = f ? f.fee_type : document.getElementById('ff-type').options[0].value;
-    document.getElementById('ff-level').value = f ? f.level : '';
-    document.getElementById('ff-serie').value = f ? f.serie : '';
-    document.getElementById('ff-amount').value = f ? f.amount : '';
-    document.getElementById('inst-rows').innerHTML = '';
-    if (f) f.installments.forEach(i => addInstRow(i.label, i.amount, i.due_date));
-    updateSum();
-    feeModal.show();
-  }
-</script>
+{{ fees_json|json_script:"fees-data" }}
+{% load static %}
+<script src="{% static 'fee_grid.js' %}" defer></script>
 {% endblock %}

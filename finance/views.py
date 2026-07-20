@@ -65,7 +65,7 @@ def fee_grid(request):
         "year": year, "years": years, "groups": groups,
         "fee_types": FeeType.objects.order_by("nom"),
         "niveaux": niveaux, "series": series,
-        "fees_json": json.dumps(fees_json),
+        "fees_json": fees_json,
         "previous_year": _previous_year(year),
         "has_previous": SchoolFee.objects.filter(
             school_year=_previous_year(year)).exists(),
@@ -317,6 +317,9 @@ def cancel_payment(request, pk):
                                     "cancelled_by", "cancelled_at"])
         message(request,f"Paiement {payment.receipt_number} annulé (tracé).")
     return safe_redirect_back(request, "cash_in")
+
+
+
 
 
 """
