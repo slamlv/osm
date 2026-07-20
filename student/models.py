@@ -507,7 +507,7 @@ class Student(models.Model):
         cls = self.classe.classe  # ClassRoom -> Class
         return cls.niveau, (cls.serie or None)
 
-    def applicable_fees(self, school_year):
+    def applicable_fees(self, school_year, fee_type_id=None):
         from finance.models import SchoolFee
         """Lignes de grille applicables à l'élève pour l'année.
         CASCADE DE SPÉCIFICITÉ par type de frais : (niveau+série) > (niveau) >
@@ -521,6 +521,8 @@ class Student(models.Model):
                       | Q(level=niveau, serie=serie))
               .select_related("fee_type")
               .prefetch_related("installments"))
+        if fee_type_id:
+            qs = qs.filter(fee_type_id=fee_type_id)
         by_type = {}
         for fee in qs:
             cur = by_type.get(fee.fee_type_id)
@@ -528,7 +530,7 @@ class Student(models.Model):
                 by_type[fee.fee_type_id] = fee
         return list(by_type.values())
 
-    def student_fee_status(self, school_year, today=None):
+    def student_fee_status(self, school_year, today=None, fee_type_id=None):
         from datetime import date as _date
         from finance.models import StudentPayment, FeeDiscount
         """Situation complète de l'élève : une entrée par type de frais applicable.
@@ -552,13 +554,18 @@ class Student(models.Model):
             StudentPayment.objects
             .filter(student=self, school_year=school_year, cancelled=False)
             .values_list("fee_type").annotate(total=Sum("amount")))
+        if fee_type_id:
+            payments = dict(
+                StudentPayment.objects
+                .filter(student=self, school_year=school_year, cancelled=False, fee_type_id=fee_type_id)
+                .values_list("fee_type").annotate(total=Sum("amount")))
         discounts = dict(
             FeeDiscount.objects
             .filter(student=self, school_year=school_year)
             .values_list("fee_type").annotate(total=Sum("amount")))
 
         rows = []
-        for fee in self.applicable_fees(school_year):
+        for fee in self.applicable_fees(school_year, fee_type_id=fee_type_id):
             du_brut = fee.amount
             remise = discounts.get(fee.fee_type_id, 0)
             du_net = max(0, du_brut - remise)

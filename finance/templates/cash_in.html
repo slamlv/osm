@@ -4,19 +4,52 @@
 <style>
   .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
   .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
-  .fin-card input:focus, .fin-card select:focus { border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; }
+  .fin-card input:focus, .fin-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  /* Options : fond sombre explicite (évite blanc-sur-blanc dans certains navigateurs) */
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
   .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  /* barre d'accent colorée en haut de chaque carte (comme le dashboard) */
+  .fin-card { position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--ac, transparent); opacity:0.9; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
   .status-pill { font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:8px; }
   .pill-ok   { background:rgba(25,149,72,0.2);  color:#5dd48e; }
   .pill-due  { background:rgba(253,126,20,0.18); color:#ffb066; }
   .pill-late { background:rgba(220,53,69,0.2);  color:#ff8a95; }
-  .amount    { font-variant-numeric:tabular-nums; }
+  /* montants : OR doux (page financière oblige) + nuances sémantiques */
+  .amount    { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+  .amt-paid  { color:#5dd48e!important; }          /* déjà encaissé : vert   */
+  .amt-rest  { color:#ffb066!important; }          /* reste à payer : orange */
+  .amt-zero  { color:#5dd48e!important; }          /* soldé : vert           */
+
+  /* ---- Tableaux sombres : style OSM adopté (identique students_list & co) ---- */
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  /* montants DANS les tableaux : spécificité renforcée (bat la règle td) */
+  .osm-table-outer tbody td.amount, .osm-table-outer tbody td .amount,
+  .osm-table-outer tfoot td.amount { color:#f0c75e!important; }
+  .osm-table-outer tbody td.amt-paid, .osm-table-outer tfoot td.amt-paid { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-rest { color:#ffb066!important; }
+  .osm-table-outer tbody td.amt-zero { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-in,  .osm-table-outer tfoot td.amt-in  { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-out, .osm-table-outer tfoot td.amt-out { color:#ff8a95!important; }
+
+  @media (max-width: 767.98px) {
+    .osm-table-outer thead th { padding:8px 8px; font-size:0.66rem; }
+    .osm-table-outer tbody td { padding:8px 8px; font-size:0.8rem; }
+  }
 </style>
 
 <div class="container py-3" style="max-width:1100px;">
 
   {# ================= RECHERCHE ÉLÈVE ================= #}
-  <div class="fin-card p-3 p-sm-4 mb-3">
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
     <p class="fin-title mb-2"><i class="bi bi-cash-coin me-1"></i>Encaissement — rechercher un élève</p>
     <form method="get" class="d-flex gap-2">
       <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
@@ -25,8 +58,8 @@
     </form>
 
     {% if results %}
-    <div class="table-responsive mt-3 osm-table-outer">
-      <table class="table table-sm align-middle mb-0">
+    <div class="osm-table-outer mt-3">
+      <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr><th>Matricule</th><th>Élève</th><th>Classe</th><th></th></tr></thead>
         <tbody>
           {% for st in results %}
@@ -50,7 +83,7 @@
 
   {% if student %}
   {# ================= SITUATION FINANCIÈRE ================= #}
-  <div class="fin-card p-3 p-sm-4 mb-3">
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#f0c75e;">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
       <div>
         <h6 class="text-white fw-bold mb-0">{{ student }}</h6>
@@ -58,13 +91,13 @@
       </div>
       {% if new_receipt %}
       <a class="btn btn-warning btn-sm fw-semibold" target="_blank"
-         href="{% url 'finance:payment_receipt' new_receipt %}">
+         href="{% url 'payment_receipt' new_receipt %}">
         <i class="bi bi-printer me-1"></i>Imprimer le reçu</a>
       {% endif %}
     </div>
 
-    <div class="table-responsive osm-table-outer">
-      <table class="table table-sm align-middle mb-0">
+    <div class="osm-table-outer">
+      <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr>
           <th>Frais</th><th class="text-end">Dû net</th><th class="text-end">Payé</th>
           <th class="text-end">Reste</th><th class="text-center">État</th>
@@ -75,8 +108,8 @@
             <td>{{ r.fee_type }}{% if not r.affects_cashbox %}
                 <i class="bi bi-bank ms-1 text-white-50" title="Reversé à l'État (hors caisse)"></i>{% endif %}</td>
             <td class="text-end amount">{{ r.du_net }}{% if r.remise %} <span class="text-white-50 small">(-{{ r.remise }})</span>{% endif %}</td>
-            <td class="text-end amount">{{ r.paye }}</td>
-            <td class="text-end amount fw-bold">{{ r.reste }}</td>
+            <td class="text-end amount amt-paid">{{ r.paye }}</td>
+            <td class="text-end amount fw-bold {% if r.reste %}amt-rest{% else %}amt-zero{% endif %}">{{ r.reste }}</td>
             <td class="text-center">
               {% if r.solde %}<span class="status-pill pill-ok">Soldé</span>
               {% elif r.retard %}<span class="status-pill pill-late">Retard {{ r.retard }}</span>
@@ -90,7 +123,7 @@
   </div>
 
   {# ================= NOUVEAU PAIEMENT ================= #}
-  <div class="fin-card p-3 p-sm-4 mb-3">
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#199548;">
     <p class="fin-title mb-3"><i class="bi bi-plus-circle me-1"></i>Nouveau paiement</p>
     <form method="post">
       {% csrf_token %}
@@ -109,10 +142,10 @@
   </div>
 
   {# ================= HISTORIQUE DES PAIEMENTS ================= #}
-  <div class="fin-card p-3 p-sm-4">
+  <div class="fin-card p-3 p-sm-4" style="--ac:#a855f7;">
     <p class="fin-title mb-2"><i class="bi bi-clock-history me-1"></i>Paiements {{ year }}</p>
-    <div class="table-responsive osm-table-outer">
-      <table class="table table-sm align-middle mb-0">
+    <div class="osm-table-outer">
+      <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr>
           <th>Reçu</th><th>Date</th><th>Frais</th>
           <th class="text-end">Montant</th><th>Mode</th><th></th>
@@ -129,16 +162,18 @@
               {% if p.cancelled %}
                 <span class="status-pill pill-late" title="{{ p.cancel_reason }}">Annulé</span>
               {% else %}
-                <a class="btn btn-sm btn-outline-secondary" target="_blank"
-                   href="{% url 'finance:payment_receipt' p.pk %}" title="Reçu">
+                {% if p.fee_type.affects_cashbox %}
+                <a class="btn btn-sm btn-outline-warning" target="_blank"
+                   href="{% url 'payment_receipt' p.pk %}" title="Reçu" data-bs-toggle="tooltip">
                   <i class="bi bi-printer"></i></a>
-                <form method="post" action="{% url 'finance:cancel_payment' p.pk %}"
+                {% endif %}
+                <form method="post" action="{% url 'cancel_payment' p.pk %}"
                       class="d-inline"
                       onsubmit="var m=prompt('Motif de l\'annulation ?');
-                                if(!m)return false;
+                                if(m === null) {return false;}
                                 this.reason.value=m; return true;">
                   {% csrf_token %}<input type="hidden" name="reason" value="">
-                  <button class="btn btn-sm btn-outline-danger" title="Annuler (tracé)">
+                  <button class="btn btn-sm btn-outline-danger" title="Annuler (tracé)" data-bs-toggle="tooltip">
                     <i class="bi bi-x-circle"></i></button>
                 </form>
               {% endif %}

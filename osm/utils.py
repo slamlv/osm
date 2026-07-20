@@ -22,6 +22,7 @@ from django.urls import reverse
 from functools import wraps
 
 from django.utils.termcolors import background
+from django.utils.http import url_has_allowed_host_and_scheme
 from django_tenants.utils import schema_context
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -1693,7 +1694,7 @@ def base_header(pdf, mode='P', y_img=0):
             # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
             logo = logo_src
             # Logo RÉDUIT avant insertion
-            logo = resize_image(logo, new_width=308)
+        logo = resize_image(logo, new_width=308)
         pdf.image(logo, x=x_img, y=y_img + 6, w=26, keep_aspect_ratio=True)
     except Exception:
         # En cas de souci de logo, on n'interrompt pas la génération du PDF.
@@ -1830,3 +1831,12 @@ def finance_defaults(school):
 
     # --- Caisse (solde de départ à renseigner par l'établissement) ----------
     CashBox.objects.get_or_create(pk=1, defaults={"opening_balance": 0})
+
+
+def safe_redirect_back(request, fallback_name="index", **fallback_kwargs):
+    referer = request.META.get("HTTP_REFERER")
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}
+    ):
+        return redirect(referer)
+    return redirect(reverse(fallback_name, kwargs=fallback_kwargs or None))

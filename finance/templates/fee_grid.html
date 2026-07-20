@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .fin-card input, .fin-card select, #feeModal input, #feeModal select {
+    background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important;
+    color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus, #feeModal input:focus, #feeModal select:focus {
+    background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important;
+    box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  /* Options : fond sombre explicite (évite blanc-sur-blanc dans certains navigateurs) */
+  .fin-card select option, #feeModal select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  /* barre d'accent colorée en haut de chaque carte (comme le dashboard) */
+  .fin-card { position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--ac, transparent); opacity:0.9; z-index:1; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .fee-head { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.25rem;
+    background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08);
+    border-radius:16px 16px 0 0; }
+  .badge-cash { font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:8px; }
+  .in-cash  { background:rgba(25,149,72,0.2); color:#5dd48e; }
+  .off-cash { background:rgba(255,193,7,0.15); color:#ffd75e; }
+  /* montants en OR doux */
+  .amount { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:0 0 14px 14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  /* montants DANS les tableaux : spécificité renforcée (bat la règle td) */
+  .osm-table-outer tbody td.amount, .osm-table-outer tbody td .amount,
+  .osm-table-outer tfoot td.amount { color:#f0c75e!important; }
+  .osm-table-outer tbody td.amt-paid, .osm-table-outer tfoot td.amt-paid { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-rest { color:#ffb066!important; }
+  .osm-table-outer tbody td.amt-zero { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-in,  .osm-table-outer tfoot td.amt-in  { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-out, .osm-table-outer tfoot td.amt-out { color:#ff8a95!important; }
+  @media (max-width:767.98px){
+    .osm-table-outer thead th{padding:8px 8px;font-size:0.66rem;}
+    .osm-table-outer tbody td{padding:8px 8px;font-size:0.8rem;}
+  }
+
+  #feeModal .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.1); border-radius:18px; color:#fff; }
+  #feeModal .modal-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); }
+  #feeModal .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
+  #feeModal label { font-size:0.8rem; color:rgba(255,255,255,0.75); margin-bottom:4px; }
+  .inst-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+</style>
+
+<div class="container py-3" style="max-width:1100px;">
+
+  {# ============ BARRE : année + actions ============ #}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+    <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-end justify-content-between">
+      <div>
+        <p class="fin-title mb-2"><i class="bi bi-sliders me-1"></i>Grille tarifaire</p>
+        <form method="get" class="d-flex gap-2 align-items-center">
+          <label class="text-white small mb-0">Année</label>
+          <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for y in years %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        {% if has_previous %}
+        <form method="post" action="{% url 'fee_duplicate' %}"
+              onsubmit="return confirm('Copier la grille {{ previous_year }} vers {{ year }} ?');">
+          {% csrf_token %}
+          <input type="hidden" name="from_year" value="{{ previous_year }}">
+          <input type="hidden" name="to_year" value="{{ year }}">
+          <button class="btn btn-outline-info btn-sm fw-semibold">
+            <i class="bi bi-copy me-1"></i>Dupliquer {{ previous_year }}</button>
+        </form>
+        {% endif %}
+        <button class="btn btn-success btn-sm fw-semibold" onclick="openFeeModal()">
+          <i class="bi bi-plus-circle me-1"></i>Nouvelle ligne</button>
+      </div>
+    </div>
+  </div>
+
+  {# ============ CARTES PAR TYPE DE FRAIS ============ #}
+  {% for fee_type, lines in groups.items %}
+  <div class="fin-card mb-3" style="overflow:hidden; --ac:{% if fee_type.affects_cashbox %}#199548{% else %}#e8b23e{% endif %};">
+    <div class="fee-head">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-cash-stack text-info"></i>
+        <span class="text-white fw-bold">{{ fee_type }}</span>
+      </div>
+      {% if fee_type.affects_cashbox %}
+        <span class="badge-cash in-cash">Entre en caisse</span>
+      {% else %}
+        <span class="badge-cash off-cash"><i class="bi bi-bank me-1"></i>Reversé à l'État</span>
+      {% endif %}
+    </div>
+    <div class="osm-table-outer">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Niveau</th><th>Série</th><th class="text-end">Montant (FCFA)</th>
+          <th>Tranches</th><th class="text-end"></th>
+        </tr></thead>
+        <tbody>
+          {% for f in lines %}
+          <tr>
+            <td class="fw-semibold">{{ f.level|default:"Tous niveaux" }}</td>
+            <td>{{ f.serie|default:"—" }}</td>
+            <td class="text-end amount fw-bold">{{ f.amount }}</td>
+            <td class="text-white-50" style="font-size:0.8rem;">
+              {% for i in f.installments.all %}
+                {{ i.label }} : {{ i.amount }} ({{ i.due_date|date:"d/m" }}){% if not forloop.last %} • {% endif %}
+              {% empty %}—{% endfor %}
+            </td>
+            <td class="text-end" style="white-space:nowrap;">
+              <button class="btn btn-sm btn-outline-secondary" onclick="openFeeModal({{ f.id }})" title="Modifier">
+                <i class="bi bi-pencil"></i></button>
+              <form method="post" action="{% url 'fee_delete' f.id %}" class="d-inline"
+                    onsubmit="return confirm('Supprimer cette ligne de grille ?');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% empty %}
+  <div class="fin-card p-5 text-center text-white-50">
+    <i class="bi bi-sliders fs-2 d-block mb-2"></i>
+    Aucune ligne pour {{ year }}. Créez la première ou dupliquez l'année précédente.
+  </div>
+  {% endfor %}
+
+  {# ============ CRÉATION RAPIDE D'UN TYPE DE FRAIS ============ #}
+  <div class="fin-card p-3 p-sm-4" style="--ac:#14b8a6;">
+    <p class="fin-title mb-2"><i class="bi bi-tags me-1"></i>Nouveau type de frais</p>
+    <form method="post" action="{% url 'fee_type_save' %}" class="d-flex flex-wrap gap-2 align-items-center">
+      {% csrf_token %}
+      <input type="text" name="nom" class="form-control" style="max-width:280px;" placeholder="Ex. Assurance scolaire" required>
+      <div class="form-check text-white-50 small">
+        <input class="form-check-input" type="checkbox" name="affects_cashbox" id="fc-cash" checked>
+        <label class="form-check-label" for="fc-cash">Entre en caisse</label>
+      </div>
+      <button class="btn btn-outline-success btn-sm fw-semibold"><i class="bi bi-plus"></i> Créer</button>
+    </form>
+  </div>
+</div>
+
+{# ================= MODALE ligne de grille ================= #}
+<div class="modal fade" id="feeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold" id="feeModalTitle">Nouvelle ligne de grille</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'fee_save' %}" id="feeForm">
+          {% csrf_token %}
+          <input type="hidden" name="year" value="{{ year }}">
+          <input type="hidden" name="fee_id" id="ff-id" value="">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label>Type de frais</label>
+              <select name="fee_type" id="ff-type" class="form-select" required>
+                {% for ft in fee_types %}<option value="{{ ft.id }}">{{ ft }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label>Niveau</label>
+              <select name="level" id="ff-level" class="form-select">
+                <option value="">Tous niveaux</option>
+                {% for n in niveaux %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label>Série</label>
+              <select name="serie" id="ff-serie" class="form-select">
+                <option value="">Toutes</option>
+                {% for s in series %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label>Montant total (FCFA)</label>
+              <input type="number" name="amount" id="ff-amount" class="form-control" min="1" required>
+            </div>
+          </div>
+
+          <hr style="border-color:rgba(255,255,255,0.1);" class="my-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="mb-0 fw-semibold text-white">Tranches (jalons) — facultatif</label>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="addInstRow()">
+              <i class="bi bi-plus"></i> Tranche</button>
+          </div>
+          <p class="text-white-50" style="font-size:0.75rem;">
+            La somme des tranches doit égaler le montant total. Les paiements restent libres
+            (avances) : les tranches servent au calcul des retards.
+            <span id="inst-sum" class="fw-bold"></span>
+          </p>
+          <div id="inst-rows"></div>
+
+          <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-success fw-semibold px-4"><i class="bi bi-save me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const FEES = JSON.parse('{{ fees_json|escapejs }}');
+  const feeModal = new bootstrap.Modal(document.getElementById('feeModal'));
+
+  function addInstRow(label, amount, date) {
+    const row = document.createElement('div');
+    row.className = 'inst-row';
+    row.innerHTML =
+      '<input type="text" name="inst_label" class="form-control form-control-sm" placeholder="Libellé" value="' + (label || '') + '">' +
+      '<input type="number" name="inst_amount" class="form-control form-control-sm inst-amt" placeholder="Montant" min="1" value="' + (amount || '') + '" oninput="updateSum()">' +
+      '<input type="date" name="inst_date" class="form-control form-control-sm" value="' + (date || '') + '">' +
+      '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentNode.remove();updateSum()"><i class="bi bi-x"></i></button>';
+    document.getElementById('inst-rows').appendChild(row);
+  }
+
+  function updateSum() {
+    let s = 0;
+    document.querySelectorAll('.inst-amt').forEach(i => s += (parseInt(i.value) || 0));
+    const total = parseInt(document.getElementById('ff-amount').value) || 0;
+    const el = document.getElementById('inst-sum');
+    if (!document.querySelectorAll('.inst-amt').length) { el.textContent = ''; return; }
+    el.textContent = 'Somme des tranches : ' + s + ' / ' + total;
+    el.style.color = (s === total) ? '#5dd48e' : '#ff8a95';
+  }
+  document.getElementById('ff-amount').addEventListener('input', updateSum);
+
+  function openFeeModal(feeId) {
+    const f = feeId ? FEES[feeId] : null;
+    document.getElementById('feeModalTitle').textContent =
+      f ? 'Modifier la ligne de grille' : 'Nouvelle ligne de grille';
+    document.getElementById('ff-id').value = feeId || '';
+    document.getElementById('ff-type').value = f ? f.fee_type : document.getElementById('ff-type').options[0].value;
+    document.getElementById('ff-level').value = f ? f.level : '';
+    document.getElementById('ff-serie').value = f ? f.serie : '';
+    document.getElementById('ff-amount').value = f ? f.amount : '';
+    document.getElementById('inst-rows').innerHTML = '';
+    if (f) f.installments.forEach(i => addInstRow(i.label, i.amount, i.due_date));
+    updateSum();
+    feeModal.show();
+  }
+</script>
+{% endblock %}
