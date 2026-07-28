@@ -243,6 +243,9 @@ class CashBox(models.Model):
     opening_balance = models.IntegerField(
         default=0, help_text="Fonds existants à l'adoption de la plateforme")
     opening_date = models.DateField(default=timezone.localdate)
+    default_hourly_rate = models.PositiveIntegerField(null=True, blank=True,
+        help_text="Taux horaire par défaut (FCFA/h). Pré-remplit le taux d'un vacataire horaire quand le sien n'est pas"
+                  " encore configuré. Jamais utilisé pour le calcul : il ne fait que remplir le champ, qui reste modifiable.")
 
     def save(self, *args, **kwargs):
         self.pk = 1          # singleton
@@ -278,29 +281,36 @@ class CashBox(models.Model):
         return opening + s(pay_qs) + s(inc_qs) - s(exp_qs)
 
     @classmethod
-    def cash_journal(cls, date_from, date_to):
+    def cashbox_balance_before(cls, day):
+        from datetime import timedelta
+        return CashBox.cashbox_balance(at=day - timedelta(days=1))
+
+    @classmethod
+    def cash_journal_ui(cls, date_from, date_to):
         """Chronologie unifiée des mouvements de caisse sur la période :
         paiements élèves (en caisse) + recettes + dépenses, avec solde courant.
         Renvoie (solde_initial, [entrées datées], solde_final)."""
-        opening = CashBox.cashbox_balance(at=date_from) - CashBox._day_total(date_from)  # solde AVANT le 1er jour
-
         entries = []
         for p in (StudentPayment.objects
                 .filter(cancelled=False, fee_type__affects_cashbox=True,
                         date__range=(date_from, date_to))
                 .select_related("student", "fee_type")):
             entries.append({"date": p.date, "sens": +1, "montant": p.amount,
-                            "libelle": f"{p.fee_type} — {p.student}",
-                            "methode": p.method, "ref": p.receipt_number})
+                            "libelle": f"{p.fee_type} - {p.student.short_name}",
+                            "methode": p.method, "ref": p.receipt_number,
+                            "type": "payment", "pk": p.pk})
         for t in (Transaction.objects
                 .filter(cancelled=False, date__range=(date_from, date_to))
                 .select_related("category", "beneficiary")):
             sens = +1 if t.kind == TransactionCategory.Kind.INCOME else -1
-            lib = t.description + (f" — {t.beneficiary}" if t.beneficiary else "")
+            lib = t.description + (f" - {t.beneficiary.short_name}" if t.beneficiary else "")
             entries.append({"date": t.date, "sens": sens, "montant": t.amount,
-                            "libelle": lib, "methode": t.method, "ref": t.reference})
+                            "libelle": lib, "methode": t.method,
+                            "ref": t.reference, "type": "transaction", "pk": t.pk})
+        entries.sort(key=lambda e: (e["date"], e["pk"]))
 
-        entries.sort(key=lambda e: e["date"])
+        # solde AVANT la période = solde global à date_from-1
+        opening = CashBox.cashbox_balance_before(date_from)
         solde = opening
         for e in entries:
             solde += e["sens"] * e["montant"]
@@ -347,6 +357,10 @@ class Transaction(models.Model):
     kind = models.CharField(max_length=10, choices=TransactionCategory.Kind.choices,
                             editable=False)   # dénormalisé depuis category (filtres rapides)
     amount = models.PositiveIntegerField()
+    salary_month = models.DateField(null=True, blank=True,
+                                    help_text="Salaires : 1er jour du mois payé (anti-doublon).")
+    hours = models.PositiveSmallIntegerField(null=True, blank=True,
+                                help_text="Salaires HORAIRES : heures payées ce mois (trace + fiche).")
     date = models.DateField(default=timezone.localdate)
     description = models.CharField(max_length=160)
     beneficiary = models.ForeignKey(Personnel, on_delete=models.SET_NULL,
@@ -367,6 +381,14 @@ class Transaction(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     created = models.DateTimeField(auto_now_add=True)
+
+    constraints = [
+        models.UniqueConstraint(
+            fields=["beneficiary", "salary_month"],
+            condition=models.Q(cancelled=False, salary_month__isnull=False),
+            name="unique_salary_per_month",
+        ),
+    ]
 
     class Meta:
         db_table = '"Transaction"'

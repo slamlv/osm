@@ -127,6 +127,9 @@ class StaffEnPosteManager(models.Manager.from_queryset(StaffQuerySet)):
 
 
 class Personnel(models.Model):
+    class SalaryMode(models.TextChoices):
+        FIXE = "FIXE", "Salaire fixe (forfait)"
+        HORAIRE = "HORAIRE", "À l'heure (taux × heures)"
 
     class Grade(models.TextChoices):
         PCEG = "PCEG", "PCEG"
@@ -150,9 +153,21 @@ class Personnel(models.Model):
     photo = models.ImageField(upload_to="image/staff", null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True, related_name="staff_member")
     en_poste = models.BooleanField(default=True)
+    salary_mode = models.CharField(max_length=8, choices=SalaryMode.choices, null=True, blank=True,
+                                   help_text="Vide = non rémunéré par l'établissement.")
+    salaire = models.PositiveIntegerField(null=True, blank=True,
+                                          help_text="Salaire mensuel FIXE (FCFA). Utilisé si mode = FIXE.")
+    hourly_rate = models.PositiveIntegerField(null=True, blank=True,
+                                              help_text="Taux horaire négocié (FCFA/h). Utilisé si mode = HORAIRE.")
+    default_hours = models.PositiveSmallIntegerField(null=True, blank=True,
+        help_text="Nombre d'heures mensuel habituel (pré-remplit la paie ; ajustable chaque mois).")
 
     objects = StaffEnPosteManager()
     objects_all = StaffAllManager()
+
+    @property
+    def is_paid(self):
+        return self.salary_mode is not None
 
     @property
     def progression(self):
@@ -457,17 +472,17 @@ class Personnel(models.Model):
 
     @property
     def short_name(self):
-        civilite = "M." if self.civilite == "Monsieur" else "Mme"
+        civilite = "M." if self.civilite == "Monsieur" else "Mme."
         short = f"{self.nom.split()[0]} {self.prenom.split()[0]}" if self.prenom else self.nom
         return f"{civilite} {short}"\
 
     @property
     def short_firstname(self):
-        civilite = "M." if self.civilite == "Monsieur" else "Mme"
+        civilite = "M." if self.civilite == "Monsieur" else "Mme."
         return f"{civilite} {self.nom.split()[0]}"
 
     def __str__(self):
-        civilite = "M." if self.civilite == "Monsieur" else "Mme"
+        civilite = "M." if self.civilite == "Monsieur" else "Mme."
         return f"{civilite} {self.nom} {self.prenom}" if self.prenom else f"{civilite} {self.nom}"
 
 

@@ -102,7 +102,7 @@
       <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr>
           <th>Niveau</th><th>Série</th><th class="text-end">Montant (FCFA)</th>
-          <th>Tranches</th><th class="text-end"></th>
+          <th>Tranches</th><th class="text-end">Actions</th>
         </tr></thead>
         <tbody>
           {% for f in lines %}
@@ -116,12 +116,12 @@
               {% empty %}—{% endfor %}
             </td>
             <td class="text-end" style="white-space:nowrap;">
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-fee-open="{{ f.id }}" title="Modifier">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-fee-open="{{ f.id }}" title="Modifier" data-bs-toggle="tooltip">
                 <i class="bi bi-pencil"></i></button>
               <form method="post" action="{% url 'fee_delete' f.id %}" class="d-inline"
                     data-confirm="Supprimer cette ligne de grille ?">
                 {% csrf_token %}
-                <button class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Supprimer"><i class="bi bi-trash"></i></button>
               </form>
             </td>
           </tr>

@@ -14,7 +14,7 @@ class StudentPaymentForm(forms.ModelForm):
             "fee_type": forms.Select(attrs={"class": "form-select"}),
             "amount": forms.NumberInput(attrs={"class": "form-control", "min": 1, "placeholder": "Montant (FCFA)"}),
             "method": forms.Select(attrs={"class": "form-select"}),
-            "date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "date": forms.DateInput(attrs={"class": "form-control", "type": "date", 'data-max-now': ""}),
             "note": forms.TextInput(attrs={"class": "form-control", "placeholder": "Note (facultatif)"}),
         }
 
@@ -24,5 +24,7 @@ class StudentPaymentForm(forms.ModelForm):
         # via la méthode de modèle applicable_fees(year).
         if student is not None and year:
             fees = student.applicable_fees(year)
-            self.fields["fee_type"].queryset = FeeType.objects.filter(id__in=[f.fee_type_id for f in fees])
+            self.fields["fee_type"].queryset = FeeType.objects.filter(
+                id__in=[f.fee_type_id for f in fees if not student.student_fee_status(year, fee_type_id=f.fee_type.id)[0]['solde']]
+            )
         self.fields["date"].initial = timezone.localdate()

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .amount { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+  .status-pill { font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:8px; }
+  .pill-ok { background:rgba(25,149,72,0.2); color:#5dd48e; }
+  .badge-mode { font-size:0.66rem; padding:1px 7px; border-radius:6px; background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 12px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+  .osm-table-outer tbody td.amount { color:#f0c75e!important; }
+  .osm-table-outer tbody tr.paid { opacity:0.55; }
+  .hrs-in { width:78px; text-align:center; }
+  @media (max-width:767.98px){ .osm-table-outer thead th{padding:8px;font-size:0.64rem;} .osm-table-outer tbody td{padding:6px 8px;font-size:0.8rem;} }
+</style>
+
+<div class="container py-3" style="max-width:1050px;">
+
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+      <div>
+        <p class="fin-title mb-2"><i class="bi bi-cash-stack me-1"></i>Paie des salaires — {{ month_label }}</p>
+        <form method="get" class="d-flex gap-2 align-items-center">
+          <label class="text-white small mb-0">Mois</label>
+          <input type="month" name="month" value="{{ month_str }}" max="{% now 'Y-m' %}" class="form-control form-control-sm" onchange="this.form.submit()">
+        </form>
+      </div>
+      <div class="d-flex gap-3 align-items-end flex-wrap">
+        <div class="text-end"><div class="amount">{{ total_paid }}</div>
+          <div class="text-white-50" style="font-size:0.68rem;text-transform:uppercase;">Déjà payé</div></div>
+        <div class="text-end"><div class="amount" id="pay-total">{{ total_due }}</div>
+          <div class="text-white-50" style="font-size:0.68rem;text-transform:uppercase;">Sélection à payer</div></div>
+        <a class="btn btn-outline-warning btn-sm fw-semibold" target="_blank"
+           href="{% url 'emargement_sheet' %}?month={{ month_str }}"
+           data-bs-toggle="tooltip" title="Fiche d'émargement des paies du mois">
+          <i class="bi bi-printer me-1"></i>Émargement</a>
+      </div>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ month_str }}">
+    <div class="fin-card p-3 p-sm-4" style="--ac:#199548;">
+      <div class="osm-table-outer">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead><tr>
+            <th style="width:36px;"><input type="checkbox" checked onchange="toggleAll(this)"></th>
+            <th>Personnel</th><th>Mode</th>
+            <th class="text-center">Heures</th>
+            <th class="text-end">Montant</th><th class="text-center">État</th>
+          </tr></thead>
+          <tbody>
+            {% for r in rows %}
+            <tr {% if r.paid %}class="paid"{% endif %}>
+              <td>
+                {% if r.paid %}<i class="bi bi-lock text-white-50" data-bs-toggle="tooltip" title="Déjà payé ce mois"></i>
+                {% else %}<input type="checkbox" name="pay" value="{{ r.p.id }}" checked
+                                 class="pay-box" data-amount="{{ r.amount }}" onchange="updatePayTotal()">{% endif %}
+              </td>
+              <td class="fw-semibold">{{ r.p }}
+                <div class="text-white-50" style="font-size:0.74rem;">{{ r.p.poste|default:"" }}</div></td>
+              <td><span class="badge-mode">{% if r.p.salary_mode == HORAIRE %}À l'heure{% else %}Fixe{% endif %}</span></td>
+              <td class="text-center">
+                {% if r.paid %}
+                  {{ r.hours|default:"—" }}
+                {% elif r.is_hourly %}
+                  <input type="number" step="1" min="0" name="hrs_{{ r.p.id }}" value="{{ r.hours|default_if_none:'' }}"
+                         class="form-control form-control-sm hrs-in d-inline-block"
+                         data-rate="{{ r.p.hourly_rate|default:0 }}" data-pid="{{ r.p.id }}"
+                         oninput="recalcHourly(this)">
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end amount" id="amt-{{ r.p.id }}">{{ r.amount }}</td>
+              <td class="text-center">{% if r.paid %}<span class="status-pill pill-ok">Payé</span>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-white-50 text-center py-4">
+              Aucun personnel rémunéré. <a href="{% url 'salary_assignment' %}">Attribuer les salaires</a>.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+        <div class="d-flex gap-2 align-items-center">
+          <label class="text-white small mb-0">Mode de paiement</label>
+          <select name="method" class="form-select form-select-sm" style="max-width:180px;">
+            {% for v, l in methods %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-success fw-semibold px-4"
+                onclick="return confirm('Payer les salaires sélectionnés pour {{ month_label }} ?');">
+          <i class="bi bi-cash-coin me-1"></i>Payer la sélection</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  function recalcHourly(input) {
+    const rate = parseInt(input.dataset.rate) || 0;
+    const hrs = parseInt(input.value) || 0;
+    const amount = rate * hrs;
+    const cell = document.getElementById('amt-' + input.dataset.pid);
+    if (cell) cell.textContent = amount.toLocaleString('fr-FR');
+    const box = document.querySelector('.pay-box[value="' + input.dataset.pid + '"]');
+    if (box) box.dataset.amount = amount;
+    updatePayTotal();
+  }
+  function updatePayTotal() {
+    let s = 0;
+    document.querySelectorAll('.pay-box:checked').forEach(b => s += parseInt(b.dataset.amount || 0));
+    document.getElementById('pay-total').textContent = s.toLocaleString('fr-FR');
+  }
+  function toggleAll(master) {
+    document.querySelectorAll('.pay-box').forEach(b => b.checked = master.checked);
+    updatePayTotal();
+  }
+  updatePayTotal();
+</script>
+{% endblock %}

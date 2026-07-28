@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select {
+    background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important;
+    color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus {
+    background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important;
+    box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .amount { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  /* montants DANS les tableaux : spécificité renforcée (bat la règle td) */
+  .osm-table-outer tbody td.amount, .osm-table-outer tbody td .amount { color:#f0c75e!important; }
+  @media (max-width:767.98px){
+    .osm-table-outer thead th{padding:8px 8px;font-size:0.66rem;}
+    .osm-table-outer tbody td{padding:8px 8px;font-size:0.8rem;}
+  }
+</style>
+
+<div class="container py-3" style="max-width:1100px;">
+
+  {# ============ RECHERCHE D'UN ÉLÈVE ============ #}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+    <p class="fin-title mb-2"><i class="bi bi-percent me-1"></i>Remises & exonérations — {{ year }}</p>
+    <p class="text-white-50 small mb-2">Recherchez un élève pour lui accorder (ou modifier) une remise :
+      bourse, enfant d'enseignant, cas social... Le dû net est recalculé immédiatement partout.</p>
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
+             placeholder="Nom, prénom ou matricule...">
+      <button class="btn btn-info fw-semibold"><i class="bi bi-search"></i></button>
+    </form>
+
+    {% if results %}
+    <div class="osm-table-outer mt-3">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr><th>Matricule</th><th>Élève</th><th>Classe</th><th></th></tr></thead>
+        <tbody>
+          {% for st in results %}
+          <tr>
+            <td class="text-white-50">{{ st.unique_id|default:"—" }}</td>
+            <td class="fw-semibold">{{ st }}</td>
+            <td>{{ st.classe.code|default:"—" }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-info" href="?student={{ st.pk }}">
+                <i class="bi bi-percent me-1"></i>Accorder une remise</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif q %}<p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} ».</p>{% endif %}
+  </div>
+
+  {# ============ ATTRIBUTION (élève sélectionné) ============ #}
+  {% if student %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#199548;">
+    <p class="fin-title mb-1"><i class="bi bi-person-check me-1"></i>Accorder / modifier — {{ student }}
+      <span class="text-white-50">({{ student.classe.code|default:"Sans classe" }})</span></p>
+    <form method="post" action="{% url 'discount_save' %}">
+      {% csrf_token %}
+      <input type="hidden" name="student" value="{{ student.pk }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-sm-5">
+          <label class="text-white small mb-1 d-block">Frais concerné</label>
+          <select name="fee_type" class="form-select" id="disc-fee" onchange="prefillDiscount()">
+            {% for row in fees %}
+            <option value="{{ row.fee.fee_type_id }}"
+                    data-brut="{{ row.fee.amount }}"
+                    data-current="{{ row.current.amount|default:'' }}"
+                    data-reason="{{ row.current.reason|default:'' }}">
+              {{ row.fee.fee_type }} : {{ row.fee.amount }} F
+              {% if row.current %} (remise actuelle : {{ row.current.amount }}){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <label class="text-white small mb-1 d-block">Remise (FCFA)</label>
+          <input type="number" name="amount" id="disc-amount" class="form-control" min="1" required>
+        </div>
+        <div class="col-sm-4">
+          <label class="text-white small mb-1 d-block">Motif</label>
+          <input type="text" name="reason" id="disc-reason" class="form-control" maxlength="120"
+                 placeholder="Ex. Enfant d'enseignant, bourse..." required>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn btn-success fw-semibold px-4"><i class="bi bi-save me-1"></i>Enregistrer la remise</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ============ REMISES DE L'ANNÉE ============ #}
+  <div class="fin-card p-3 p-sm-4" style="--ac:#f0c75e;">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <p class="fin-title mb-0"><i class="bi bi-list-check me-1"></i>Remises accordées — {{ year }}</p>
+      <span class="text-white-50 small">Total : <span class="amount">{{ total }}</span> FCFA</span>
+    </div>
+    <div class="osm-table-outer">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Élève</th><th>Classe</th><th>Frais</th>
+          <th class="text-end">Remise</th><th>Motif</th><th>Accordée par</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for d in discounts %}
+          <tr>
+            <td class="fw-semibold">{{ d.student }}</td>
+            <td class="text-white-50">{{ d.student.classe.code|default:"—" }}</td>
+            <td>{{ d.fee_type }}</td>
+            <td class="text-end amount">{{ d.amount }}</td>
+            <td class="text-white-50">{{ d.reason }}</td>
+            <td class="text-white-50">{{ d.granted_by.staff_member.short_name|default:"—" }} <span style="font-size:0.75rem;">({{ d.created|date:"d/m/Y" }})</span></td>
+            <td class="text-end" style="white-space:nowrap;">
+              <a class="btn btn-sm btn-outline-warning" href="?student={{ d.student_id }}" title="Modifier" data-bs-toggle="tooltip">
+                <i class="bi bi-pencil"></i></a>
+              <form method="post" action="{% url 'discount_delete' d.pk %}" class="d-inline"
+                    onsubmit="return confirm('Retirer cette remise ? Le dû de l\'élève sera recalculé.');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Retirer"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-white-50 text-center py-4">Aucune remise accordée cette année.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Pré-remplit montant + motif si une remise existe déjà pour le frais choisi
+  function prefillDiscount() {
+    const opt = document.querySelector('#disc-fee option:checked');
+    if (!opt) return;
+    document.getElementById('disc-amount').value = opt.dataset.current || '';
+    document.getElementById('disc-amount').max = opt.dataset.brut || '';
+    document.getElementById('disc-reason').value = opt.dataset.reason || '';
+  }
+  if (document.getElementById('disc-fee')) prefillDiscount();
+</script>
+{% endblock %}

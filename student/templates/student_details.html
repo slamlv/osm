@@ -80,14 +80,18 @@
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
           {% if object.is_active %}
-            <button type="submit" class="btn btn-warning fw-semibold"><i class="bi bi-person-dash me-1"></i>Désactiver</button>
+            <button type="submit" class="btn btn-danger fw-semibold"><i class="bi bi-person-dash me-1"></i>Désactiver</button>
           {% else %}
             <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-person-check me-1"></i>Réactiver</button>
           {% endif %}
         </form>
         <a class="btn btn-warning fw-semibold" href="{% url 'student-edit' id=object.id %}"><i class="bi bi-pencil-square me-2"></i>Modifier</a>
         <a class="btn btn-outline-danger" href="{% url 'student-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
+      </div>
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3">
         <a class="btn btn-info fw-semibold" href="{% url 'student_journey' id=object.id %}"><i class="bi bi-signpost-2 me-1"></i>Parcours</a>
+        <a class="btn btn-primary" href="{% url 'enrollment_certificate' id=object.id %}" title="Certificat de scolarité" data-bs-toggle="tooltip">
+            <i class="bi bi-file-earmark-text me-2"></i>Certificat</a>
         <a class="btn btn-outline-secondary" href="{% url 'students' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
       </div>
     </div>

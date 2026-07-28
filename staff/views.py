@@ -1,30 +1,82 @@
 # Create your views here.
-from sys import prefix
 
-from django.contrib.admin.views.decorators import staff_member_required
 from django.db import transaction
 from django.db.models import Q
 from django.forms import model_to_dict
-from django.http import Http404, request, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
-from django.views import View
-from openpyxl.styles.builtins import title
+from django.utils import timezone
 
-from authentification.models import School, User
-from authentification.tokens import generate_token
-from authentification.forms import UserForm
+from authentification.models import User
 from classroom.models import Enseignements
-from osm.forms import SearchForm
 from .forms import MemberForm, ActivityForm, ProgressionForm
 from note.forms import SelectForm
-from .models import Personnel, Discipline, Activities
+from .models import Personnel, Activities
 from osm.utils import message, one_escape, LoggedUserView, LoggedAdminView, logged_admin_view, ListView, DeleteView,\
     DetailView, ADetailView, BaseStaffMemberTimetable, AdminRequired, WithUsersSchoolSchema, LoginRequired,\
-    NonAdminListView
-import os
+    NonAdminListView, logged_super_admin_view
+
+
+"""
+=============================================================================
+ DÉSIGNATION DES RÔLES DÉLÉGUÉS (super_admin et financial_user)
+=============================================================================
+ Page unique, deux sections, chacune protégée selon le droit de désigner :
+   - Super administrateurs : SEUL LE CHEF peut désigner/révoquer.
+   - Responsables financiers : le CHEF ou un SUPER_ADMIN.
+
+ On protège la VUE au niveau super_admin (accès à la page), et on filtre
+ la SECTION super_admin sur le chef à l'intérieur (un super_admin voit la
+ liste mais ne peut pas modifier les super_admins).
+=============================================================================
+"""
+
+
+@logged_super_admin_view
+def delegated_roles(request):
+    candidates = (User.objects.filter(is_active=True, is_superuser=False).order_by("last_name", "first_name"))
+    user_is_chief = request.user.is_principal
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        target = get_object_or_404(User, pk=request.POST.get("user_id"))
+        now = timezone.now()
+
+        # ----- SUPER_ADMIN : réservé au CHEF -----
+        if action in ("grant_super", "revoke_super"):
+            if not user_is_chief:
+                message(request, "Seul le chef d'établissement peut gérer les super administrateurs.", msg_type="error")
+                return redirect(request.path)
+            if action == "grant_super" and not target.is_super_admin:
+                target.is_super_admin = True
+                target.named_super_admin_by = request.user
+                target.named_super_admin_at = now
+                target.save(update_fields=["is_super_admin", "named_super_admin_by", "named_super_admin_at"])
+                message(request, f"{target.full_name or target} est désormais super administrateur.")
+            elif action == "revoke_super" and target.is_super_admin:
+                target.is_super_admin = False
+                target.save(update_fields=["is_super_admin"])
+                message(request, f"{target.full_name or target} n'est plus super administrateur.")
+
+        # ----- FINANCIAL_USER : chef OU super_admin -----
+        elif action in ("grant_fin", "revoke_fin"):
+            if action == "grant_fin" and not target.is_financial_user:
+                target.is_financial_user = True
+                target.named_financial_user_by = request.user
+                target.named_financial_user_at = now
+                target.save(update_fields=["is_financial_user", "named_financial_user_by", "named_financial_user_at"])
+                message(request, f"{target.full_name or target} est désormais responsable financier.")
+            elif action == "revoke_fin" and target.is_financial_user:
+                target.is_financial_user = False
+                target.save(update_fields=["is_financial_user"])
+                message(request, f"{target.full_name or target} n'est plus responsable financier.")
+        return redirect(request.path)
+    return render(request, "delegated_roles.html", {
+        "user_is_chief": user_is_chief, "super_admins": candidates.filter(is_super_admin=True),
+        "financial_users": candidates.filter(is_financial_user=True), "non_super": candidates.filter(is_super_admin=False),
+        "non_financial": candidates.filter(is_financial_user=False), 'title': "Délégation des Rôles"
+    })
 
 
 class StaffArchive(LoggedAdminView):

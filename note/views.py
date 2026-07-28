@@ -1073,7 +1073,7 @@ class TableaudHonneur(FPDF):
         self.decoration = "static/image/decoration.png"
         self.draw_tables()
 
-    def filligranne(self, x=70, y=70, w=70):
+    def filigrane(self, x=70, y=70, w=70):
         logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
         if logo:
             with self.local_context(fill_opacity=0.2):
@@ -1095,6 +1095,7 @@ class TableaudHonneur(FPDF):
                         logo = logo
                 except Exception:
                     pass
+                logo = resize_image(logo, new_width=830)
                 self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
 
     def draw_tables(self):
@@ -1104,8 +1105,8 @@ class TableaudHonneur(FPDF):
             j += 1
         for i in range(j):
             self.add_page()
-            self.filligranne()
-            self.filligranne(y=218.5)
+            self.filigrane()
+            self.filigrane(y=218.5)
             if i == j -1 and is_not_modulo2:
                 end = len(self.data['students'])
             else:

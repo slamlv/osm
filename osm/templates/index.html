@@ -102,6 +102,7 @@
   .accent-notes-term { --c:#f97316; --rgb:249,115,22; }
   .accent-planning   { --c:#0ea5e9; --rgb:14,165,233; }
   .accent-profil     { --c:#94a3b8; --rgb:148,163,184; }
+  .accent-finances   { --c:#f0c75e; --rgb:240,199,94; }
   .hero-banner {
     background: linear-gradient(135deg, #152f45 0%, #1e4266 50%, #172e45 100%);
     border-radius: 18px;
@@ -170,6 +171,19 @@
         </div>
       </a>
     </div>
+    {% if user.is_financial_user %}
+    <div class="col-6 col-sm-4 col-lg-4">
+      <a href="{% url 'cash_in' %}" class="text-decoration-none">
+        <div class="mod-card accent-finances p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-cash-coin"></i>
+          </div>
+          <h6 class="text-white fw-bold mb-1">Finances</h6>
+          <p class="text-white-50 small mb-0">Encaissements, caisse et états.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'classrooms' %}" class="text-decoration-none">
         <div class="mod-card accent-classes p-3 h-100">
@@ -204,6 +218,7 @@
         </div>
       </a>
     </div>
+    {% if not user.is_financial_user %}
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'school_details' %}" class="text-decoration-none">
         <div class="mod-card accent-etab p-3 h-100">
@@ -215,9 +230,24 @@
         </div>
       </a>
     </div>
+    {% endif %}
   </div>
 
   {% else %}
+
+  {% if user.is_financial_user %}
+  <div class="col-6 col-sm-4 col-lg-4">
+      <a href="{% url 'cash_in' %}" class="text-decoration-none">
+        <div class="mod-card accent-finances p-3 h-100">
+          <div class="icon-wrap mb-3">
+            <i class="bi bi-cash-coin"></i>
+          </div>
+          <h6 class="text-white fw-bold mb-1">Finances</h6>
+          <p class="text-white-50 small mb-0">Encaissements, caisse et états.</p>
+        </div>
+      </a>
+  </div>
+  {% endif %}
   <!-- Modules Enseignant -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-lg-4">
@@ -275,6 +305,7 @@
         </div>
       </a>
     </div>
+    {% if not user.is_financial_user %}
     <div class="col-6 col-sm-4 col-lg-4">
       <a href="{% url 'user-details' %}" class="text-decoration-none">
         <div class="mod-card accent-profil p-3 h-100">
@@ -286,6 +317,7 @@
         </div>
       </a>
     </div>
+    {% endif %}
   </div>
   {% endif %}
 

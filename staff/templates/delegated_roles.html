@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  .badge-role { font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:8px; }
+  .b-super { background:rgba(168,85,247,0.2); color:#c99bf5; }
+  .b-fin   { background:rgba(25,149,72,0.2); color:#5dd48e; }
+  @media (max-width:767.98px){ .osm-table-outer thead th{padding:8px;font-size:0.66rem;} .osm-table-outer tbody td{padding:8px;font-size:0.8rem;} }
+</style>
+
+<div class="container py-3" style="max-width:940px;">
+  <h6 class="text-white fw-bold mb-3"><i class="bi bi-diagram-3 me-2 text-info"></i>Rôles délégués</h6>
+
+  {# ================= SUPER ADMINISTRATEURS (chef uniquement) ================= #}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#a855f7;">
+    <p class="fin-title mb-1"><i class="bi bi-shield-fill-check me-1"></i>Super administrateurs</p>
+    <p class="text-white-50 small mb-3">Peuvent archiver et clôturer une année, et désigner les responsables
+      financiers. {% if user_is_chief %}Vous seul (chef d'établissement) pouvez les désigner.{% else %}
+      Seul le chef d'établissement peut modifier cette liste.{% endif %}</p>
+
+    <div class="osm-table-outer mb-3">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr><th>Super administrateur</th><th>Désigné par</th><th>Le</th>
+          {% if user_is_chief %}<th class="text-end"></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for u in super_admins %}
+          <tr>
+            <td class="fw-semibold">{{ u.full_name|default:u }} <span class="badge-role b-super ms-1">Super admin</span></td>
+            <td class="text-white-50">{{ u.named_super_admin_by.full_name|default:u.named_super_admin_by|default:"—" }}</td>
+            <td class="text-white-50">{{ u.named_super_admin_at|date:"d/m/Y"|default:"—" }}</td>
+            {% if user_is_chief %}
+            <td class="text-end">
+              <form method="post" class="d-inline" data-confirm="Retirer les droits de super administrateur à {{ u.full_name|default:u }} ?">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="revoke_super">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Révoquer">
+                  <i class="bi bi-x-circle me-1"></i>Révoquer</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if user_is_chief %}4{% else %}3{% endif %}" class="text-white-50 text-center py-3">Aucun super administrateur désigné.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if user_is_chief %}
+    <form method="post" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="grant_super">
+      <div class="flex-grow-1">
+        <label class="text-white small mb-1 d-block">Désigner un super administrateur</label>
+        <select name="user_id" class="form-select" required>
+          <option value="">— Choisir —</option>
+          {% for u in non_super %}<option value="{{ u.id }}">{{ u.full_name|default:u }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-success fw-semibold" data-bs-toggle="tooltip" title="Accorder les droits de super administrateur">
+        <i class="bi bi-check-circle me-1"></i>Désigner</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ================= RESPONSABLES FINANCIERS (chef ou super_admin) ================= #}
+  <div class="fin-card p-3 p-sm-4" style="--ac:#199548;">
+    <p class="fin-title mb-1"><i class="bi bi-cash-coin me-1"></i>Responsables financiers</p>
+    <p class="text-white-50 small mb-3">Autorisés à utiliser le module financier (encaissements, caisse,
+      salaires, états). Désignation tracée.</p>
+
+    <div class="osm-table-outer mb-3">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr><th>Responsable</th><th>Désigné par</th><th>Le</th><th class="text-end"></th></tr></thead>
+        <tbody>
+          {% for u in financial_users %}
+          <tr>
+            <td class="fw-semibold">{{ u.full_name|default:u }} <span class="badge-role b-fin ms-1">Financier</span></td>
+            <td class="text-white-50">{{ u.named_financial_user_by.full_name|default:u.named_financial_user_by|default:"—" }}</td>
+            <td class="text-white-50">{{ u.named_financial_user_at|date:"d/m/Y"|default:"—" }}</td>
+            <td class="text-end">
+              <form method="post" class="d-inline" data-confirm="Retirer les droits financiers à {{ u.full_name|default:u }} ?">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="revoke_fin">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Révoquer">
+                  <i class="bi bi-x-circle me-1"></i>Révoquer</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-white-50 text-center py-3">Aucun responsable financier désigné.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <form method="post" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="grant_fin">
+      <div class="flex-grow-1">
+        <label class="text-white small mb-1 d-block">Désigner un responsable financier</label>
+        <select name="user_id" class="form-select" required>
+          <option value="">— Choisir —</option>
+          {% for u in non_financial %}<option value="{{ u.id }}">{{ u.full_name|default:u }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-success fw-semibold" data-bs-toggle="tooltip" title="Accorder les droits financiers">
+        <i class="bi bi-check-circle me-1"></i>Désigner</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

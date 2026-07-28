@@ -106,12 +106,12 @@
           {% for r in status %}
           <tr>
             <td>{{ r.fee_type }}{% if not r.affects_cashbox %}
-                <i class="bi bi-bank ms-1 text-white-50" title="Reversé à l'État (hors caisse)"></i>{% endif %}</td>
+                <i class="bi bi-bank ms-1 text-white-50" data-bs-toggle="tooltip" title="Reversé à l'État (hors caisse)"></i>{% endif %}</td>
             <td class="text-end amount">{{ r.du_net }}{% if r.remise %} <span class="text-white-50 small">(-{{ r.remise }})</span>{% endif %}</td>
             <td class="text-end amount amt-paid">{{ r.paye }}</td>
             <td class="text-end amount fw-bold {% if r.reste %}amt-rest{% else %}amt-zero{% endif %}">{{ r.reste }}</td>
             <td class="text-center">
-              {% if r.solde %}<span class="status-pill pill-ok">Soldé</span>
+              {% if r.solde %}<span class="status-pill pill-ok">{% if r.du_net %} Soldé {% else %} Rien à payer {% endif %}</span>
               {% elif r.retard %}<span class="status-pill pill-late">Retard {{ r.retard }}</span>
               {% else %}<span class="status-pill pill-due">Reste {{ r.reste }}</span>{% endif %}
             </td>
@@ -148,7 +148,7 @@
       <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr>
           <th>Reçu</th><th>Date</th><th>Frais</th>
-          <th class="text-end">Montant</th><th>Mode</th><th></th>
+          <th class="text-end">Montant</th><th>Mode</th><th class="text-end">Actions</th>
         </tr></thead>
         <tbody>
           {% for p in history %}
@@ -160,7 +160,7 @@
             <td>{{ p.method }}</td>
             <td class="text-end">
               {% if p.cancelled %}
-                <span class="status-pill pill-late" title="{{ p.cancel_reason }}">Annulé</span>
+                <span class="status-pill pill-late" data-bs-toggle="tooltip" title="{{ p.cancel_reason }}">Annulé</span>
               {% else %}
                 {% if p.fee_type.affects_cashbox %}
                 <a class="btn btn-sm btn-outline-warning" target="_blank"

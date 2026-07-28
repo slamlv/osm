@@ -3,7 +3,7 @@ from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, Stude
     Students, StudentDetails, ParentDetails, Parents, discipline, Discipline, StudentsImport, students_export,\
     StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney, StudentsTrash, StudentsWithoutClass,\
     StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass,\
-    ImportTemplateDownload
+    ImportTemplateDownload, age_sex_stats, age_sex_stats_pdf, age_sex_stats_xlsx, enrollment_certificate
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
@@ -30,5 +30,9 @@ urlpatterns = [
     path("students_delete_deactivated", DeleteDeactivatedStudents.as_view(), name="students_delete_deactivated"),
     path("students_delete_without_class", DeleteStudentsWithoutClass.as_view(), name="students_delete_without_class"),
     path("class_bulk_assignment", AssignClassToWithoutClass.as_view(), name="class_bulk_assignment"),
-    path("students_import_template", ImportTemplateDownload.as_view(), name="students_import_template")
+    path("students_import_template", ImportTemplateDownload.as_view(), name="students_import_template"),
+    path("age_and_sex_stats", age_sex_stats, name="age_and_sex_stats"),
+    path("age_and_sex_stats_pdf", age_sex_stats_pdf, name="age_and_sex_stats_pdf"),
+    path("age_and_sex_stats_xlsx", age_sex_stats_xlsx, name="age_and_sex_stats_xlsx"),
+    path("enrollment_certificate-<int:id>/", enrollment_certificate, name="enrollment_certificate"),
 ]

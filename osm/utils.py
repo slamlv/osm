@@ -82,6 +82,34 @@ def admin_required(view_func):
     return _wrapped_vied
 
 
+def super_admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped_vied(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
+        if not request.user.is_superuser and (request.user.is_super_admin or request.user.is_principal):
+            return view_func(request, *args, **kwargs)
+        elif request.user.is_superuser:
+            return render(request, "404_unauthenticated.html")
+        return render(request, "404.html")
+
+    return _wrapped_vied
+
+
+def financial_user_required(view_func):
+    @wraps(view_func)
+    def _wrapped_vied(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse('signin'))
+        if not request.user.is_superuser and request.user.is_financial_user:
+            return view_func(request, *args, **kwargs)
+        elif request.user.is_superuser:
+            return render(request, "404_unauthenticated.html")
+        return render(request, "404.html")
+
+    return _wrapped_vied
+
+
 class BlockIfYearClosed:
     """À mixer dans les vues de saisie (notes, etc.)."""
     def dispatch(self, request, *args, **kwargs):
@@ -89,7 +117,7 @@ class BlockIfYearClosed:
         if school.is_year_closed:
             message(request, "L'année est clôturée : cette action n'est plus disponible.",
                     msg_type="warning")
-            return redirect("idex")
+            return redirect("index")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -467,6 +495,19 @@ def disciplines_par_classe(x):
 def logged_admin_view(view_func):
     wrapped = login_required(view_func, login_url="signin")
     wrapped = admin_required(wrapped)
+    wrapped = with_users_school_schema(wrapped)
+    return wrapped
+
+
+def logged_super_admin_view(view_func):
+    wrapped = login_required(view_func, login_url="signin")
+    wrapped = super_admin_required(wrapped)
+    wrapped = with_users_school_schema(wrapped)
+    return wrapped
+
+def logged_financial_user_view(view_func):
+    wrapped = login_required(view_func, login_url="signin")
+    wrapped = financial_user_required(wrapped)
     wrapped = with_users_school_schema(wrapped)
     return wrapped
 
@@ -1814,7 +1855,7 @@ def finance_defaults(school):
     # --- Catégories de transactions -------------------------------------------
     K = TransactionCategory.Kind
     categories = [
-        ("Salaires Vacataires", K.EXPENSE),
+        ("Salaires Vacataires et Personnel d'Appui", K.EXPENSE),
         ("Fournitures & Matériel", K.EXPENSE),
         ("Entretien & Réparations", K.EXPENSE),
         ("Eau", K.EXPENSE),

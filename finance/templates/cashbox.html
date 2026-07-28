@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select, .modal-dark input, .modal-dark select, .modal-dark textarea {
+    background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important;
+    color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus, .modal-dark input:focus, .modal-dark select:focus, .modal-dark textarea:focus {
+    background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important;
+    box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option, .modal-dark select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+
+  .kpi { font-size:1.5rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .kpi small { display:block; font-size:0.68rem; font-weight:600; color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
+  .amount { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+  .amt-in  { color:#5dd48e!important; } .amt-out { color:#ff8a95!important; }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 14px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; transition:background 0.12s; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:10px 14px; vertical-align:middle; }
+  /* montants DANS les tableaux : spécificité renforcée (bat la règle td) */
+  .osm-table-outer tbody td.amount, .osm-table-outer tbody td .amount,
+  .osm-table-outer tfoot td.amount { color:#f0c75e!important; }
+  .osm-table-outer tbody td.amt-paid, .osm-table-outer tfoot td.amt-paid { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-rest { color:#ffb066!important; }
+  .osm-table-outer tbody td.amt-zero { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-in,  .osm-table-outer tfoot td.amt-in  { color:#5dd48e!important; }
+  .osm-table-outer tbody td.amt-out, .osm-table-outer tfoot td.amt-out { color:#ff8a95!important; }
+  .osm-table-outer tfoot tr { background:linear-gradient(135deg, #152f45, #1a3a57)!important; }
+  .osm-table-outer tfoot td { background:transparent!important; border-color:rgba(255,255,255,0.1=!important; padding:10px 14px; }
+  @media (max-width:767.98px){
+    .osm-table-outer thead th{padding:8px 8px;font-size:0.66rem;}
+    .osm-table-outer tbody td{padding:8px 8px;font-size:0.8rem;}
+    .kpi{font-size:1.15rem;}
+  }
+  .modal-dark .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.1); border-radius:18px; color:#fff; }
+  .modal-dark .modal-header { background:linear-gradient(135deg,#152f45,#1e4266); border-bottom:1px solid rgba(255,255,255,0.08); }
+  .modal-dark .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
+  .modal-dark label { font-size:0.8rem; color:rgba(255,255,255,0.75); margin-bottom:4px; }
+</style>
+
+<div class="container py-3" style="max-width:1100px;">
+
+  {# ============ INDICATEURS ============ #}
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#f0c75e;">
+        <p class="fin-title mb-2"><i class="bi bi-safe me-1"></i>Solde actuel</p>
+        <div class="kpi amount">{{ balance_now }} <span style="font-size:0.8rem;">FCFA</span>
+          <small>Caisse — toutes opérations confondues</small></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#199548;">
+        <p class="fin-title mb-2"><i class="bi bi-arrow-down-circle me-1"></i>Entrées (période)</p>
+        <div class="kpi amt-in">+{{ total_in }} <span class="d-none d-md-inline" style="font-size:0.8rem;">FCFA</span><small>Paiements élèves & recettes</small></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#ef4444;">
+        <p class="fin-title mb-2"><i class="bi bi-arrow-up-circle me-1"></i>Sorties (période)</p>
+        <div class="kpi amt-out">-{{ total_out }} <span class="d-none d-md-inline" style="font-size:0.8rem;">FCFA</span><small>Dépenses & salaires</small></div>
+      </div>
+    </div>
+  </div>
+
+  {# ============ BARRE : période + actions ============ #}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+    <div class="d-flex flex-column flex-md-row gap-3 align-items-stretch align-items-md-end justify-content-between">
+      <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+        <div><label class="text-white small mb-1 d-block">Du</label>
+          <input data-max-now type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+        <div><label class="text-white small mb-1 d-block">Au</label>
+          <input data-max-now type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+        <button class="btn btn-info btn-sm fw-semibold"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+      </form>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-outline-warning btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#boxModal">
+          <i class="bi bi-gear me-1"></i>Paramètres</button>
+        <button class="btn btn-success btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#opModal">
+          <i class="bi bi-plus-circle me-1"></i>Nouvelle opération</button>
+      </div>
+    </div>
+  </div>
+
+  {# ============ JOURNAL UNIFIÉ ============ #}
+  <div class="fin-card p-3 p-sm-4" style="--ac:#a855f7;">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <p class="fin-title mb-0"><i class="bi bi-journal-text me-1"></i>Journal de caisse — {{ date_from|date:"d/m/Y" }} au {{ date_to|date:"d/m/Y" }}</p>
+      <span class="text-white-50 small">Solde d'ouverture : <span class="amount">{{ opening }} FCFA</span></span>
+    </div>
+    <div class="osm-table-outer">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Date</th><th>Libellé</th><th>Réf.</th><th>Mode</th>
+          <th class="text-end">Entrée</th><th class="text-end">Sortie</th>
+          <th class="text-end">Solde</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for e in entries %}
+          <tr>
+            <td class="text-white-50" style="white-space:nowrap;">{{ e.date|date:"d/m/Y" }}</td>
+            <td>{{ e.libelle }}</td>
+            <td class="text-white-50">{{ e.ref|default:"—" }}</td>
+            <td class="text-white-50">{{ e.methode }}</td>
+            <td class="text-end amount amt-in">{% if e.sens > 0 %}+{{ e.montant }}{% endif %}</td>
+            <td class="text-end amount amt-out">{% if e.sens < 0 %}-{{ e.montant }}{% endif %}</td>
+            <td class="text-end amount fw-bold">{{ e.solde }}</td>
+            <td class="text-end">
+              {% if e.type == "payment" %}
+                <a class="btn btn-sm btn-outline-warning" target="_blank"
+                   href="{% url 'payment_receipt' e.pk %}" data-bs-toggle="tooltip" title="Reçu"><i class="bi bi-printer"></i></a>
+              {% else %}
+                <form method="post" action="{% url 'cancel_transaction' e.pk %}" class="d-inline"
+                      onsubmit="var m=prompt('Motif de l\'annulation ?'); if(!m)return false; this.reason.value=m; return true;">
+                  {% csrf_token %}<input type="hidden" name="reason" value="">
+                  <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Annuler (tracé)"><i class="bi bi-x-circle"></i></button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-white-50 text-center py-4">Aucun mouvement sur la période.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if entries %}
+        <tfoot>
+          <tr>
+            <td colspan="4" class="fw-bold text-white">Totaux période</td>
+            <td class="text-end amount amt-in fw-bold">+{{ total_in|cut:" " }}</td>
+            <td class="text-end amount amt-out fw-bold">-{{ total_out|cut:" " }}</td>
+            <td class="text-end amount fw-bold">{{ closing|cut:" " }}</td><td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ================= MODALE nouvelle opération ================= #}
+<div class="modal fade modal-dark" id="opModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle text-success me-2"></i>Nouvelle opération</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'transaction_save' %}">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-sm-7">
+              <label>Catégorie</label>
+              <select name="category" id="op-cat" class="form-select" required onchange="toggleBenef()">
+                {% regroup categories by get_kind_display as kinds %}
+                {% for k in kinds %}
+                <optgroup label="{{ k.grouper }}s">
+                  {% for c in k.list %}
+                  <option value="{{ c.id }}" data-kind="{{ c.kind }}" data-salary="{% if 'alaire' in c.nom %}1{% endif %}">{{ c.nom }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-5"><label>Montant (FCFA)</label>
+              <input type="number" name="amount" class="form-control" min="1" required></div>
+            <div class="col-12"><label>Libellé</label>
+              <input type="text" name="description" class="form-control" maxlength="160"
+                     placeholder="Ex. Achat de craies, Facture ENEO..." required></div>
+            <div class="col-sm-6" id="benef-wrap" style="display:none;">
+              <label>Bénéficiaire (salaire)</label>
+              <select name="beneficiary" class="form-select">
+                <option value="">—</option>
+                {% for p in personnel %}<option value="{{ p.id }}">{{ p }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-3"><label>Mode</label>
+              <select name="method" class="form-select">
+                {% for v, l in methods %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+              </select></div>
+            <div class="col-sm-3"><label>Date</label>
+              <input data-max-now type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}" required></div>
+            <div class="col-12"><label>Référence pièce (facultatif)</label>
+              <input type="text" name="reference" class="form-control" placeholder="N° facture, bordereau..."></div>
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-success fw-semibold px-4"><i class="bi bi-save me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ================= MODALE solde initial ================= #}
+<div class="modal fade modal-dark" id="boxModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold"><i class="bi bi-gear text-info me-2"></i>Paramètres financiers</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-white-50 small">Fonds existants à l'adoption de la plateforme.
+           Le solde est calculé à partir de ce point de départ.</p>
+        <form method="post" action="{% url 'cashbox_settings' %}">
+          {% csrf_token %}
+          <label>Montant (FCFA)</label>
+          <input type="number" name="opening_balance" class="form-control mb-2"
+                 value="{{ box.opening_balance|default:0 }}" required>
+          <label>À la date du</label>
+          <input data-max-now type="date" name="opening_date" class="form-control mb-3"
+                 value="{{ box.opening_date|date:'Y-m-d' }}" required>
+          <hr style="border-color:rgba(255,255,255,0.1);">
+          <label>Taux horaire par défaut (FCFA/h)</label>
+          <input type="number" name="default_hourly_rate" class="form-control mb-1" min="1"
+                 value="{{ box.default_hourly_rate|default_if_none:'' }}" placeholder="Facultatif">
+          <p class="text-white-50 mb-3" style="font-size:0.72rem;">Pré-remplit le taux des vacataires
+             horaires sans taux configuré. Reste modifiable par personne.</p>
+          <button class="btn btn-success w-100 fw-semibold"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Affiche le champ Bénéficiaire seulement pour une catégorie de type salaire
+  function toggleBenef() {
+    const opt = document.querySelector('#op-cat option:checked');
+    document.getElementById('benef-wrap').style.display =
+      (opt && opt.dataset.salary) ? '' : 'none';
+  }
+  toggleBenef();
+</script>
+{% endblock %}

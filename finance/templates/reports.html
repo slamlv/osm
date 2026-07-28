@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select {
+    background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important;
+    color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus {
+    background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important;
+    box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.55); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .fin-card label { font-size:0.78rem; color:rgba(255,255,255,0.65); margin-bottom:4px; display:block; }
+  .fin-desc { color:rgba(255,255,255,0.45); font-size:0.8rem; }
+</style>
+
+<div class="container py-3" style="max-width:1100px;">
+  <h6 class="text-white fw-bold mb-3"><i class="bi bi-file-earmark-bar-graph me-2 text-warning"></i>États financiers</h6>
+
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+      <label class="text-white fin-title small mb-1 d-block">Année scolaire</label>
+      <select id="year-picker" class="form-select form-select-sm" style="max-width:220px;"
+        onchange="syncYear(this.value)">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+      </select>
+  </div>
+  <div class="row g-3">
+
+    {# ---- Insolvables ---- #}
+    <div class="col-12 col-lg-6">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#ef4444;">
+        <p class="fin-title mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Insolvables par classe</p>
+        <p class="fin-desc mb-3">Liste des élèves n'ayant pas soldé, avec reste à payer. Base des renvois et relances.</p>
+        <form method="get" onsubmit="this.action='{% url 'defaulters_pdf' 0 %}'.replace('0/',this.classroom.value+'/');">
+          <div class="row g-2">
+            <input type="hidden" name="year" value="{{ year }}" class="year-field">
+            <div class="col-6"><label>Classe</label>
+              <select name="classroom" class="form-select form-select-sm">
+                {% for c in classrooms %}<option value="{{ c.id }}">{{ c.code }}</option>{% endfor %}
+              </select></div>
+            <div class="col-6"><label>Frais (optionnel)</label>
+              <select name="fee_type" class="form-select form-select-sm">
+                <option value="">Tous</option>
+                {% for ft in fee_types %}<option value="{{ ft.id }}">{{ ft }}</option>{% endfor %}
+              </select></div>
+            <div class="col-8"><label>Critère</label>
+              <select name="crit" class="form-select form-select-sm">
+                <option value="reste">Reste à payer (global)</option>
+                <option value="retard">Retard sur tranches échues</option>
+              </select></div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-outline-danger btn-sm fw-semibold w-100"
+                      data-bs-toggle="tooltip" title="Générer le PDF des insolvables">
+                <i class="bi bi-printer me-1"></i>PDF</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ---- Convocations ---- #}
+    <div class="col-12 col-lg-6">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#f97316;">
+        <p class="fin-title mb-1"><i class="bi bi-envelope-exclamation me-1"></i>Convocations des parents</p>
+        <p class="fin-desc mb-3">Une convocation par élève insolvable (2 par page, à découper), cachet apposé.</p>
+        <form method="get" onsubmit="this.action='{% url 'convocations_pdf' 0 %}'.replace('0/',this.classroom.value+'/');">
+          <div class="row g-2">
+            <input type="hidden" name="year" value="{{ year }}" class="year-field">
+            <div class="col-6"><label>Classe</label>
+              <select name="classroom" class="form-select form-select-sm">
+                {% for c in classrooms %}<option value="{{ c.id }}">{{ c.code }}</option>{% endfor %}
+              </select></div>
+            <div class="col-6"><label>Frais (optionnel)</label>
+              <select name="fee_type" class="form-select form-select-sm">
+                <option value="">Tous</option>
+                {% for ft in fee_types %}<option value="{{ ft.id }}">{{ ft }}</option>{% endfor %}
+              </select></div>
+            <div class="col-5"><label>Date du RDV</label>
+              <input type="date" name="date" class="form-control form-control-sm"></div>
+            <div class="col-3"><label>Heure</label>
+              <input type="time" name="time" class="form-control form-control-sm"></div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-outline-warning btn-sm fw-semibold w-100"
+                      data-bs-toggle="tooltip" title="Générer les convocations">
+                <i class="bi bi-printer me-1"></i>PDF</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ---- Recouvrement ---- #}
+    <div class="col-12 col-lg-6">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#14b8a6;">
+        <p class="fin-title mb-1"><i class="bi bi-graph-up-arrow me-1"></i>Recouvrement par classe</p>
+        <p class="fin-desc mb-3">Attendu / encaissé / taux, classe par classe, avec total établissement.</p>
+        <form method="get" target="_blank" action="{% url 'recovery_pdf' %}">
+          <div class="row g-2">
+            <input type="hidden" name="year" value="{{ year }}" class="year-field">
+            <div class="col-8"><label>Frais (optionnel)</label>
+              <select name="fee_type" class="form-select form-select-sm">
+                <option value="">Tous frais en caisse</option>
+                {% for ft in fee_types %}<option value="{{ ft.id }}">{{ ft }}</option>{% endfor %}
+              </select></div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-outline-info btn-sm fw-semibold w-100"
+                      data-bs-toggle="tooltip" title="Générer l'état de recouvrement">
+                <i class="bi bi-printer me-1"></i>PDF</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ---- Journal de caisse ---- #}
+    <div class="col-12 col-lg-6">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#a855f7;">
+        <p class="fin-title mb-1"><i class="bi bi-journal-text me-1"></i>Journal de caisse</p>
+        <p class="fin-desc mb-3">Chronologie des mouvements avec solde courant, arrêté en lettres.</p>
+        <form method="get" target="_blank" action="{% url 'journal_pdf' %}">
+          <div class="row g-2">
+            <div class="col-4"><label>Du</label>
+              <input data-max-now type="date" name="from" value="{{ month_start|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-4"><label>Au</label>
+              <input data-max-now type="date" name="to" value="{{ today|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-outline-light btn-sm fw-semibold w-100"
+                      data-bs-toggle="tooltip" title="Générer le journal de caisse">
+                <i class="bi bi-printer me-1"></i>PDF</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ---- Dépenses ---- #}
+    <div class="col-12 col-lg-6">
+      <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#e8b23e;">
+        <p class="fin-title mb-1"><i class="bi bi-pie-chart me-1"></i>Dépenses & recettes par catégorie</p>
+        <p class="fin-desc mb-3">Répartition des dépenses (dont salaires) et recettes diverses sur une période.</p>
+        <form method="get" target="_blank" action="{% url 'expenses_pdf' %}">
+          <div class="row g-2">
+            <div class="col-4"><label>Du</label>
+              <input data-max-now type="date" name="from" value="{{ month_start|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-4"><label>Au</label>
+              <input data-max-now type="date" name="to" value="{{ today|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-4 d-flex align-items-end">
+              <button class="btn btn-outline-warning btn-sm fw-semibold w-100"
+                      data-bs-toggle="tooltip" title="Générer l'état des dépenses">
+                <i class="bi bi-printer me-1"></i>PDF</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+    function syncYear(v) {
+        document.querySelectorAll('.year-field').forEach(i => i.value = v);
+    }
+</script>
+{% endblock %}

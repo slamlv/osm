@@ -7,22 +7,23 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
-from django.views import View
-from django.views.decorators.http import condition
-from django.views.generic import DeleteView, DetailView
 from django.forms.models import model_to_dict
 from django.db import IntegrityError, transaction
 from django.conf import settings
 from fpdf import FPDF
-from fpdf.enums import VAlign, TableCellFillMode
+from fpdf.enums import VAlign, TableCellFillMode, TableHeadingsDisplay
 from fpdf.table import Table
 from babel.dates import format_date
 from openpyxl.utils.datetime import to_excel
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 from authentification.models import SchoolYear, User
 from note.models import Note, Enseignements
 from classroom.models import ClassRoom
+from classroom.views import add_fonts
 from note.views import ReportCard
 from .forms import StudentForm, ParentForm, DForm, BulkDecisionForm
 from osm.forms import SearchForm
@@ -31,13 +32,13 @@ from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes, stamp_bytes, paste_stamp
+    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
 from openpyxl import load_workbook
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date
 from os import path
 
 
@@ -1198,16 +1199,578 @@ class Discipline(LoggedAdminView):
         return response
 
 
-# Dimensions normalisées de la carte (norme ISO/IEC 7810 ID-1).
-CARD_W, CARD_H = 85.6, 54.0
+"""
+=============================================================================
+ STATISTIQUES — Répartition des élèves par ÂGE et par SEXE
+=============================================================================
+ Tableau croisé : lignes = classes (+ Total), colonnes = âges présents
+ (chacun éclaté F/G/T) + bloc Total (F/G/T).
+ Âge = âge au 31 DÉCEMBRE de l'année scolaire (convention officielle).
+ Vue web + export PDF + export Excel.
+=============================================================================
+"""
 
-# Couleurs de la charte (drapeau camerounais + bleu institutionnel).
+
+def _ref_year_dec31(school_year_str):
+    """Année scolaire '2025/2026' -> 2025 (le 31/12 de l'année de RENTRÉE)."""
+    try:
+        return int(school_year_str.split("/")[0])
+    except Exception:
+        return date.today().year
+
+
+def age_at(dob, ref_year):
+    """Âge révolu au 31 décembre de ref_year."""
+    if not dob:
+        return None
+    ref = date(ref_year, 12, 31)
+    return ref.year - dob.year - ((ref.month, ref.day) < (dob.month, dob.day))
+
+
+def build_age_sex_table(year=None):
+    """Construit la structure du tableau croisé âge×sexe par classe.
+    Renvoie un dict prêt pour le template ET les exports."""
+    year = year or school_year()
+    ref = _ref_year_dec31(year)
+
+    classrooms = list(ClassRoom.objects.all().order_by_niveau())
+
+    # 1er passage : collecter les âges présents + compter par (classe, âge, sexe)
+    ages = set()
+    # counts[classroom_id][age] = {"F": n, "G": n}
+    counts = {c.id: {} for c in classrooms}
+    for c in classrooms:
+        for st in c.students.all():
+            a = age_at(st.date_naissance, ref)
+            if a is None:
+                continue
+            ages.add(a)
+            slot = counts[c.id].setdefault(a, {"F": 0, "G": 0})
+            if st.sexe == "Fille":
+                slot["F"] += 1
+            else:
+                slot["G"] += 1
+
+    ages = sorted(ages)
+
+    # 2e passage : lignes par classe avec F/G/T par âge + total ligne
+    rows = []
+    col_tot = {a: {"F": 0, "G": 0} for a in ages}   # totaux par âge (bas)
+    grand = {"F": 0, "G": 0}
+    for c in classrooms:
+        cells = []
+        rF = rG = 0
+        for a in ages:
+            slot = counts[c.id].get(a, {"F": 0, "G": 0})
+            f, g = slot["F"], slot["G"]
+            cells.append({"F": f, "G": g, "T": f + g})
+            rF += f; rG += g
+            col_tot[a]["F"] += f; col_tot[a]["G"] += g
+        rows.append({"classe": c.code, "cells": cells, "F": rF, "G": rG, "T": rF + rG})
+        grand["F"] += rF; grand["G"] += rG
+
+    # ligne des totaux (bas)
+    total_cells = [{"F": col_tot[a]["F"], "G": col_tot[a]["G"], "T": col_tot[a]["F"] + col_tot[a]["G"]} for a in ages]
+    total_row = {"classe": "TOTAL", "cells": total_cells, "F": grand["F"], "G": grand["G"], "T": grand["F"] + grand["G"]}
+
+    return {"year": year, "ref_year": ref, "ages": ages, "rows": rows, "total_row": total_row}
+
+
+# ---------------------------------------------------------------------------
+#  VUE STATISTIQUES — Répartition des élèves par ÂGE et par SEXE
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def age_sex_stats(request):
+    data = build_age_sex_table(school_year())
+    data['title'] = "Répartition par âge et par sexe"
+    return render(request, "age_sex.html", data)
+
+
+# ---------------------------------------------------------------------------
+#  EXPORT PDF STATISTIQUES — Répartition des élèves par ÂGE et par SEXE
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def age_sex_stats_pdf(request):
+    data = build_age_sex_table(school_year())
+    if not Student.objects.exists() or not ClassRoom.objects.exists():
+        if not Student.objects.exists():
+            msg = "Aucun élève enregistré."
+        else:
+            msg = "Aucune classe enregistrée."
+        message(request, msg, msg_type="error")
+        return safe_redirect_back(request)
+    pdf = AgeSexTablePDF(data, request.user.school)
+    return pdf_response(pdf, f"Répartition par Age et par Sexe {data['year']}.pdf")
+
+
+# ---------------------------------------------------------------------------
+#  EXPORT EXCEL STATISTIQUES — Répartition des élèves par ÂGE et par SEXE
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def age_sex_stats_xlsx(request):
+    data = build_age_sex_table(school_year())
+    ages, rows, total = data["ages"], data["rows"], data["total_row"]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Répartition âge-sexe"
+
+    bold = Font(bold=True)
+    center = Alignment(horizontal="center", vertical="center")
+    fill = PatternFill("solid", fgColor="1B3A57")
+    white_bold = Font(bold=True, color="FFFFFF")
+    thin = Side(style="thin", color="BBBBBB")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Ligne 1 : Classe | <age> (fusion 3) ... | Total (fusion 3)
+    ws.cell(1, 1, "Classe"); ws.merge_cells(start_row=1, start_column=1, end_row=2, end_column=1)
+    col = 2
+    for a in ages:
+        ws.cell(1, col, f"{a} ans")
+        ws.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + 2)
+        col += 3
+    ws.cell(1, col, "Total")
+    ws.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + 2)
+
+    # Ligne 2 : F G T répétés
+    col = 2
+    for _ in range(len(ages) + 1):     # +1 pour le bloc Total
+        ws.cell(2, col, "F"); ws.cell(2, col + 1, "G"); ws.cell(2, col + 2, "T")
+        col += 3
+
+    # style en-têtes
+    for r in (1, 2):
+        for cc in range(1, col):
+            cell = ws.cell(r, cc)
+            cell.font = white_bold; cell.alignment = center
+            cell.fill = fill; cell.border = border
+
+    # lignes de données
+    rownum = 3
+    for row in rows + [total]:
+        ws.cell(rownum, 1, row["classe"])
+        if row["classe"] == "TOTAL":
+            ws.cell(rownum, 1).font = bold
+        cc = 2
+        for cell in row["cells"]:
+            ws.cell(rownum, cc, cell["F"] or "")
+            ws.cell(rownum, cc + 1, cell["G"] or "")
+            ws.cell(rownum, cc + 2, cell["T"] or "")
+            cc += 3
+        ws.cell(rownum, cc, row["F"]); ws.cell(rownum, cc + 1, row["G"])
+        ws.cell(rownum, cc + 2, row["T"])
+        for c2 in range(1, cc + 3):
+            cell = ws.cell(rownum, c2)
+            cell.alignment = center; cell.border = border
+            if row["classe"] == "TOTAL":
+                cell.font = bold
+        rownum += 1
+
+    ws.column_dimensions["A"].width = 16
+    for i in range(2, col + 3):
+        ws.column_dimensions[get_column_letter(i)].width = 5
+
+    resp = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    resp["Content-Disposition"] = f'attachment; filename="Répartition par Age et par Sexe {data["year"]}.xlsx"'
+    wb.save(resp)
+    return resp
+
+
+"""
+=============================================================================
+ CERTIFICAT DE SCOLARITÉ
+=============================================================================
+ Conditionné à la solvabilité : l'élève ne doit avoir AUCUN reste sur les
+ frais qui ENTRENT EN CAISSE (affects_cashbox=True).
+=============================================================================
+"""
+
+
+# ---------------------------------------------------------------------------
+#  HELPER SOLVABILITÉ
+# ---------------------------------------------------------------------------
+def unpaid_cashbox_fees(student, year):
+    """Liste des frais EN CAISSE non soldés de l'élève pour l'année.
+    Vide => l'élève est à jour (éligible au certificat)."""
+    return [r for r in student.student_fee_status(year) if r["affects_cashbox"] and r["reste"] > 0]
+
+
+def is_solvent(student, year):
+    return not unpaid_cashbox_fees(student, year)
+
+
+# ---------------------------------------------------------------------------
+#  VUE CERTIFICAT DE SCOLARITÉ
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def enrollment_certificate(request, id):
+    student = get_object_or_404(Student, pk=id)
+    year = school_year()
+    unpaid = unpaid_cashbox_fees(student, year)
+    if unpaid:
+        reste = sum(r["reste"] for r in unpaid)
+        details = ", ".join(f"{r['fee_type']} ({r['reste']:,} F)".replace(",", " ") for r in unpaid)
+        message(request, f"Certificat indisponible : {student.short_name} n'est pas à jour "
+                f"(reste {reste:,} FCFA — {details}).".replace(",", " "), msg_type="error")
+        return safe_redirect_back(request)
+
+    pdf = EnrollmentCertificate(student, year, request.user.school)
+    return pdf_response(pdf, f"Certificat de Scolarité {student.short_name}.pdf")
+
+
+# Couleurs
 GREEN = (10, 125, 63)
+HEAD  = (27, 58, 87)
+GREY  = (110, 120, 132)
+LINE  = (170, 180, 190)
 RED = (210, 31, 60)
 YELLOW = (249, 214, 22)
-INK = (21, 35, 59)       # texte principal
-BLUE = (10, 61, 98)      # valeurs mises en avant
-GREY = (138, 147, 163)   # labels secondaires
+INK = (21, 35, 59)
+BLUE = (10, 61, 98)
+NAVY  = (10, 61, 98)
+DARK  = (30, 40, 55)
+
+
+"""
+=============================================================================
+ EnrollmentCertificate — Certificat de scolarité (corps bilingue à champs)
+=============================================================================
+ Chaque mention en français, avec sa traduction
+ anglaise en italique juste dessous, et la valeur en gras à droite du
+ libellé. Photo d'identité de l'élève en haut à droite (authentification
+ visuelle, comme sur les certificats universitaires).
+=============================================================================
+"""
+
+
+class EnrollmentCertificate(FPDF):
+    """pdf = EnrollmentCertificate(student, year) -> pdf_response(...)"""
+
+    L, R = 10, 200          # marges du corps
+    GREY = (120, 130, 142)
+    LINE = (200, 208, 216)
+
+    def __init__(self, student, year, school):
+        super().__init__(orientation="P", unit="mm", format="A4")
+        add_fonts(self)
+        self.set_auto_page_break(False)
+        self.set_margins(6, 16, 6)
+        self.student = student
+        self.year = year
+        self.school = school
+        try:
+            self._cachet_bytes = stamp_bytes(school.cachet)
+            self._visa_bytes = stamp_bytes(self.school.visa)
+        except Exception:
+            self._cachet_bytes = None
+            self._visa_bytes = None
+        self.add_page()
+        self.filigrane(x=50, y=95, w=110)
+        self.set_font("inter", "", 8)
+        base_header(self, mode="P", y_img=10)
+        self._title()
+        self._body()
+
+    # ------------------------------------------------------------------
+    #  HELPERS DE MISE EN FORME (le cœur de l'optimisation)
+    # ------------------------------------------------------------------
+    def _label(self, x, y, fr, en):
+        """Libellé bilingue : français puis anglais en italique dessous.
+        Renvoie la largeur occupée (pour poser la valeur juste après)."""
+        self.set_font("inter", "", 10)
+        self.set_text_color(*DARK)
+        w_fr = self.get_string_width(fr)
+        self.set_xy(x, y)
+        self.cell(w_fr + 1, 4.6, fr)
+        self.set_font("inter", "I", 8)
+        self.set_text_color(*self.GREY)
+        w_en = self.get_string_width(en)
+        self.set_xy(x, y + 4.3)
+        self.cell(w_en + 1, 3.4, en)
+        return max(w_fr, w_en) + 3
+
+    def _value(self, x, y, text, size=10.5, color=NAVY):
+        """Valeur en gras, alignée sur la ligne française du libellé."""
+        self.set_font("inter", "B", size)
+        self.set_text_color(*color)
+        self.set_xy(x, y)
+        self.cell(0, 4.6, str(text) if text not in (None, "") else "")
+
+    def _field(self, x, y, fr, en, value, size=10.5):
+        """Libellé bilingue + valeur, sur une seule ligne. -> largeur totale."""
+        w = self._label(x, y, fr, en)
+        self._value(x + w, y, value, size)
+        return w
+
+    def _title(self):
+        y = 60
+        self.set_font("inter", "B", 17)
+        self.set_text_color(*GREEN)
+        self.set_xy(self.L, y)
+        self.cell(self.R - self.L, 8, "CERTIFICAT DE SCOLARITÉ", align="C")
+        self.set_font("inter", "I", 10)
+        self.set_text_color(*self.GREY)
+        self.set_xy(self.L, y + 8)
+        self.cell(self.R - self.L, 5, "SCHOOL ATTENDANCE CERTIFICATE", align="C")
+        cx = (self.L + self.R) / 2
+        self.set_draw_color(*GREEN)
+        self.set_line_width(1)
+        self.line(cx - 35, y + 15, cx - 35 + 70 / 3, y + 15)
+        self.set_draw_color(*RED)
+        self.line(cx - 35 + 70 / 3, y + 15, cx - 35 + 140 / 3, y + 15)
+        self.set_draw_color(*YELLOW)
+        self.line(cx - 35 + 140 / 3, y + 15, cx + 35, y + 15)
+
+    # ------------------------------------------------------------------
+    #  CORPS — mentions bilingues + photo
+    # ------------------------------------------------------------------
+    def _body(self):
+        from staff.models import Personnel
+        st = self.student
+        s = self.school
+        L, R = self.L, self.R
+
+        # --- photo d'identité en haut à droite -------------------------
+        ph_w, ph_h = 30, 40
+        ph_x, ph_y = R - ph_w - 5, 85
+        try:
+            src = st.photo if getattr(st, "photo", None) else "static/image/student.jpg"
+            photo = resize_image(src, id_card=True, ratio=(30, 40))
+            self.image(photo, x=ph_x, y=ph_y, w=ph_w, h=ph_h)
+        except Exception:
+            pass
+        self.set_draw_color(*self.LINE)
+        self.set_line_width(0.3)
+        self.rect(ph_x, ph_y, ph_w, ph_h)
+
+        # largeur utile à gauche de la photo (pour les lignes hautes)
+        text_r = ph_x - 6
+
+        # --- référence de registre (discrète) --------------------------
+        self.set_font("inter", "", 8)
+        self.set_text_color(*self.GREY)
+        self.set_xy(L, 85)
+        self.cell(60, 4, f"Réf. N° ______________________________")
+
+        # --- 1. le signataire ------------------------------------------
+        y = 95
+        chef = Personnel.objects.filter(poste="Chef d'Établissement").first()
+        w = self._label(L, y, "Je soussigné(e),", "I the undersigned,")
+        self._value(L + w, y, chef.__str__().upper() if chef else "")
+
+        y += 12
+        poste = s.chef
+        w = self._label(L, y, f"{poste} du", "The Principal of")
+        self.set_font("inter", "B", 10)
+        self.set_text_color(*NAVY)
+        self.set_xy(L + w, y)
+        self.multi_cell(text_r - (L + w), 4.6, s.nom.upper())
+        self.set_xy(L + w, y + 4.6)
+        self.set_font("inter", "I", 8)
+        self.set_text_color(*self.GREY)
+        self.cell(0, 3.4, s.name.upper())
+
+        # --- 2. l'élève -------------------------------------------------
+        y += 12
+        w = self._label(L, y, "Attestons que l'élève", "Certify that the student")
+        self.set_font("inter", "B", 11)
+        self.set_text_color(*NAVY)
+        self.set_xy(L + w, y)
+        self.multi_cell(text_r - (L + w), 4.8, str(st).upper())
+
+        # naissance : "Né(e) le ..." + "à ..."
+        y = max(self.get_y() + 4, y + 11)
+        try:
+            naiss = st.date_naissance.strftime("%d/%m/%Y")
+        except Exception:
+            naiss = "—"
+        w = self._field(L, y, "Né(e) le", "Born on", naiss)
+        x2 = L + 78
+        self._field(x2, y, "à", "at", getattr(st, "lieu_naissance", "") or "—")
+
+        # --- 3. l'inscription -------------------------------------------
+        y += 12
+        self._label(L, y, "Est régulièrement inscrit(e) comme élève dans notre établissement",
+                    "Is duly enrolled as a student at our school")
+
+        y += 12
+        w = self._label(L, y, "En classe de", "In the class of")
+        classe = st.classe.code if st.classe else ""
+        self._value(L + w, y, classe, color=GREEN, size=11)
+
+        # --- 4. année + matricule ---------------------------------------
+        y += 13
+        w = self._field(L, y, "Année scolaire", "Academic year", self.year)
+        self._field(L + 78, y, "sous le matricule numéro", "Registration number", st.unique_id, size=10)
+
+        # --- 5. formule de délivrance -----------------------------------
+        y += 14
+        self.set_font("inter", "", 10)
+        self.set_text_color(*DARK)
+        self.set_xy(L, y)
+        self.multi_cell(R - L, 4.6, "En foi de quoi le présent certificat lui est délivré pour servir et valoir "
+                                  "ce que de droit.", align="L")
+        self.set_font("inter", "I", 8)
+        self.set_text_color(*self.GREY)
+        self.set_xy(L, self.get_y() + 0.5)
+        self.multi_cell(R - L, 4.3, "In witness whereof the present certificate is issued to serve and avail "
+                                    "as of right.", align="L")
+
+        # --- 6. lieu, date, signature, cachet ---------------------------
+        y = self.get_y() + 14
+        localite = s.localite
+        w = self._label(R - 82, y, f"Fait à {localite}, le", f"Done in {localite}, on")
+        self._value(R - 82 + w, y, f"{date.today():%d/%m/%Y}", size=10, color=RED)
+
+        y += 13
+        self.set_font("inter", "B", 10)
+        self.set_text_color(*NAVY)
+        self.set_xy(R - 82, y)
+        self.cell(82, 5, f"Le {poste}", align="C")
+        self.set_font("inter", "I", 7)
+        self.set_text_color(*self.GREY)
+        self.set_xy(R - 82, y + 4.6)
+        self.cell(82, 4, "The Principal", align="C")
+
+        paste_stamp(self, self._cachet_bytes, x=120, y=y + 10, w=40)
+        paste_stamp(self, self._visa_bytes, x=155, y=y + 25, w=50)
+
+    def filigrane(self, x=70, y=70, w=70):
+        from io import BytesIO
+        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
+        if logo:
+            with self.local_context(fill_opacity=0.1):
+                try:
+                    if hasattr(logo, "read"):
+                        # FieldFile (ImageField) -> on récupère des octets frais.
+                        try:
+                            logo.open("rb")
+                        except Exception:
+                            pass
+                        logo_bytes = logo.read()
+                        try:
+                            logo.close()
+                        except Exception:
+                            pass
+                        logo = BytesIO(logo_bytes)
+                    else:
+                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
+                        logo = logo
+                except Exception:
+                    pass
+                logo = resize_image(logo, new_width=830)
+                self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
+
+
+"""
+=============================================================================
+ AgeSexTablePDF — Répartition des élèves par âge et par sexe (PDF)
+=============================================================================
+ A4 PAYSAGE. Double en-tête : ligne 1 = âges (+ Total), ligne 2 = F/G/T.
+ Lignes = classes (+ ligne TOTAL).
+=============================================================================
+"""
+
+class AgeSexTablePDF(FPDF):
+    def __init__(self, data, school):
+        super().__init__(orientation="L", unit="mm", format="A4")
+        self.alias_nb_pages()
+        add_fonts(self)
+        self.set_margins(6, 6, 6)
+        self.set_auto_page_break(True, margin=6)
+        self.data = data
+        self.now = datetime.now().strftime("%d-%m-%Y à %H:%M")
+        self.school = school
+        self.add_page()
+        self.set_font("inter", "", 8)
+        base_header(self, mode="L")
+        self._title()
+        self._table()
+
+    def _title(self):
+        self.ln(2)
+        self.set_font("inter", "B", 12)
+        self.set_text_color(*GREEN)
+        self.cell(0, 7, "RÉPARTITION DES ÉLÈVES PAR ÂGE ET PAR SEXE", align="C")
+        self.ln(6)
+        self.set_font("inter", "", 8)
+        self.set_text_color(*GREY)
+        self.cell(0, 4, f"Année scolaire {self.data['year']} • Âge au 31 décembre {self.data['ref_year']} • "
+                        f"F : Filles · G : Garçons · T : Total", align="C")
+        self.ln(6)
+        self.set_text_color(0)
+
+    def _table(self):
+        ages = self.data["ages"]
+        rows = self.data["rows"] + [self.data["total_row"]]
+
+        # largeurs : colonne classe large, puis 3 sous-colonnes par âge + Total
+        page_w = 297 - 12
+        class_w = 25
+        n_blocks = len(ages) + 1                 # âges + bloc Total
+        sub_w = max(6.0, (page_w - class_w) / (n_blocks * 3))
+        col_widths = [class_w, ]
+        for _ in range(n_blocks * 3):
+            col_widths.append(sub_w)
+        col_widths = tuple(col_widths)
+        self.set_font("inter", "", 8)
+
+        table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
+                      repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
+        labels = [str(a) + " ans" for a in ages] + ["Total"]
+        th1 = table.row()
+        self.set_fill_color(*HEAD)
+        self.set_text_color(255, 255, 255)
+        # --- EN-TÊTE ligne 1 : Classe (fusion vert.) + âges + Total ---
+        th1.cell("**Classe**", align="C", rowspan=2)
+        for label in labels:
+            th1.cell(f"**{label}**", align="C", colspan=3)
+
+        # --- EN-TÊTE ligne 2 : F / G / T ---
+        th2 = table.row()
+        for _ in labels:
+            th2.cell("**F**", align="C")
+            th2.cell("**G**", align="C")
+            th2.cell("**T**", align="C")
+
+        # --- CORPS ---
+        self.set_text_color(0)
+        for row in rows:
+            is_total = row["classe"] == "TOTAL"
+            if is_total:
+                self.set_font("inter", "B", 8)
+                self.set_fill_color(230, 238, 233)
+            else:
+                self.set_font("inter", "", 8)
+                self.set_fill_color(255, 255, 255)
+            tr = table.row()
+            # cellule classe
+            tr.cell(row['classe'], align="L")
+            # cellules F/G/T par âge + total
+            for cell in row["cells"]:
+                for key in ("F", "G", "T"):
+                    value = cell[key]
+                    tr.cell(str(value) if value else "", align="C")
+            # bloc total de la ligne
+            for key in ("F", "G", "T"):
+                tr.cell(str(row[key]) if row[key] else "", align="C")
+        table.render()
+
+    def footer(self):
+        self.set_y(-6)
+        self.set_draw_color(200)
+        self.line(6, 204, 291, 204)
+        self.set_font("inter", "I", 7)
+        self.set_text_color(*GREY)
+        self.cell(145, 6, f"Document généré par Oméga School Manager le {self.now}", align="L")
+        self.cell(140, 6, f"Répartition par âge et par sexe • Page {self.page_no()}/{{nb}}", align="R")
+
+
+# Dimensions normalisées de la carte scolaire (norme ISO/IEC 7810 ID-1).
+CARD_W, CARD_H = 85.6, 54.0
+
+# Nouveau gris
+GREY = (138, 147, 163)
 
 
 class StudentsIdentityCardsCNI(FPDF):

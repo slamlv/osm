@@ -234,6 +234,21 @@ class User(AbstractUser):
     poste = models.CharField(choices=Poste.choices, default=Poste.AU)
     droits = models.CharField(blank=True, null=True)
     theme = models.CharField(default="blue")
+    # --- super administrateur (bras droit opérationnel du chef) ---
+    is_super_admin = models.BooleanField(default=False,
+        help_text="Peut archiver/clôturer une année et désigner les responsables financiers. Est désigné par le chef.")
+    named_super_admin_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="super_admins_named")
+    named_super_admin_at = models.DateTimeField(null=True, blank=True)
+    # --- responsable financier ---
+    is_financial_user = models.BooleanField(default=False, help_text="Autorisé à utiliser le module financier.")
+    named_financial_user_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="financial_users_named")
+    named_financial_user_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_principal(self):
+        return self.poste == "Chef d'Établissement"
 
     @property
     def is_titulaire(self):
@@ -248,6 +263,11 @@ class User(AbstractUser):
         if self.poste == "Chef d'Établissement":
             return self.school.chef
         return self.poste
+
+    @property
+    def full_name(self):
+        civilite = "M." if self.civilite == Civilite.MR else "Mme."
+        return civilite + " " + (self.last_name + " " + self.first_name if self.first_name else self.last_name)
 
     def __str__(self):
         return self.username

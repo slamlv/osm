@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:8px!important; }
+  .fin-card input:focus, .fin-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.4); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .amount { font-variant-numeric:tabular-nums; color:#f0c75e!important; font-weight:600; }
+
+  .osm-table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead tr { background:linear-gradient(135deg,#152f45,#1a3a57); }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:transparent!important; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:10px 12px; white-space:nowrap; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.86rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
+  .osm-table-outer tbody td.amount { color:#f0c75e!important; }
+  .cell-sal { width:120px; } .cell-rate { width:110px; } .cell-hrs { width:80px; } .cell-mode { width:150px; }
+  input:disabled { opacity:0.3!important; cursor:not-allowed; }
+  @media (max-width:767.98px){ .osm-table-outer thead th{padding:8px;font-size:0.64rem;} .osm-table-outer tbody td{padding:6px 8px;font-size:0.8rem;} }
+</style>
+
+<div class="container py-3" style="max-width:1150px;">
+
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#199548;">
+    <p class="fin-title mb-1"><i class="bi bi-people me-1"></i>Attribution des salaires</p>
+    <p class="text-white-50 small mb-0">Choisissez le <strong>mode</strong> de chaque personne.
+      <strong>Non rémunéré</strong> (vide).
+      <strong>Fixe</strong> = forfait mensuel. <strong>À l'heure</strong> = taux horaire négocié
+      (les heures se saisissent chaque mois à la paie). <strong class="text-warning">Le nombre d'heures est mensuel.</strong>
+      {% if default_rate %}Le taux par défaut de l'établissement
+      ({{ default_rate }} F/h) pré-remplit les vacataires horaires sans taux.{% endif %}</p>
+  </div>
+
+  <form method="post" data-default-rate="{{ default_rate }}">
+    {% csrf_token %}
+    <div class="fin-card p-3 p-sm-4" style="--ac:#f0c75e;">
+      <div class="osm-table-outer">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead><tr>
+            <th>Personnel</th><th>Fonction</th>
+            <th class="cell-mode">Mode</th>
+            <th class="cell-sal text-end">Salaire fixe</th>
+            <th class="cell-rate text-end">Taux horaire</th>
+            <th class="cell-hrs text-center">H. habituelles</th>
+          </tr></thead>
+          <tbody>
+            {% for p in staff %}
+            <tr data-row>
+              <td class="fw-semibold">{{ p }}</td>
+              <td class="text-white-50">{{ p.poste|default:"—" }}</td>
+              <td>
+                <select name="mode_{{ p.id }}" class="form-select form-select-sm mode-sel" onchange="applyMode(this)">
+                  <option value="" {% if not p.salary_mode %}selected{% endif %}>Non rémunéré</option>
+                  <option value="{{ FIXE }}" {% if p.salary_mode == FIXE %}selected{% endif %}>Fixe</option>
+                  <option value="{{ HORAIRE }}" {% if p.salary_mode == HORAIRE %}selected{% endif %}>À l'heure</option>
+                </select>
+              </td>
+              <td class="text-end">
+                <input type="number" name="sal_{{ p.id }}" value="{{ p.salaire|default_if_none:'' }}"
+                       class="form-control form-control-sm cell-sal fld-sal text-end" min="1" placeholder="—">
+              </td>
+              <td class="text-end">
+                <input type="number" name="rate_{{ p.id }}" value="{{ p.hourly_rate|default_if_none:'' }}"
+                       class="form-control form-control-sm cell-rate fld-rate text-end" min="1" placeholder="—">
+              </td>
+              <td class="text-center">
+                <input type="number" name="hrs_{{ p.id }}" value="{{ p.default_hours|default_if_none:'' }}"
+                       class="form-control form-control-sm cell-hrs fld-hrs text-center" min="1" placeholder="—">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+        <a class="btn btn-outline-info btn-sm fw-semibold" href="{% url 'payroll' %}">
+          <i class="bi bi-cash-stack me-1"></i>Aller à la paie mensuelle</a>
+        <button class="btn btn-success fw-semibold px-4"><i class="bi bi-save me-1"></i>Enregistrer</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const DEFAULT_RATE = document.querySelector('form[data-default-rate]').dataset.defaultRate || '';
+  // Édition conditionnelle selon le mode choisi sur chaque ligne
+  function applyMode(sel) {
+    const tr = sel.closest('tr');
+    const sal  = tr.querySelector('.fld-sal');
+    const rate = tr.querySelector('.fld-rate');
+    const hrs  = tr.querySelector('.fld-hrs');
+    const mode = sel.value;
+    if (mode === '{{ FIXE }}') {
+      sal.disabled = false;
+      rate.disabled = true;  rate.value = '';
+      hrs.disabled = true;   hrs.value = '';
+    } else if (mode === '{{ HORAIRE }}') {
+      sal.disabled = true;   sal.value = '';
+      rate.disabled = false;
+      hrs.disabled = false;
+      // défaut établissement SEULEMENT si le taux de la personne est vide
+      if (!rate.value && DEFAULT_RATE) rate.value = DEFAULT_RATE;
+    } else {                 // non rémunéré
+      sal.disabled = rate.disabled = hrs.disabled = true;
+      sal.value = rate.value = hrs.value = '';
+    }
+  }
+  // état initial de chaque ligne
+  document.querySelectorAll('.mode-sel').forEach(applyMode);
+</script>
+{% endblock %}
