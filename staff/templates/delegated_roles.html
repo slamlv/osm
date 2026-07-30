@@ -99,7 +99,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="revoke_fin">
                 <input type="hidden" name="user_id" value="{{ u.id }}">
-                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Révoquer">
+                <button class="btn btn-sm btn-outline-danger fw-bold" data-bs-toggle="tooltip" title="Révoquer">
                   <i class="bi bi-x-circle me-1"></i>Révoquer</button>
               </form>
             </td>

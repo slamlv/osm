@@ -17,6 +17,38 @@
     .osm-table-outer tbody td { padding:8px 4px; }
     .note-input { width:62px!important; padding:4px 2px!important; }
   }
+
+  /* ===== LISERÉ D'ACCENT au-dessus du tableau (comme les pages récentes).
+     Réalisé en border-top : aucun ::before absolu, donc AUCUNE interaction
+     avec le overflow-x du wrapper (le scroll mobile reste intact). ===== */
+  .osm-table-outer { border-top:3px solid #ffc107!important; }
+
+  /* ===== BARRE D'ACTION COLLANTE =====
+     Le bouton reste visible au bas de l'écran pendant tout le défilement du
+     tableau : plus besoin de scroller 80 lignes pour corriger une seule note.
+     position:sticky (pas fixed) -> la barre reste DANS le formulaire, donc
+     elle disparaît proprement quand on quitte la zone de saisie. ===== */
+  .marks-actions {
+    position:sticky; bottom:0; z-index:30;
+    padding:12px 10px 14px;
+    background:linear-gradient(180deg, rgba(23,46,69,0) 0%,
+               rgba(23,46,69,0.94) 45%, rgba(23,46,69,0.99) 100%);
+    backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+    border-radius:0 0 14px 14px;
+  }
+  .marks-actions .btn { box-shadow:0 4px 14px rgba(0,0,0,0.35); }
+  /* compteur de saisie (retirer cette règle + le <span> pour s'en passer) */
+  .marks-count { font-size:0.78rem; color:rgba(255,255,255,0.55);
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .marks-count strong { color:#ffc107; }
+
+  /* ===== OPTION (désactivée) : en-tête de tableau figé pendant le défilement.
+     À activer si tu veux garder les intitulés visibles sur 80 élèves. Il faut
+     borner la hauteur du wrapper pour créer un vrai conteneur de défilement :
+  .osm-table-outer { max-height:68vh; overflow-y:auto; }
+  .osm-table-outer thead th { position:sticky; top:0; z-index:6;
+    background:linear-gradient(135deg,#152f45,#1a3a57)!important; }
+     ===== */
 </style>
 
 {% if error %}
@@ -87,7 +119,8 @@
       </table>
     </div>
 
-    <div class="d-flex justify-content-center mt-3">
+    <div class="marks-actions d-flex justify-content-center align-items-center gap-3 mt-3">
+      <span class="marks-count" id="marks-count"></span>
       {% if trim %}
       <button class="btn btn-success fw-semibold px-5" type="submit" hx-post="{% url 'tlevel-marks-edit' %}" hx-include="select" hx-target="#marks_form" data-with-spinner>
         <i class="bi bi-save me-2"></i>Sauvegarder
@@ -99,6 +132,26 @@
       {% endif %}
     </div>
   </form>
+<script>
+(function () {
+  // Compteur discret "X / Y notes saisies" dans la barre collante.
+  // Le fragment étant remplacé par HTMX, ce script est rejoué à chaque swap.
+  const form = document.getElementById('marks_form');
+  const out  = document.getElementById('marks-count');
+  if (!form || !out) return;
+  const fields = form.querySelectorAll('tbody input:not([type=hidden])');
+  if (!fields.length) return;
+
+  function refresh() {
+    let filled = 0;
+    fields.forEach(f => { if ((f.value || '').trim() !== '') filled++; });
+    out.innerHTML = '<strong>' + filled + '</strong> / ' + fields.length + ' saisies';
+  }
+  form.addEventListener('input', refresh);
+  refresh();
+})();
+</script>
+
   {% else %}
   <div class="alert alert-info py-2 small rounded-3 mt-3">
     <i class="bi bi-people me-2"></i>Aucun élève pour ce niveau.

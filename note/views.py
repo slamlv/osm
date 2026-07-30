@@ -13,7 +13,7 @@ from django.db.models.expressions import result
 
 from osm.utils import formated_float, resized_image, school_year, message, LoggedUserView, LoggedAdminView, \
     logged_user_view, logged_admin_view, resize_image, truncate_str, base_infos, base_header, pdf_response, check_notes, \
-    zip_pdfs_response
+    zip_pdfs_response, filigrane, stamp_bytes, paste_stamp, add_fonts
 from django.db.models import Sum
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -1070,33 +1070,14 @@ class TableaudHonneur(FPDF):
         self.set_font('inter', '', 8)
         self.data = kwargs.pop('data')
         self.school = self.data['school_data']
+        try:
+            self._cachet_bytes = stamp_bytes(self.school.cachet)
+            self._visa_bytes = stamp_bytes(self.school.visa)
+        except Exception:
+            self._cachet_bytes = None
+            self._visa_bytes = None
         self.decoration = "static/image/decoration.png"
         self.draw_tables()
-
-    def filigrane(self, x=70, y=70, w=70):
-        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
-        if logo:
-            with self.local_context(fill_opacity=0.2):
-                try:
-                    if hasattr(logo, "read"):
-                        # FieldFile (ImageField) -> on récupère des octets frais.
-                        try:
-                            logo.open("rb")
-                        except Exception:
-                            pass
-                        logo_bytes = logo.read()
-                        try:
-                            logo.close()
-                        except Exception:
-                            pass
-                        logo = BytesIO(logo_bytes)
-                    else:
-                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
-                        logo = logo
-                except Exception:
-                    pass
-                logo = resize_image(logo, new_width=830)
-                self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
 
     def draw_tables(self):
         is_not_modulo2 = len(self.data['students']) % 2 != 0
@@ -1105,13 +1086,13 @@ class TableaudHonneur(FPDF):
             j += 1
         for i in range(j):
             self.add_page()
-            self.filigrane()
-            self.filigrane(y=218.5)
+            filigrane(self, opacity=0.2)
+            filigrane(self, y=218.5, opacity=0.2)
             if i == j -1 and is_not_modulo2:
                 end = len(self.data['students'])
             else:
                 end = (i * 2) + 2
-            x, y, y_img, y_deco = 6, 20, 14, -28
+            x, y, y_img, y_deco, y_stamp = 6, 20, 14, -28, 105
             for student in self.data['students'][i * 2:end]:
                 self.image(self.decoration, x=6, y=y_deco, w=198, keep_aspect_ratio=True)
                 self.set_xy(x, y)
@@ -1128,18 +1109,28 @@ class TableaudHonneur(FPDF):
                 texte = (f"\n      L'élève **{student['nom']}** de la classe de **{self.data['classe']}** a obtenu(e) "
                          f"**{student['moyenne']}** comme moyenne {self.data['trimestre']} de l'année scolaire "
                          f"**{self.data['annee']}**, en étant classé **{student['rang']}**. Ce résultat témoigne d'un travail "
-                         f"remarquable et d'un engagement vers la quête de l'execellence scolaire. En foi de quoi le présent "
+                         f"remarquable et d'un engagement vers la quête de l'excellence scolaire. En foi de quoi le présent "
                          f"**TABLEAU D'HONNEUR** lui est remis pour servir et valoir ce que de droit.")
                 self.multi_cell(w=198, h=5, align='L', center=True, text=texte, markdown=True)
                 self.ln()
                 self.ln()
-                self.cell(w=198, h=5, align='R', center=True, text=f"Fait à {self.school.localite}, le --                          --",
+                if self._cachet_bytes and self._visa_bytes:
+                    dy = self.get_y()
+                    self.set_text_color(200, 30, 45)
+                    self.set_x(204 - self.get_string_width(f"Fait à {self.school.localite}, le "))
+                    self.cell(0, 5, align='L', text=f"**{datetime.date.today():%d/%m/%Y}**", markdown=True)
+                    self.set_text_color(0)
+                    self.set_xy(6, dy)
+                self.cell(w=198, h=5, align='R', text=f"Fait à {self.school.localite}, le --                          --",
                           markdown=True)
                 self.ln()
-                self.cell(w=188, h=10, align='R', center=True, text=f"**Le {self.school.chef}**", markdown=True)
+                self.cell(w=188, h=10, align='R', text=f"**Le {self.school.chef}**", markdown=True)
+                paste_stamp(self, self._cachet_bytes, x=120, y=y_stamp, w=40)
+                paste_stamp(self, self._visa_bytes, x=155, y=y_stamp + 15, w=50)
                 y += 148.5
                 y_img += 148.5
                 y_deco += 148.5
+                y_stamp += 148.5
             self.dashed_line(x1=0, y1=148.5, x2=210, y2=148.5)
 
 class ExamRecord(FPDF):
@@ -1328,7 +1319,7 @@ class ReportCard(FPDF):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.add_fonts(self)
+        add_fonts(self)
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
@@ -1359,7 +1350,7 @@ class ReportCard(FPDF):
                     PDF jetable : on dessine le 1er bulletin uniquement pour MESURER combien de pages il occupe. page_no()
                     donne ce nombre directement -> ni output(), ni pypdf (plus rapide, et une dépendance de moins dans ce chemin)."""
                     pdf = FPDF()
-                    self.add_fonts(pdf)
+                    add_fonts(pdf)
                     pdf.set_margins(6, 6, 6)
                     pdf.set_auto_page_break(True, margin=6)
                     pdf.set_font('inter', '', 8)
@@ -1376,12 +1367,6 @@ class ReportCard(FPDF):
                                          chef=school_data['chef'])
             if self.nb_pages > 1:
                 self.nom = data['students_data'][i]['student']['short_name']
-
-    def add_fonts(self, pdf):
-        pdf.add_font('inter', '', settings.INTER_REGULAR)
-        pdf.add_font('inter', 'I', settings.INTER_ITALIC)
-        pdf.add_font('inter', 'B', settings.INTER_BOLD)
-        pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
 
     #TODO
     def footer(self):

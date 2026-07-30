@@ -23,7 +23,6 @@ from openpyxl.utils import get_column_letter
 from authentification.models import SchoolYear, User
 from note.models import Note, Enseignements
 from classroom.models import ClassRoom
-from classroom.views import add_fonts
 from note.views import ReportCard
 from .forms import StudentForm, ParentForm, DForm, BulkDecisionForm
 from osm.forms import SearchForm
@@ -32,7 +31,7 @@ from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back
+    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
@@ -1465,7 +1464,7 @@ class EnrollmentCertificate(FPDF):
             self._cachet_bytes = None
             self._visa_bytes = None
         self.add_page()
-        self.filigrane(x=50, y=95, w=110)
+        filigrane(self, x=50, y=95, w=110)
         self.set_font("inter", "", 8)
         base_header(self, mode="P", y_img=10)
         self._title()
@@ -1620,7 +1619,10 @@ class EnrollmentCertificate(FPDF):
         y = self.get_y() + 14
         localite = s.localite
         w = self._label(R - 82, y, f"Fait à {localite}, le", f"Done in {localite}, on")
-        self._value(R - 82 + w, y, f"{date.today():%d/%m/%Y}", size=10, color=RED)
+        if self._visa_bytes and self._cachet_bytes:
+            self._value(R - 82 + w, y, f"{date.today():%d/%m/%Y}", size=10, color=RED)
+        else:
+            self.line(R - 82 + w, y + 4, R - 52 + w, y + 4)
 
         y += 13
         self.set_font("inter", "B", 10)
@@ -1634,32 +1636,6 @@ class EnrollmentCertificate(FPDF):
 
         paste_stamp(self, self._cachet_bytes, x=120, y=y + 10, w=40)
         paste_stamp(self, self._visa_bytes, x=155, y=y + 25, w=50)
-
-    def filigrane(self, x=70, y=70, w=70):
-        from io import BytesIO
-        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
-        if logo:
-            with self.local_context(fill_opacity=0.1):
-                try:
-                    if hasattr(logo, "read"):
-                        # FieldFile (ImageField) -> on récupère des octets frais.
-                        try:
-                            logo.open("rb")
-                        except Exception:
-                            pass
-                        logo_bytes = logo.read()
-                        try:
-                            logo.close()
-                        except Exception:
-                            pass
-                        logo = BytesIO(logo_bytes)
-                    else:
-                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
-                        logo = logo
-                except Exception:
-                    pass
-                logo = resize_image(logo, new_width=830)
-                self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
 
 
 """

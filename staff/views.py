@@ -35,7 +35,8 @@ from osm.utils import message, one_escape, LoggedUserView, LoggedAdminView, logg
 
 @logged_super_admin_view
 def delegated_roles(request):
-    candidates = (User.objects.filter(is_active=True, is_superuser=False).order_by("last_name", "first_name"))
+    candidates = (User.objects.filter(is_active=True, is_superuser=False, school=request.user.school)
+                  .order_by("last_name", "first_name"))
     user_is_chief = request.user.is_principal
 
     if request.method == "POST":

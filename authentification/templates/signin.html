@@ -45,6 +45,7 @@
     <div class="auth-card-body">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
         <div class="mb-3">
           <label>Nom d'utilisateur</label>
           {{ form.username }}

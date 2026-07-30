@@ -1656,6 +1656,42 @@ def default_competences(level, matiere, evalx):
     return None
 
 
+##############################################################################################
+# Utilitaires des documents pdf
+##############################################################################################
+def add_fonts(pdf):
+    pdf.add_font('inter', '', settings.INTER_REGULAR)
+    pdf.add_font('inter', 'I', settings.INTER_ITALIC)
+    pdf.add_font('inter', 'B', settings.INTER_BOLD)
+    pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
+
+
+def filigrane(pdf, x=70, y=70, w=70, opacity=0.1):
+    logo = (pdf.school.logo, None)[pdf.school.logo in ("", "static/image/no_image.jpg", None)]
+    if logo:
+        with pdf.local_context(fill_opacity=opacity):
+            try:
+                if hasattr(logo, "read"):
+                    # FieldFile (ImageField) -> on récupère des octets frais.
+                    try:
+                        logo.open("rb")
+                    except Exception:
+                        pass
+                    logo_bytes = logo.read()
+                    try:
+                        logo.close()
+                    except Exception:
+                        pass
+                    logo = BytesIO(logo_bytes)
+                else:
+                    # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
+                    logo = logo
+            except Exception:
+                pass
+            logo = resize_image(logo, new_width=830)
+            pdf.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
+
+
 def base_header(pdf, mode='P', y_img=0):
     from fpdf.table import Table
     from fpdf.fonts import FontFace
@@ -1755,6 +1791,7 @@ def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode
     pdf.cell(w, 5, f"**Classe : {classroom}**", align='L', markdown=True)
     info = f"Effectif : {effectif}, Filles : {filles}, Garçons : {garcons}, Redoublants : {redoublants}"
     pdf.cell(w, 5, f"__{info}__", align='R', markdown=True)
+##############################################################################################
 
 
 ##############################################################################################

@@ -103,6 +103,9 @@ def signin(request):
                 return render(request, "404_unauthenticated.html", {'license': True if user.is_admin else False})
             if user:
                 login(request, user)
+                next_url = request.POST.get("next") or request.GET.get("next")
+                if next_url:
+                    return redirect(next_url)
                 return redirect("index")
     return render(request, "signin.html", {"form": form, 'title': "Connexion"})
 

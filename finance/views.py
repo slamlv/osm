@@ -11,9 +11,8 @@ from .models import SchoolFee, FeeInstallment, FeeType, StudentPayment, PaymentM
 from .forms import StudentPaymentForm
 from student.models import Student
 from staff.models import Personnel
-from osm.utils import school_year, message, logged_financial_user_view, stamp_bytes, paste_stamp, resize_image, base_header, \
-    number_to_words_fr, safe_redirect_back, pdf_response, base_infos, formated_float
-from classroom.views import add_fonts
+from osm.utils import school_year, message, logged_financial_user_view, stamp_bytes, paste_stamp, resize_image, \
+    base_header, number_to_words_fr, safe_redirect_back, pdf_response, base_infos, formated_float, filigrane, add_fonts
 from classroom.models import ClassRoom, Class
 from fpdf import FPDF
 from fpdf.fonts import FontFace
@@ -21,6 +20,7 @@ from fpdf.table import Table
 from fpdf.enums import TableHeadingsDisplay
 import json
 from datetime import datetime, date as _date
+from babel.dates import format_date
 from django.db import transaction
 
 
@@ -42,8 +42,38 @@ def fee_grid(request):
     for f in fees:
         groups.setdefault(f.fee_type, []).append(f)
 
+    school = request.user.school
+    classes = Class.objects
+
+    niveaux_premier_cycle_esg_fr = ["Sixième", "Cinquième", "Quatrième", "Troisième"]
+    niveaux_premier_cycle_est_fr = ["1ère Année", "2ème Année", "3ème Année", "4ème Année"]
+    niveaux_premier_cycle_esg_en = ["From One", "From Two", "From Three", "From Four"]
+    niveaux_second_cycle_esg_fr = ["Seconde", "Première", "Terminale"]
+    niveaux_second_cycle_esg_en = ["From Five", "Lower Sixth", "Upper Sixth"]
+    series_premier_cycle_esg_fr = ["Bilingue", ]
+    series_premier_cycle_esg_en = ["Arts", "Sciences"]
+    series_second_cycle_esg_en = ["Commercial"]
+    series_second_cycle_esg_fr = ["A1", "A2", "A3", "A4", "A5", "ABI", "AC", "B", "C", "D", "E", "SH", "TI"]
+    series_premier_cycle_est_fr = ["MACO"]
+    series_second_cycle_est_fr = ["F4", "IH"]
+    if school.type_ets == "CES":
+        s_niveaux, s_series = niveaux_premier_cycle_esg_fr, series_premier_cycle_esg_fr
+    elif school.type_ets in ["Collège", "Lycée"]:
+        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr,
+                           series_premier_cycle_esg_fr + series_second_cycle_esg_fr)
+    elif school.type_ets == "CES Bilingue":
+        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_premier_cycle_esg_en,
+                           series_premier_cycle_esg_fr + series_premier_cycle_esg_en)
+    elif school.type_ets in ["Lycée Bilingue", "Collège Bilingue"]:
+        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr + niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
+                           series_premier_cycle_esg_fr + series_second_cycle_esg_fr + series_premier_cycle_esg_en + series_second_cycle_esg_en)
+    elif school.type_ets == "CETIC":
+        s_niveaux, s_series = niveaux_premier_cycle_est_fr, series_premier_cycle_est_fr
+    elif school.type_ets == "Lycée Technique":
+        s_niveaux, s_series = (niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr,
+                           series_premier_cycle_est_fr + series_second_cycle_est_fr)
     # niveaux/séries EXISTANTS dans cet établissement (selects dynamiques)
-    niveaux = list(Class.objects.exclude(niveau__isnull=True)
+    niveaux = list(classes.exclude(niveau__isnull=True).filter(niveau__in=s_niveaux, serie__in=s_series)
                    .values_list("niveau", flat=True).distinct())
     series = [s for s in Class.objects.values_list("serie", flat=True)
               .distinct() if s]
@@ -69,7 +99,7 @@ def fee_grid(request):
     return render(request, "fee_grid.html", {
         "year": year, "years": years, "groups": groups,
         "fee_types": FeeType.objects.order_by("nom"),
-        "niveaux": niveaux, "series": series,
+        "niveaux": sorted(niveaux), "series": sorted(series),
         "fees_json": fees_json,
         "previous_year": _previous_year(year),
         'title': "Grille Tarifaire",
@@ -110,6 +140,10 @@ def fee_save(request):
         message(request, "Montant invalide.", msg_type="error")
         return safe_redirect_back(request)
 
+    if serie and level:
+        if not Class.objects.filter(niveau=level, serie=serie).exists():
+            message(request, "Cette série n'existe pas pour ce niveau.", msg_type="error")
+            return safe_redirect_back(request)
     # tranches (champs parallèles du formulaire dynamique)
     labels = request.POST.getlist("inst_label")
     amounts = request.POST.getlist("inst_amount")
@@ -546,7 +580,14 @@ def payroll(request):
 @logged_financial_user_view
 def emargement_sheet(request):
     month = _month_from(request.GET.get("month") or "")
-    return pdf_response(FicheEmargement(month, school=request.user.school),
+    payments = list(
+            Transaction.objects.filter(cancelled=False, salary_month=month)
+            .select_related("beneficiary")
+            .order_by("beneficiary__nom", "beneficiary__prenom"))
+    if not payments:
+        message(request, "Aucun salaire défini.", msg_type="error")
+        return safe_redirect_back(request)
+    return pdf_response(FicheEmargement(month, school=request.user.school, payments=payments),
                         f"Fiche d'émargement {MONTHS_FR[month.month]} {month.year}.pdf")
 
 
@@ -802,32 +843,6 @@ class _FinReport(FPDF):
             self.ln(5)
         self.set_text_color(0)
 
-    def filigrane(self, x=70, y=70, w=70):
-        from io import BytesIO
-        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
-        if logo:
-            with self.local_context(fill_opacity=0.1):
-                try:
-                    if hasattr(logo, "read"):
-                        # FieldFile (ImageField) -> on récupère des octets frais.
-                        try:
-                            logo.open("rb")
-                        except Exception:
-                            pass
-                        logo_bytes = logo.read()
-                        try:
-                            logo.close()
-                        except Exception:
-                            pass
-                        logo = BytesIO(logo_bytes)
-                    else:
-                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
-                        logo = logo
-                except Exception:
-                    pass
-                logo = resize_image(logo, new_width=830)
-                self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)
-
     def footer(self):
         w = 285 if self._land else 198
         line_xy = (6, 204, 291, 204) if self._land else (6, 291, 204, 291)
@@ -855,16 +870,13 @@ class _FinReport(FPDF):
 class FicheEmargement(_FinReport):        # hérite du socle commun
     DOC_NAME = "Fiche d'émargement"
 
-    def __init__(self, month, school):
+    def __init__(self, month, school, payments):
         super().__init__(orientation="L", school=school)             # paysage
         self.month = month
         label = f"{MONTHS_FR[month.month]} {month.year}"
 
         # les paies de salaire réellement enregistrées ce mois
-        self.payments = list(
-            Transaction.objects.filter(cancelled=False, salary_month=month)
-            .select_related("beneficiary")
-            .order_by("beneficiary__nom", "beneficiary__prenom"))
+        self.payments = payments
 
         self.set_font('inter', '', 8)
         self.start(f"FICHE D'ÉMARGEMENT DES SALAIRES — {label.upper()}")
@@ -987,7 +999,7 @@ class ConvocationsPDF(_FinReport):
         self.set_auto_page_break(False)
         try:
             self._cachet_bytes = stamp_bytes(school.cachet)
-            self._visa_bytes = stamp_bytes(self.school.visa)
+            self._visa_bytes = stamp_bytes(school.visa)
         except Exception:
             self._cachet_bytes = None
             self._visa_bytes = None
@@ -995,8 +1007,8 @@ class ConvocationsPDF(_FinReport):
         for slot, (student, rows) in enumerate(data):
             if slot % 2 == 0:
                 self.add_page()
-                self.filigrane()
-                self.filigrane(y=218.5)
+                filigrane(self)
+                filigrane(self, y=218.5)
             y0 = 12 if slot % 2 == 0 else 160.5
             self._convocation(student, rows, y0, classroom, year, meet_date, meet_time)
             if slot % 2 == 0:
@@ -1026,7 +1038,9 @@ class ConvocationsPDF(_FinReport):
         self.set_text_color(0)
         reste_total = sum(r["reste"] for r in rows)
         frais_txt = ", ".join(f"{r['fee_type']} ({fmt(r['reste'])} F)" for r in rows)
-        rdv = (f" le {mdate}" + (f" à {mtime}" if mtime else "")) if mdate else ""
+        rdv = (
+                f" le **{format_date(datetime.strptime(mdate, '%Y-%m-%d').date(), format='d MMMM yyyy', locale='fr')}**" +
+                (f" à **{mtime}**" if mtime else "")) if mdate else ""
         texte = (f"Monsieur / Madame, parent de l'élève **{student}** "
                  f"({classroom.code}, matricule {student.unique_id or '—'}), "
                  f"vous êtes prié(e) de bien vouloir vous présenter à la "
@@ -1220,8 +1234,8 @@ class PaymentReceipt(FPDF):
         self.set_auto_page_break(False)
         self.set_margins(0, 0, 0)
         self.add_page()
-        self.filigrane()
-        self.filigrane(y=218.5)
+        filigrane(self)
+        filigrane(self, y=218.5)
         self.set_xy(6, 6)
         self.set_font("inter", "", 8)
         base_header(self)
@@ -1327,29 +1341,3 @@ class PaymentReceipt(FPDF):
         self.cell(80, 5, f"Frais encaissés par : {p.received_by.staff_member.__str__()}")
         self.set_xy(R - 60, y + 10)
         self.cell(60, 5, "Signature & cachet", align="R")
-
-    def filigrane(self, x=70, y=70, w=70):
-        from io import BytesIO
-        logo = (self.school.logo, "static/image/no_image.jpg")[self.school.logo == ""]
-        if logo:
-            with self.local_context(fill_opacity=0.1):
-                try:
-                    if hasattr(logo, "read"):
-                        # FieldFile (ImageField) -> on récupère des octets frais.
-                        try:
-                            logo.open("rb")
-                        except Exception:
-                            pass
-                        logo_bytes = logo.read()
-                        try:
-                            logo.close()
-                        except Exception:
-                            pass
-                        logo = BytesIO(logo_bytes)
-                    else:
-                        # Chemin (str) -> fpdf ouvrira le fichier lui-même (flux neuf).
-                        logo = logo
-                except Exception:
-                    pass
-                logo = resize_image(logo, new_width=830)
-                self.image(logo, x=x, y=y, w=w, keep_aspect_ratio=True)

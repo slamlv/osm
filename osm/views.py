@@ -16,14 +16,6 @@ from staff.models import Activities
 
 @anonymous_required
 def offline_index(request):
-    from django_tenants.utils import schema_context
-    schools = School.objects.exclude(schema_name="public")
-    from finance.models import TransactionCategory
-    for school in schools:
-        with schema_context(school.schema_name):
-            salary = TransactionCategory.objects.filter(nom="Salaires Vacataires")
-            salary.update(nom="Salaires Vacataires et Personnel d'Appui")
-
     schools_infos = [
         {
             'nom': school.nom,

@@ -151,7 +151,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle text-success me-2"></i>Nouvelle opération</h6>
+        <h6 class="modal-title text-white fw-bold"><i class="bi bi-plus-circle text-success me-2"></i>Nouvelle opération</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -159,7 +159,7 @@
           {% csrf_token %}
           <div class="row g-3">
             <div class="col-sm-7">
-              <label>Catégorie</label>
+              <label class="text-white">Catégorie</label>
               <select name="category" id="op-cat" class="form-select" required onchange="toggleBenef()">
                 {% regroup categories by get_kind_display as kinds %}
                 {% for k in kinds %}
@@ -171,25 +171,25 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-sm-5"><label>Montant (FCFA)</label>
+            <div class="col-sm-5"><label class="text-white">Montant (FCFA)</label>
               <input type="number" name="amount" class="form-control" min="1" required></div>
-            <div class="col-12"><label>Libellé</label>
+            <div class="col-12"><label class="text-white">Libellé</label>
               <input type="text" name="description" class="form-control" maxlength="160"
                      placeholder="Ex. Achat de craies, Facture ENEO..." required></div>
             <div class="col-sm-6" id="benef-wrap" style="display:none;">
-              <label>Bénéficiaire (salaire)</label>
+              <label class="text-white">Bénéficiaire (salaire)</label>
               <select name="beneficiary" class="form-select">
                 <option value="">—</option>
                 {% for p in personnel %}<option value="{{ p.id }}">{{ p }}</option>{% endfor %}
               </select>
             </div>
-            <div class="col-sm-3"><label>Mode</label>
+            <div class="col-sm-3"><label class="text-white">Mode</label>
               <select name="method" class="form-select">
                 {% for v, l in methods %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
               </select></div>
-            <div class="col-sm-3"><label>Date</label>
+            <div class="col-sm-3"><label class="text-white">Date</label>
               <input data-max-now type="date" name="date" class="form-control" value="{% now 'Y-m-d' %}" required></div>
-            <div class="col-12"><label>Référence pièce (facultatif)</label>
+            <div class="col-12"><label class="text-white">Référence pièce (facultatif)</label>
               <input type="text" name="reference" class="form-control" placeholder="N° facture, bordereau..."></div>
           </div>
           <div class="d-flex justify-content-end mt-3">
@@ -206,7 +206,7 @@
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title fw-bold"><i class="bi bi-gear text-info me-2"></i>Paramètres financiers</h6>
+        <h6 class="modal-title text-white fw-bold"><i class="bi bi-gear text-info me-2"></i>Paramètres financiers</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -214,14 +214,14 @@
            Le solde est calculé à partir de ce point de départ.</p>
         <form method="post" action="{% url 'cashbox_settings' %}">
           {% csrf_token %}
-          <label>Montant (FCFA)</label>
+          <label class="text-white">Montant (FCFA)</label>
           <input type="number" name="opening_balance" class="form-control mb-2"
                  value="{{ box.opening_balance|default:0 }}" required>
-          <label>À la date du</label>
+          <label class="text-white">À la date du</label>
           <input data-max-now type="date" name="opening_date" class="form-control mb-3"
                  value="{{ box.opening_date|date:'Y-m-d' }}" required>
           <hr style="border-color:rgba(255,255,255,0.1);">
-          <label>Taux horaire par défaut (FCFA/h)</label>
+          <label class="text-white">Taux horaire par défaut (FCFA/h)</label>
           <input type="number" name="default_hourly_rate" class="form-control mb-1" min="1"
                  value="{{ box.default_hourly_rate|default_if_none:'' }}" placeholder="Facultatif">
           <p class="text-white-50 mb-3" style="font-size:0.72rem;">Pré-remplit le taux des vacataires

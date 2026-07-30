@@ -8,7 +8,7 @@ from fpdf.enums import TableHeadingsDisplay
 from authentification.models import TrancheHoraire, School, User
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
-    base_header, base_infos, delete_image, zip_pdfs_response, check_notes
+    base_header, base_infos, delete_image, zip_pdfs_response, check_notes, add_fonts
 from django.db.models import Q, Prefetch
 from django.forms import model_to_dict
 from django.http import Http404, HttpResponse, JsonResponse
@@ -1091,13 +1091,6 @@ class Stats(LoggedAdminView):
             return pdf_response(result, filename)
         else:
             return JsonResponse({'success': False, 'message': "Action inconnue."})
-
-
-def add_fonts(pdf):
-    pdf.add_font('inter', '', settings.INTER_REGULAR)
-    pdf.add_font('inter', 'I', settings.INTER_ITALIC)
-    pdf.add_font('inter', 'B', settings.INTER_BOLD)
-    pdf.add_font('inter', 'BI', settings.INTER_BOLDITALIC)
 
 
 class ClassAlbum(LoggedAdminView):
