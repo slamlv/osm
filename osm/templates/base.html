@@ -290,7 +290,7 @@
                 <li><a class="dropdown-item" href="{% url 'add_user' %}"><i class="bi bi-person-plus me-2 text-warning"></i>Nouvel utilisateur</a></li>
                 <li><a class="dropdown-item" href="{% url 'delegated_roles' %}"><i class="bi bi-key me-2 text-danger"></i>Délégation des Rôles</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Documents administratifs</a></li>
+                <li><a class="dropdown-item" href="{% url 'service_documents' %}"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Documents administratifs</a></li>
               </ul>
             </li>
 
@@ -306,7 +306,7 @@
                 <li><a class="dropdown-item" href="{% url 'age_and_sex_stats' %}"><i class="bi bi-bar-chart-line-fill me-2 text-purple"></i>Stats par Age et par Sexe</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'discipline' %}"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Discipline</a></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Certificat de scolarité</a></li>
+                <li><a class="dropdown-item" href="{% url 'certificates' %}"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Certificat de scolarité</a></li>
                 <li><a class="dropdown-item" href="{% url 'students_id_cards' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Cartes d'identité scolaire</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'parents' %}"><i class="bi bi-people-fill me-2 text-warning"></i>Liste des Parents</a></li>
@@ -421,8 +421,7 @@
                 <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-warning"></i>Informations Établissement</a></li>
                 {% endif %}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-palette me-2 text-white-50"></i>Thème</a></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2 text-white-50"></i>Assistance</a></li>
+                <li><a class="dropdown-item" href="{% url 'user_guide' %}" target="_blank"><i class="bi bi-book me-2 text-warning"></i>Guide d'utilisation</a></li>
               </ul>
             </li>
 

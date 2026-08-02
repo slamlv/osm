@@ -270,7 +270,7 @@ class TLevelMarksEdit(LoggedUserView):
                     compt1 = level_marks_form.level_marks_form[0].cleaned_data["competences1"]
                 else:
                     compt, compt1 = None, None
-                x = level_marks_form.save((compt, compt1))
+                x = level_marks_form.save((compt, compt1), term_index=evl)
                 y = LevelMarksForms.marks_check(ens=data["enseignements"], evl=evl_in)
                 if x:
                     if not y:
@@ -352,7 +352,7 @@ class LevelMarksEdit(LoggedUserView):
                     compt = level_marks_form.level_marks_form[0].cleaned_data["competences"]
                 else:
                     compt = None
-                x = level_marks_form.save((compt,))
+                x = level_marks_form.save((compt,), sequence=evl)
                 y = LevelMarksForms.marks_check(ens=data["enseignements"], evl=evl)
                 if x:
                     if not y:
@@ -439,7 +439,7 @@ class TrimesterMarksEdit(LoggedUserView):
                 else:
                     compts = (None, None)
 
-                x = marks_form.save(compts)
+                x = marks_form.save(compts, term_index=evl)
                 y = MarksForm.marks_check(ens=data["enseignement"], evl=evl_in)
                 if x:
                     if not y:
@@ -650,7 +650,7 @@ class MarksEdit(LoggedUserView):
                     compt = marks_form.cleaned_data["competences"]
                 else:
                     compt = None
-                x = marks_form.save((compt,))
+                x = marks_form.save((compt,), sequence=evl)
                 y = MarksForm.marks_check(ens=data["enseignement"], evl=evl)
                 if x:
                     if not y:

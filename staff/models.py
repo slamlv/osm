@@ -161,6 +161,19 @@ class Personnel(models.Model):
                                               help_text="Taux horaire négocié (FCFA/h). Utilisé si mode = HORAIRE.")
     default_hours = models.PositiveSmallIntegerField(null=True, blank=True,
         help_text="Nombre d'heures mensuel habituel (pré-remplit la paie ; ajustable chaque mois).")
+    # --- identité administrative ---
+    matricule = models.CharField(max_length=10, blank=True, default="",
+        help_text="Matricule administratif du membre du personnel.")
+    provenance = models.CharField(max_length=120, blank=True, default="",
+        help_text="École de formation ou poste précédent (ex. ENS de Yaoundé, Lycée de XXX).")
+    # --- décision d'affectation ---
+    note_service_number = models.CharField(max_length=80, blank=True, default="",
+        help_text="N° de la décision / note de service / arrêté / d'affectation ou de nomination.")
+    note_service_date = models.DateField(null=True, blank=True, help_text="Date de la décision / note de service.")
+    # --- formation ---
+    discipline_formation = models.CharField(max_length=60, blank=True, default="",
+        help_text="Discipline de formation (ex. Informatique, Mathématiques). Sert (uniquement si poste est Enseignant) "
+                  "à la mention « En qualité de » — distincte des matières effectivement enseignées cette année.")
 
     objects = StaffEnPosteManager()
     objects_all = StaffAllManager()

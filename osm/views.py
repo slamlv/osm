@@ -5,13 +5,18 @@ from django.contrib.auth.decorators import login_required
 
 from authentification.views import anonymous_required
 from .forms import TranchesHorairesForm, SchoolForm
-from .utils import with_users_school_schema, ADetailView, LoggedAdminView, add_minutes, greet
+from .utils import with_users_school_schema, ADetailView, LoggedAdminView, add_minutes, greet, logged_user_view
 from authentification.models import School, TrancheHoraire
 from staff.models import Personnel
 from student.models import Student
 from classroom.models import ClassRoom
 from datetime import time, datetime
 from staff.models import Activities
+
+
+@logged_user_view
+def user_guide(request):
+    return render(request, "guide_utilisateur.html")
 
 
 @anonymous_required

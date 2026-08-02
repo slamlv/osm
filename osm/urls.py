@@ -18,11 +18,12 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.views.static import serve
-
-from .views import index, ajax_messages, SchoolDetails, TranchesHorairesEdit, SchoolInformations, offline_index
+from .views import index, ajax_messages, SchoolDetails, TranchesHorairesEdit, SchoolInformations, offline_index,\
+    user_guide
 
 urlpatterns = [
     path("", offline_index, name="offline_index"),
+    path("user_guide", user_guide, name="user_guide"),
     path("index", index, name="index"),
     path("school_details", SchoolDetails.as_view(), name="school_details"),
     path("school_infos_edit", SchoolInformations.as_view(), name="school_infos_edit"),

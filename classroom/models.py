@@ -177,16 +177,49 @@ class ClassRoomQuerySet(models.QuerySet):
 
 class ClassRoom(models.Model):
     classe = models.ForeignKey(Class, on_delete=models.CASCADE)
-    code = models.CharField(max_length=15)
+    code = models.CharField(max_length=30)
     lv2 = models.CharField(choices=LVII.choices, null=True, max_length=15)
     lv3 = models.CharField(choices=LVIII.choices, null=True, max_length=15)
     matieres = models.ManyToManyField(Matieres, through="Enseignements")
     titulaire = models.ForeignKey(Personnel, on_delete=models.SET_NULL, null=True, related_name="titulaire")
+    # Horodatage de la dernière modification des notes, PAR TRIMESTRE.
+    # C'est LA clé de l'obsolescence : on compare cette date à celle de
+    # l'archive pour savoir s'il faut régénérer, ou si l'archive est encore
+    # à jour (donc réutilisable telle quelle).
+    notes_updated_t1 = models.DateTimeField(null=True, blank=True)
+    notes_updated_t2 = models.DateTimeField(null=True, blank=True)
+    notes_updated_t3 = models.DateTimeField(null=True, blank=True)
+
+    # Moyenne minimale d'admission : 10 par défaut, mais chaque établissement
+    # peut l'ajuster. Source UNIQUE pour bulletins, PV et statistiques.
+    moyenne_min_admission = models.DecimalField(
+        max_digits=4, decimal_places=2, default=10, help_text="Moyenne minimale d'admission (défaut : 10).")
 
     objects = ClassRoomQuerySet.as_manager()
 
     class Meta:
         db_table = '"ClassRoom"'
+
+    def notes_updated_at(self, term_index):
+        """term_index : 1, 2, 3 -> trimestre ; 0 -> annuel (le plus
+        récent des trois, car le bulletin annuel dépend des trois)."""
+        dates = [self.notes_updated_t1, self.notes_updated_t2, self.notes_updated_t3]
+        if term_index in (1, 2, 3):
+            return dates[term_index - 1]
+
+        return max([d for d in dates if d], default=None)
+
+    def touch_notes(self, term_index=None, sequence=None):
+        """Marque les notes d'un trimestre comme modifiées MAINTENANT.
+        Accepte soit le trimestre(1 - 3), soit la séquence(1 - 6)."""
+        from django.utils import timezone
+        if term_index is None and sequence:
+            term_index = (int(sequence) + 1) // 2  # 1,2->1 3,4->2 5,6->3
+        if term_index not in (1, 2, 3):
+            return
+        field = f"notes_updated_t{term_index}"
+        setattr(self, field, timezone.now())
+        self.save(update_fields=[field])
 
     def classroom_defaulters(self, school_year, fee_type=None, on_installments=False):
         """Liste des élèves de la classe n'ayant pas soldé.
@@ -459,10 +492,11 @@ class ClassRoom(models.Model):
         }
         return data
 
-    def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False, seuil=10.0):
+    def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False):
         from note.models import Note
         from osm.utils import formated_float
 
+        seuil = self.moyenne_min_admission
         notes = (
             Note.objects.select_related('enseignement__matiere__sujet', 'enseignement__enseignant').
             filter(eleve__classe_id=self.pk, eval__in=evals)
@@ -569,9 +603,10 @@ class ClassRoom(models.Model):
                 result['max_words'] = max_words
         return result
 
-    def set_rang(self, datas, cle_moyenne="moyenne", cle_rang="rang", for_stats=False, pv_orderd=False, seuil=10.0):
+    def set_rang(self, datas, cle_moyenne="moyenne", cle_rang="rang", for_stats=False, pv_orderd=False):
         from osm.utils import formated_float
 
+        seuil = self.moyenne_min_admission
         ordered_data = sorted(datas, key=lambda x: x[cle_moyenne], reverse=True)
         if cle_moyenne == "moyenne":
             minim, maxim = float("inf"), float("-inf")
@@ -634,10 +669,11 @@ class ClassRoom(models.Model):
                 return ordered_data, moyenne_generale, taux, min_max, nb, nb_admis
             return moyenne_generale, taux, min_max, nb, nb_admis
 
-    def reportcard_data(self, evals, with_competences=True, seuil=10.0, for_livret=False):
+    def reportcard_data(self, evals, with_competences=True, for_livret=False):
         from note.models import Note
         from osm.utils import formated_float
 
+        seuil = self.moyenne_min_admission
         notes = (
             Note.objects.select_related('enseignement__matiere__sujet', 'enseignement__enseignant').
             filter(eleve__classe_id=self.pk, eval__in=evals)

@@ -2,7 +2,7 @@ from django.urls import path
 from .views import StaffMemberAdd, Staff, StaffMemberEdit, StaffMemberDelete, StaffDetails, UserDetails, UserEdit,\
     AddUser, Details, Users, UserDelete, admin, active, StaffMemberTimetable, UserTimetable, ActivityAdd,\
     ActivitiesList, ActivityEdit, ActivityDelete, ProgressionSelectForm, ProgressionEdit, Progression,\
-    DeleteArchivedStaff, StaffArchive, StaffToggleEnPoste, delegated_roles
+    DeleteArchivedStaff, StaffArchive, StaffToggleEnPoste, delegated_roles, service_documents
 
 urlpatterns = [
     path("staff-add", StaffMemberAdd.as_view(), name="add_staff_member"),
@@ -31,4 +31,5 @@ urlpatterns = [
     path("staff_delete_archived", DeleteArchivedStaff.as_view(), name="staff_delete_archived"),
     path("staff_toggle_poste-<int:id>", StaffToggleEnPoste.as_view(), name="staff_toggle_poste"),
     path("delegated_roles", delegated_roles, name="delegated_roles"),
+    path("service_documents", service_documents, name="service_documents"),
 ]

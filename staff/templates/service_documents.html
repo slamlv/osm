@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus, .fin-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-card select option { background-color:#1b3a57; color:#fff; }
+  .fin-card input:disabled { opacity:0.35!important; cursor:not-allowed; }
+  .fin-card label.fl { font-size:0.78rem; color:rgba(255,255,255,0.65); margin-bottom:4px; display:block; }
+  .fin-title { font-size:0.74rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.45); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+  .hint { font-size:0.72rem; color:rgba(255,255,255,0.4); margin-top:3px; }
+
+  /* choix du document : cartes radio */
+  .kind-pick { display:block; cursor:pointer; padding:12px 14px; border-radius:13px;
+               background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+               transition:background .12s, border-color .12s; height:100%; }
+  .kind-pick:hover { background:rgba(10,61,98,0.35); }
+  .kind-pick input { display:none; }
+  .kind-pick .nm { color:#fff; font-weight:600; font-size:0.88rem; }
+  .kind-pick .ds { color:rgba(255,255,255,0.45); font-size:0.74rem; }
+  .kind-pick.active { background:rgba(13,110,253,0.16); border-color:rgba(13,110,253,0.5); }
+  .kind-pick.active .nm { color:#8ec5ff; }
+
+  .note-box { background:rgba(255,193,7,0.08); border:1px solid rgba(255,193,7,0.3);
+              border-radius:12px; padding:10px 13px; font-size:0.78rem;
+              color:rgba(255,255,255,0.7); }
+
+  /* barre d'action collante : le bouton reste accessible sur mobile */
+  .sd-actions { position:sticky; bottom:0; z-index:20; padding:12px 0 14px; margin-top:14px;
+    background:linear-gradient(180deg, rgba(23,46,69,0) 0%, rgba(23,46,69,0.94) 45%, rgba(23,46,69,0.99) 100%);
+    backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); }
+  .sd-actions .btn { box-shadow:0 4px 14px rgba(0,0,0,0.35); }
+</style>
+
+<div class="container py-3" style="max-width:980px;">
+
+  <h6 class="text-white fw-bold mb-1">
+    <i class="bi bi-briefcase me-2" style="color:#8ec5ff;"></i>Documents administratifs</h6>
+  <p class="text-white-50 small mb-3">Prise de service, reprise de service et présence effective.
+    Les mentions non renseignées sortent en <strong>traits à compléter à la main</strong>.</p>
+
+  <form method="post" id="sd-form">
+    {% csrf_token %}
+
+    {# ================= 1. TYPE DE DOCUMENT ================= #}
+    <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0a3d62;">
+      <p class="fin-title mb-3"><i class="bi bi-files me-1"></i>Type de document</p>
+      <div class="row g-2">
+        {% for key, label in kinds %}
+        <div class="col-12 col-md-4">
+          <label class="kind-pick {% if forloop.first %}active{% endif %}" data-kind>
+            <input type="radio" name="kind" value="{{ key }}" {% if forloop.first %}checked{% endif %}>
+            <span class="nm d-block">{{ label }}</span>
+            <span class="ds">
+              {% if key == "PRISE" %}Première installation au poste
+              {% elif key == "REPRISE" %}Retour après absence ou congé
+              {% else %}Attestation de présence au poste{% endif %}</span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ================= 2. L'AGENT ================= #}
+    <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#199548;">
+      <p class="fin-title mb-3"><i class="bi bi-person-badge me-1"></i>Agent concerné</p>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="fl">Membre du personnel</label>
+          <select name="personnel" id="sd-person" class="form-select">
+            <option value="">— Choisir —</option>
+            {% for r in rows %}
+            <option value="{{ r.p.id }}"
+                    data-matricule="{{ r.matricule }}"
+                    data-grade="{{ r.grade }}"
+                    data-provenance="{{ r.provenance }}"
+                    data-note="{{ r.note_number }}"
+                    data-notedate="{{ r.note_date }}"
+                    data-discipline="{{ r.discipline }}"
+                    data-qualite="{{ r.qualite }}"
+                    data-poste="{{ r.poste }}"
+                    data-teacher="{{ r.teacher }}"
+                    data-fem="{{ r.fem }}">{{ r.p }}</option>
+            {% endfor %}
+          </select>
+          <p class="hint">Les champs ci-dessous se remplissent avec ce qui est déjà connu de sa fiche.</p>
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="fl">Matricule</label>
+          <input type="text" name="matricule" id="sd-matricule" class="form-control"
+                 placeholder="Ex. E61">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="fl">Grade</label>
+          <input type="text" name="grade" id="sd-grade" class="form-control"
+                 placeholder="Ex. PLEG">
+        </div>
+
+        <div class="col-12 col-md-7" id="sd-origin-wrap">
+          <label class="fl">Venant de <span class="text-white-50">(école de formation ou poste précédent)</span></label>
+          <input type="text" name="origin" id="sd-origin" class="form-control"
+                 placeholder="Ex. École Normale Supérieure de Yaoundé">
+        </div>
+        {# affiché UNIQUEMENT si l'agent occupe un poste d'enseignant #}
+        <div class="col-12 col-md-5" id="sd-discipline-wrap">
+          <label class="fl">Discipline de formation</label>
+          <input type="text" name="discipline" id="sd-discipline" class="form-control"
+                 placeholder="Ex. Informatique">
+          <p class="hint">Réservée aux enseignants : elle complète « En qualité de ».</p>
+        </div>
+      </div>
+    </div>
+
+    {# ================= 3. DÉCISION ET DATES ================= #}
+    <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#f0c75e;">
+      <p class="fin-title mb-3"><i class="bi bi-calendar-check me-1"></i>Décision et dates</p>
+      <div class="row g-3">
+        <div class="col-12 col-md-7">
+          <label class="fl">N° de décision / arrêté / note de service</label>
+          <input type="text" name="note_number" id="sd-note" class="form-control"
+                 placeholder="Ex. 024/53/D/MINESEC/SG/DRH">
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="fl">Date de la décision</label>
+          <input type="date" name="note_date" id="sd-notedate" class="form-control" data-max-now>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="fl" id="sd-duty-label">Date de prise de service</label>
+          <input type="date" name="duty_date" class="form-control" value="{{ today }}">
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="fl">En qualité de</label>
+          <input type="text" name="qualite" id="sd-qualite" class="form-control"
+                 placeholder="Ex. Enseignant d'Informatique">
+          <p class="hint">Se met à jour d'après la discipline, tant que vous ne l'avez pas modifié.</p>
+        </div>
+
+        {# --- année scolaire : libre, et imprimable ou non --- #}
+        <div class="col-12 col-md-5">
+          <label class="fl">Année scolaire du document</label>
+          <input type="text" name="year" id="sd-year" class="form-control"
+                 list="sd-years" value="{{ year }}" placeholder="Ex. 2021-2022"
+                 autocomplete="off">
+          <datalist id="sd-years">
+            {% for y in years %}<option value="{{ y }}">{% endfor %}
+          </datalist>
+          <p class="hint">Saisie libre : le document peut concerner une année antérieure
+            à l'utilisation d'OSM.</p>
+        </div>
+        <div class="col-12 col-md-7 d-flex align-items-center">
+          <div class="form-check text-white-50 small">
+            <input class="form-check-input" type="checkbox" name="print_year"
+                   id="sd-printyear" checked>
+            <label class="form-check-label" for="sd-printyear">
+              <strong>Imprimer l'année scolaire</strong> sur le document.
+              Décochez pour laisser un trait à compléter à la main.</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ================= 4. OPTIONS ET GÉNÉRATION ================= #}
+    <div class="fin-card p-3 p-sm-4" style="--ac:#8ec5ff;">
+      <div class="note-box mb-3">
+        <i class="bi bi-shield-exclamation me-1"></i>
+        Ces documents sont des <strong>pièces de carrière</strong> : ils ne sont pas cachetés
+        numériquement et doivent être <strong>signés et cachetés à la main</strong> par le chef
+        d'établissement ou par ordre.
+      </div>
+
+      <div class="form-check text-white-50 small mb-2">
+        <input class="form-check-input" type="checkbox" name="save_to_profile"
+               id="sd-save" checked>
+        <label class="form-check-label" for="sd-save">
+          Enregistrer matricule, grade, provenance, n° et date de décision et discipline
+          dans la fiche de l'agent (évite de les ressaisir la prochaine fois)</label>
+      </div>
+      <div class="form-check text-white-50 small">
+        <input class="form-check-input" type="checkbox" name="blank" id="sd-blank">
+        <label class="form-check-label" for="sd-blank">
+          <strong>Version vierge</strong> — toutes les mentions en traits à remplir à la main
+          (l'agent choisi est alors ignoré)</label>
+      </div>
+
+      <div class="sd-actions d-flex justify-content-center">
+        <button class="btn btn-primary fw-semibold px-4" data-bs-toggle="tooltip"
+                title="Générer le document en PDF">
+          <i class="bi bi-file-earmark-arrow-down me-1"></i>Générer le document</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var person = document.getElementById('sd-person');
+  var blank  = document.getElementById('sd-blank');
+  var disc   = document.getElementById('sd-discipline');
+  var qual   = document.getElementById('sd-qualite');
+  var year   = document.getElementById('sd-year');
+  var printY = document.getElementById('sd-printyear');
+
+  // --- pré-remplissage depuis la fiche de l'agent ---------------------
+  var FIELDS = {
+    matricule:  'sd-matricule',
+    grade:      'sd-grade',
+    provenance: 'sd-origin',
+    note:       'sd-note',
+    notedate:   'sd-notedate',
+    discipline: 'sd-discipline',
+    qualite:    'sd-qualite'
+  };
+  function fill() {
+    var o = person.options[person.selectedIndex];
+    if (!o || !o.value) return;
+    Object.keys(FIELDS).forEach(function (key) {
+      var el = document.getElementById(FIELDS[key]);
+      if (el) el.value = (key === 'qualite')
+                       ? (o.dataset[key] || '').toUpperCase()
+                       : (o.dataset[key] || '');
+    });
+    qualEdited = false;          // la valeur vient de la fiche, pas de l'utilisateur
+    syncPoste();                 // affiche ou masque la discipline
+  }
+  person.addEventListener('change', fill);
+
+  // --- POSTE : la discipline ne concerne que les enseignants -----------
+  //  Pour tout autre poste (gardien, secrétaire, censeur…), le champ est
+  //  masqué et « En qualité de » reprend directement le poste occupé.
+  var discWrap = document.getElementById('sd-discipline-wrap');
+
+  function currentOption() {
+    return person.options[person.selectedIndex] || null;
+  }
+  function isTeacher() {
+    var o = currentOption();
+    return !!(o && o.dataset.teacher);
+  }
+  function teacherWord() {
+    var o = currentOption();
+    return (o && o.dataset.fem) ? 'ENSEIGNANTE' : 'ENSEIGNANT';
+  }
+
+  // --- élision : « DE MATHÉMATIQUES » mais « D'INFORMATIQUE » ----------
+  //  Le test se fait sur la première lettre débarrassée de ses accents,
+  //  sans quoi « ÉDUCATION » ou « ÉCONOMIE » seraient traités en consonne.
+  //  Le H est compté comme voyelle : les disciplines concernées (Histoire,
+  //  Hôtellerie) prennent toutes un h muet, donc l'élision s'applique.
+  function elision(mot) {
+    var c = (mot || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .charAt(0).toUpperCase();
+    return /[AEIOUYH]/.test(c) ? "D'" : 'DE ';
+  }
+
+  // --- saisie toujours en majuscules, sans faire sauter le curseur -----
+  function forceUpper(el) {
+    var s = el.selectionStart, e = el.selectionEnd;
+    var v = (el.value || '').toUpperCase();
+    if (v !== el.value) {
+      el.value = v;
+      try { el.setSelectionRange(s, e); } catch (_) {}
+    }
+  }
+
+  function syncPoste() {
+    var o = currentOption();
+    var teacher = isTeacher();
+    discWrap.style.display = teacher ? '' : 'none';
+    if (!teacher) {
+      disc.value = '';                      // aucune discipline hors enseignement
+      if (!qualEdited && o) qual.value = (o.dataset.poste || '').toUpperCase();
+    }
+  }
+
+  // --- « En qualité de » suit la discipline TANT QU'ON N'Y TOUCHE PAS --
+  var qualEdited = false;
+  qual.addEventListener('input', function () {
+    qualEdited = true;
+    forceUpper(qual);                       // la saisie manuelle aussi
+  });
+  disc.addEventListener('input', function () {
+    if (qualEdited || !isTeacher()) return;
+    var d = disc.value.trim();
+    qual.value = d ? (teacherWord() + ' ' + elision(d) + d.toUpperCase())
+                   : teacherWord();
+  });
+
+
+  // --- carte active + libellés adaptés au document --------------------
+  var LABELS = {
+    PRISE:    'Date de prise de service',
+    REPRISE:  'Date de reprise de service',
+    PRESENCE: 'Présent(e) depuis le'
+  };
+  function syncKind() {
+    var checked = document.querySelector('input[name=kind]:checked');
+    document.querySelectorAll('[data-kind]').forEach(function (el) {
+      el.classList.toggle('active', el.contains(checked));
+    });
+    var k = checked ? checked.value : 'PRISE';
+    document.getElementById('sd-duty-label').textContent = LABELS[k];
+    // « Venant de » n'a pas de sens pour une présence effective
+    document.getElementById('sd-origin-wrap').style.display =
+      (k === 'PRESENCE') ? 'none' : '';
+  }
+  document.querySelectorAll('input[name=kind]').forEach(function (r) {
+    r.addEventListener('change', syncKind);
+  });
+  syncKind();
+
+  // --- année imprimée ou laissée en trait ------------------------------
+  function syncYear() { year.disabled = !printY.checked; }
+  printY.addEventListener('change', syncYear);
+  syncYear();
+
+  // --- version vierge : plus rien à saisir -----------------------------
+  function syncBlank() {
+    var off = blank.checked;
+    document.querySelectorAll('#sd-form input[type=text], #sd-form input[type=date], #sd-person')
+      .forEach(function (f) { f.disabled = off; });
+    document.getElementById('sd-save').disabled = off;
+    printY.disabled = off;
+    if (!off) syncYear();
+  }
+  blank.addEventListener('change', syncBlank);
+  syncBlank();
+  syncPoste();                   // état initial (aucun agent sélectionné)
+})();
+</script>
+{% endblock %}

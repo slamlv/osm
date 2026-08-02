@@ -12,7 +12,8 @@ from .forms import StudentPaymentForm
 from student.models import Student
 from staff.models import Personnel
 from osm.utils import school_year, message, logged_financial_user_view, stamp_bytes, paste_stamp, resize_image, \
-    base_header, number_to_words_fr, safe_redirect_back, pdf_response, base_infos, formated_float, filigrane, add_fonts
+    base_header, number_to_words_fr, safe_redirect_back, pdf_response, base_infos, formated_float, filigrane, add_fonts,\
+    format_date
 from classroom.models import ClassRoom, Class
 from fpdf import FPDF
 from fpdf.fonts import FontFace
@@ -20,7 +21,6 @@ from fpdf.table import Table
 from fpdf.enums import TableHeadingsDisplay
 import json
 from datetime import datetime, date as _date
-from babel.dates import format_date
 from django.db import transaction
 
 
@@ -73,9 +73,9 @@ def fee_grid(request):
         s_niveaux, s_series = (niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr,
                            series_premier_cycle_est_fr + series_second_cycle_est_fr)
     # niveaux/séries EXISTANTS dans cet établissement (selects dynamiques)
-    niveaux = list(classes.exclude(niveau__isnull=True).filter(niveau__in=s_niveaux, serie__in=s_series)
+    niveaux = list(classes.exclude(niveau__isnull=True).filter(niveau__in=s_niveaux)
                    .values_list("niveau", flat=True).distinct())
-    series = [s for s in Class.objects.values_list("serie", flat=True)
+    series = [s for s in Class.objects.filter(serie__in=s_series).values_list("serie", flat=True)
               .distinct() if s]
 
     # années déjà paramétrées (sélecteur) + année courante
@@ -1038,9 +1038,7 @@ class ConvocationsPDF(_FinReport):
         self.set_text_color(0)
         reste_total = sum(r["reste"] for r in rows)
         frais_txt = ", ".join(f"{r['fee_type']} ({fmt(r['reste'])} F)" for r in rows)
-        rdv = (
-                f" le **{format_date(datetime.strptime(mdate, '%Y-%m-%d').date(), format='d MMMM yyyy', locale='fr')}**" +
-                (f" à **{mtime}**" if mtime else "")) if mdate else ""
+        rdv = (f" le **{format_date(mdate)}**" + (f" à **{mtime}**" if mtime else "")) if mdate else ""
         texte = (f"Monsieur / Madame, parent de l'élève **{student}** "
                  f"({classroom.code}, matricule {student.unique_id or '—'}), "
                  f"vous êtes prié(e) de bien vouloir vous présenter à la "

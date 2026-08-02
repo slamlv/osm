@@ -129,6 +129,11 @@ class School(TenantMixin):
     second_break_duration = models.IntegerField(choices=((10, 10), (15, 15), (20, 20), (25, 25), (30, 30)), default=30)
     mergedprogrammations = models.BooleanField(default=False, verbose_name="Programmations Combinées")
     last_schoolyear_closed = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, null=True, blank=True, related_name="school_closed")
+    # Année scolaire où l'établissement se trouve RÉELLEMENT. La table globale des années dit ce qui EXISTE ; ce champ
+    # dit où EN EST cet établissement. C'est la clôture qui le fait avancer -> aucun décalage silencieux quand l'année
+    # courante globale change avant que l'établissement ait clôturé.
+    school_year = models.CharField(max_length=9, blank=True, default="",
+                                   help_text="Année scolaire en cours dans cet établissement.")
 
     # pour ne retraiter QUE si le fichier a changé
     __original_cachet = None
@@ -145,6 +150,15 @@ class School(TenantMixin):
         db_table = '"School"'
         verbose_name = "Etablissement"
         verbose_name_plural = "Etablissements"
+
+    @property
+    def establishment_year(self):
+        """Année scolaire où l'établissement se trouve RÉELLEMENT. Priorité à School.school_year ;
+        repli sur le helper global si le champ n'est pas encore renseigné."""
+        if self and getattr(self, "school_year", ""):
+            return self.school_year
+        from osm.utils import school_year as global_year
+        return global_year()
 
     def save(self, *args, **kwargs):
         # Traite chaque image (détourage + autocrop) UNIQUEMENT si elle a changé.

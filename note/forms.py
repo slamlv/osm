@@ -257,10 +257,10 @@ class LevelMarksForms:
                 return False
         return True
 
-    def save(self, compts):
+    def save(self, compts, term_index=None, sequence=None):
         x = 0
         for level_marks_form in self.level_marks_form:
-            x += level_marks_form.save(compts)
+            x += level_marks_form.save(compts, term_index, sequence)
         return x
 
     @classmethod
@@ -339,16 +339,17 @@ class MarksForm(DynamicFormMixin, forms.Form):
                 matiere = self.classroom.lv3
             return default_competences(level, matiere, evalx)
 
-    def save(self, compts):
+    def save(self, compts, term_index=None, sequence=None):
         x = 0
         for mark_form in self.marks_form:
             x += mark_form.mark_save(compts)
+            if x:
+                self.classroom.touch_notes(term_index=term_index, sequence=sequence)
         return x
 
     def isvalid(self):
         for mark_form in self.marks_form:
             if not mark_form.is_valid():
-                print(mark_form)
                 return False
         return True
 

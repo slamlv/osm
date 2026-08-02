@@ -3,7 +3,8 @@ from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, Stude
     Students, StudentDetails, ParentDetails, Parents, discipline, Discipline, StudentsImport, students_export,\
     StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney, StudentsTrash, StudentsWithoutClass,\
     StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass,\
-    ImportTemplateDownload, age_sex_stats, age_sex_stats_pdf, age_sex_stats_xlsx, enrollment_certificate
+    ImportTemplateDownload, age_sex_stats, age_sex_stats_pdf, age_sex_stats_xlsx, enrollment_certificate, certificates,\
+    enrollment_certificates, enrollment_certificate_blank
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
@@ -35,4 +36,7 @@ urlpatterns = [
     path("age_and_sex_stats_pdf", age_sex_stats_pdf, name="age_and_sex_stats_pdf"),
     path("age_and_sex_stats_xlsx", age_sex_stats_xlsx, name="age_and_sex_stats_xlsx"),
     path("enrollment_certificate-<int:id>/", enrollment_certificate, name="enrollment_certificate"),
+    path("enrollment_certificates", certificates, name="certificates"),
+    path("enrollment_certificates-<int:student_id>/", enrollment_certificates, name="enrollment_certificates"),
+    path("enrollment_certificate_blank", enrollment_certificate_blank, name="enrollment_certificate_blank"),
 ]

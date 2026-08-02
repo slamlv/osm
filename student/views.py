@@ -13,7 +13,6 @@ from django.conf import settings
 from fpdf import FPDF
 from fpdf.enums import VAlign, TableCellFillMode, TableHeadingsDisplay
 from fpdf.table import Table
-from babel.dates import format_date
 from openpyxl.utils.datetime import to_excel
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl import Workbook
@@ -31,7 +30,7 @@ from note.forms import CheckForm, MarksForm, SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts
+    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts, format_date
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
@@ -1190,6 +1189,7 @@ class Discipline(LoggedAdminView):
                                          retards=dform.cleaned_data['retards'])
                 dstd.save()
             message(self.request, "Données enregistrées avec succès.")
+            student.classe.touch_notes(term_index=trim)
         else:
             message(self.request, "Aucune donnée modifiée ou enregistrée.", msg_type="warning")
         context = {'form': dform, 'sid': sid, 'trim': trim, 'std_info': std_info, 'show': False}
@@ -1391,19 +1391,105 @@ def age_sex_stats_xlsx(request):
 def unpaid_cashbox_fees(student, year):
     """Liste des frais EN CAISSE non soldés de l'élève pour l'année.
     Vide => l'élève est à jour (éligible au certificat)."""
-    return [r for r in student.student_fee_status(year) if r["affects_cashbox"] and r["reste"] > 0]
+    try:
+        return [r for r in student.student_fee_status(year) if r["affects_cashbox"] and r["reste"] > 0]
+    except Exception:
+        return []
 
 
 def is_solvent(student, year):
     return not unpaid_cashbox_fees(student, year)
 
 
+def _available_years():
+    """Années présentes en base + année courante, la plus récente d'abord."""
+    years = list(StudentEnrollment.objects.values_list("school_year__libelle", flat=True).distinct())
+    current = school_year()
+    if current not in years:
+        years.append(current)
+    return sorted({y for y in years if y}, reverse=True)
+
+
+def _classroom_for(student, year):
+    """Classe de l'élève POUR L'ANNÉE DEMANDÉE (via son inscription)."""
+    enr = (StudentEnrollment.objects.filter(student=student, school_year__libelle=year).select_related("classroom").first())
+    if enr and enr.classroom_id:
+        return enr.classroom
+    # repli : année courante -> classe actuelle
+    return student.classe if year == school_year() else None
+
+
 # ---------------------------------------------------------------------------
-#  VUE CERTIFICAT DE SCOLARITÉ
+#  VUE CERTIFICAT DE SCOLARITÉ : ON CHOISIT L'ÉLÈVE
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def certificates(request):
+    years = _available_years()
+    year = request.GET.get("year") or school_year()
+    if year not in years:
+        year = years[0] if years else school_year()
+
+    q = (request.GET.get("q") or "").strip()
+    rows = []
+    if q:
+        students = (Student.objects.filter(Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(unique_id__icontains=q))
+                    .select_related("classe").order_by("nom", "prenom")[:30])
+        for st in students:
+            classroom = _classroom_for(st, year)
+            unpaid = unpaid_cashbox_fees(st, year)
+            rows.append({
+                "student": st,
+                "classroom": classroom,
+                "enrolled": classroom is not None,
+                "solvent": not unpaid,
+                "reste": sum(r["reste"] for r in unpaid),
+            })
+
+    return render(request, "certificates.html", {
+        "years": years, "year": year, "q": q, "rows": rows, 'title': "Certificat de Scolarité"
+    })
+
+
+# ---------------------------------------------------------------------------
+#  TÉLÉCHARGEMENT CERTIFICAT DE SCOLARITÉ : ANNÉE PASSÉE EN PARAMÈTRE
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def enrollment_certificates(request, student_id):
+    """Certificat nominatif pour l'année passée en paramètre (?year=)."""
+    student = get_object_or_404(Student, pk=student_id)
+    year = request.GET.get("year") or school_year()
+
+    unpaid = unpaid_cashbox_fees(student, year)
+    if unpaid:
+        reste = sum(r["reste"] for r in unpaid)
+        details = ", ".join(f"{r['fee_type']} ({r['reste']:,} F)".replace(",", " ")
+                            for r in unpaid)
+        message(request, f"Certificat indisponible : {student.short_name} n'est pas à jour pour "
+                f"{year} (reste {reste:,} FCFA — {details}).".replace(",", " "), msg_type="error")
+        return safe_redirect_back(request, "certificates")
+    classroom = _classroom_for(student, year)
+    if classroom is None:
+        message(request, f"{student.short_name} n'a pas d'inscription enregistrée pour {year}.", msg_type="error")
+        return safe_redirect_back(request, "certificates")
+
+    pdf = EnrollmentCertificate(student, year, request.user.school, classroom=classroom)
+    return pdf_response(pdf, f"Certificat de Scolarite {student.short_name} {year}.pdf")
+
+
+@logged_admin_view
+def enrollment_certificate_blank(request):
+    """Certificat VIERGE : toutes les mentions variables en lignes à remplir.
+    Aucune condition de solvabilité (aucun élève n'est désigné)."""
+    pdf = EnrollmentCertificate(None, None, request.user.school, blank=True)
+    return pdf_response(pdf, f"Certificat de Scolarité vierge.pdf")
+
+
+# ---------------------------------------------------------------------------
+#  VUE CERTIFICAT DE SCOLARITÉ POUR UN ÉLÈVE POUR L'ANNÉE COURANTE
 # ---------------------------------------------------------------------------
 @logged_admin_view
 def enrollment_certificate(request, id):
-    student = get_object_or_404(Student, pk=id)
+    student = get_object_or_404(Student.objects.select_related('classe'), pk=id)
     year = school_year()
     unpaid = unpaid_cashbox_fees(student, year)
     if unpaid:
@@ -1413,7 +1499,7 @@ def enrollment_certificate(request, id):
                 f"(reste {reste:,} FCFA — {details}).".replace(",", " "), msg_type="error")
         return safe_redirect_back(request)
 
-    pdf = EnrollmentCertificate(student, year, request.user.school)
+    pdf = EnrollmentCertificate(student, year, request.user.school, student.classe)
     return pdf_response(pdf, f"Certificat de Scolarité {student.short_name}.pdf")
 
 
@@ -1432,24 +1518,27 @@ DARK  = (30, 40, 55)
 
 """
 =============================================================================
- EnrollmentCertificate — Certificat de scolarité (corps bilingue à champs)
+ EnrollmentCertificate — Certificat de scolarité
 =============================================================================
- Chaque mention en français, avec sa traduction
- anglaise en italique juste dessous, et la valeur en gras à droite du
- libellé. Photo d'identité de l'élève en haut à droite (authentification
- visuelle, comme sur les certificats universitaires).
+ 1. ANNÉE CIBLE : le certificat peut porter sur une année PASSÉE. La classe
+    n'est alors pas forcément student.classe (classe actuelle) mais peut être
+    celle de l'inscription de l'année demandée -> paramètre `classroom`.
+
+ 2. VERSION VIERGE (`blank=True`) : toutes les valeurs sont remplacées par
+    des LIGNES à remplir à la main, y compris le cadre photo. L'établissement
+    peut ainsi imprimer une réserve de certificats. `student` vaut None dans
+    ce mode.
 =============================================================================
 """
-
-
 class EnrollmentCertificate(FPDF):
-    """pdf = EnrollmentCertificate(student, year) -> pdf_response(...)"""
+    """pdf = EnrollmentCertificate(student, year, school) -> pdf_response(...)
+    Version vierge : EnrollmentCertificate(None, year, school, blank=True)"""
 
-    L, R = 10, 200          # marges du corps
+    L, R = 10, 200
     GREY = (120, 130, 142)
     LINE = (200, 208, 216)
 
-    def __init__(self, student, year, school):
+    def __init__(self, student, year, school, classroom=None, blank=False):
         super().__init__(orientation="P", unit="mm", format="A4")
         add_fonts(self)
         self.set_auto_page_break(False)
@@ -1457,9 +1546,12 @@ class EnrollmentCertificate(FPDF):
         self.student = student
         self.year = year
         self.school = school
+        self.blank = blank
+        # classe de l'ANNÉE DEMANDÉE (peut différer de la classe actuelle)
+        self.classroom = classroom or (getattr(student, "classe", None) if student else None)
         try:
             self._cachet_bytes = stamp_bytes(school.cachet)
-            self._visa_bytes = stamp_bytes(self.school.visa)
+            self._visa_bytes = stamp_bytes(school.visa)
         except Exception:
             self._cachet_bytes = None
             self._visa_bytes = None
@@ -1471,7 +1563,7 @@ class EnrollmentCertificate(FPDF):
         self._body()
 
     # ------------------------------------------------------------------
-    #  HELPERS DE MISE EN FORME (le cœur de l'optimisation)
+    #  HELPERS DE MISE EN FORME
     # ------------------------------------------------------------------
     def _label(self, x, y, fr, en):
         """Libellé bilingue : français puis anglais en italique dessous.
@@ -1488,19 +1580,30 @@ class EnrollmentCertificate(FPDF):
         self.cell(w_en + 1, 3.4, en)
         return max(w_fr, w_en) + 3
 
-    def _value(self, x, y, text, size=10.5, color=NAVY):
-        """Valeur en gras, alignée sur la ligne française du libellé."""
+    def _rule(self, x, y, w):
+        """Ligne à remplir à la main (version vierge)."""
+        self.set_draw_color(*self.GREY)
+        self.set_line_width(0.25)
+        self.line(x, y + 4.4, x + max(10, w) if w else 198, y + 4.4)
+
+    def _value(self, x, y, text, size=10.5, color=NAVY, line_w=None):
+        """Valeur en gras — ou LIGNE À REMPLIR si version vierge.
+        `line_w` : longueur du trait ; par défaut jusqu'à la marge droite."""
+        if self.blank:
+            self._rule(x, y, line_w)
+            return
         self.set_font("inter", "B", size)
         self.set_text_color(*color)
         self.set_xy(x, y)
         self.cell(0, 4.6, str(text) if text not in (None, "") else "")
 
-    def _field(self, x, y, fr, en, value, size=10.5):
-        """Libellé bilingue + valeur, sur une seule ligne. -> largeur totale."""
+    def _field(self, x, y, fr, en, value, size=10.5, line_w=None):
+        """Libellé bilingue + valeur (ou ligne). Renvoie la largeur du libellé."""
         w = self._label(x, y, fr, en)
-        self._value(x + w, y, value, size)
+        self._value(x + w, y, value, size, line_w=line_w)
         return w
 
+    # ------------------------------------------------------------------
     def _title(self):
         y = 60
         self.set_font("inter", "B", 17)
@@ -1511,9 +1614,10 @@ class EnrollmentCertificate(FPDF):
         self.set_text_color(*self.GREY)
         self.set_xy(self.L, y + 8)
         self.cell(self.R - self.L, 5, "SCHOOL ATTENDANCE CERTIFICATE", align="C")
+        # filet tricolore
         cx = (self.L + self.R) / 2
-        self.set_draw_color(*GREEN)
         self.set_line_width(1)
+        self.set_draw_color(*GREEN)
         self.line(cx - 35, y + 15, cx - 35 + 70 / 3, y + 15)
         self.set_draw_color(*RED)
         self.line(cx - 35 + 70 / 3, y + 15, cx - 35 + 140 / 3, y + 15)
@@ -1521,7 +1625,7 @@ class EnrollmentCertificate(FPDF):
         self.line(cx - 35 + 140 / 3, y + 15, cx + 35, y + 15)
 
     # ------------------------------------------------------------------
-    #  CORPS — mentions bilingues + photo
+    #  CORPS
     # ------------------------------------------------------------------
     def _body(self):
         from staff.models import Personnel
@@ -1529,33 +1633,39 @@ class EnrollmentCertificate(FPDF):
         s = self.school
         L, R = self.L, self.R
 
-        # --- photo d'identité en haut à droite -------------------------
+        # --- photo (cadre vide et légendé en version vierge) -----------
         ph_w, ph_h = 30, 40
         ph_x, ph_y = R - ph_w - 5, 85
-        try:
-            src = st.photo if getattr(st, "photo", None) else "static/image/student.jpg"
-            photo = resize_image(src, id_card=True, ratio=(30, 40))
-            self.image(photo, x=ph_x, y=ph_y, w=ph_w, h=ph_h)
-        except Exception:
-            pass
+        if not self.blank:
+            try:
+                src = (st.photo if getattr(st, "photo", None) else "static/image/student.jpg")
+                photo = resize_image(src, id_card=True, ratio=(30, 40))
+                self.image(photo, x=ph_x, y=ph_y, w=ph_w, h=ph_h)
+            except Exception:
+                pass
+        else:
+            self.set_font("inter", "I", 7)
+            self.set_text_color(*self.GREY)
+            self.set_xy(ph_x, ph_y + ph_h / 2 - 3)
+            self.cell(ph_w, 5, "Photo", align="C")
         self.set_draw_color(*self.LINE)
         self.set_line_width(0.3)
         self.rect(ph_x, ph_y, ph_w, ph_h)
 
-        # largeur utile à gauche de la photo (pour les lignes hautes)
         text_r = ph_x - 6
 
-        # --- référence de registre (discrète) --------------------------
+        # --- référence de registre -------------------------------------
         self.set_font("inter", "", 8)
         self.set_text_color(*self.GREY)
         self.set_xy(L, 85)
-        self.cell(60, 4, f"Réf. N° ______________________________")
+        self.cell(60, 4, "Réf. N° ___________________________________")
 
         # --- 1. le signataire ------------------------------------------
         y = 95
         chef = Personnel.objects.filter(poste="Chef d'Établissement").first()
-        w = self._label(L, y, "Je soussigné(e),", "I the undersigned,")
-        self._value(L + w, y, chef.__str__().upper() if chef else "")
+        add = ("e" if chef.civilite == "Madame" else "") if (not self.blank and chef) else "(e)"
+        w = self._label(L, y, f"Je soussigné{add},", "I the undersigned,")
+        self._value(L + w, y, chef.__str__().upper() if chef else "", line_w=text_r - (L + w))
 
         y += 12
         poste = s.chef
@@ -1563,44 +1673,50 @@ class EnrollmentCertificate(FPDF):
         self.set_font("inter", "B", 10)
         self.set_text_color(*NAVY)
         self.set_xy(L + w, y)
-        self.multi_cell(text_r - (L + w), 4.6, s.nom.upper())
+        self.multi_cell(text_r - (L + w), 4.6, (s.nom or "").upper())
         self.set_xy(L + w, y + 4.6)
         self.set_font("inter", "I", 8)
         self.set_text_color(*self.GREY)
-        self.cell(0, 3.4, s.name.upper())
+        self.cell(0, 3.4, (s.name or "").upper())
 
         # --- 2. l'élève -------------------------------------------------
         y += 12
         w = self._label(L, y, "Attestons que l'élève", "Certify that the student")
-        self.set_font("inter", "B", 11)
-        self.set_text_color(*NAVY)
-        self.set_xy(L + w, y)
-        self.multi_cell(text_r - (L + w), 4.8, str(st).upper())
+        if self.blank:
+            self._rule(L + w, y, text_r - (L + w))
+            y += 11
+        else:
+            self.set_font("inter", "B", 11)
+            self.set_text_color(*NAVY)
+            self.set_xy(L + w, y)
+            self.multi_cell(text_r - (L + w), 4.8, str(st).upper())
+            y = max(self.get_y() + 4, y + 11)
 
-        # naissance : "Né(e) le ..." + "à ..."
-        y = max(self.get_y() + 4, y + 11)
+        # naissance
         try:
-            naiss = st.date_naissance.strftime("%d/%m/%Y")
+            date_naissance = format_date(st.date_naissance)
         except Exception:
-            naiss = "—"
-        w = self._field(L, y, "Né(e) le", "Born on", naiss)
+            date_naissance = ""
+        plus = ("e" if st.sexe == "Fille" else "") if not self.blank else "(e)"
+        w = self._field(L, y, f"Né{plus} le", "Born on", date_naissance, line_w=42)
         x2 = L + 78
-        self._field(x2, y, "à", "at", getattr(st, "lieu_naissance", "") or "—")
+        self._field(x2, y, "à", "at", getattr(st, "lieu_naissance", "") if st else "", line_w=text_r - x2 - 12)
 
         # --- 3. l'inscription -------------------------------------------
         y += 12
-        self._label(L, y, "Est régulièrement inscrit(e) comme élève dans notre établissement",
+        self._label(L, y, f"Est régulièrement inscrit{plus} comme élève au sein de notre établissement",
                     "Is duly enrolled as a student at our school")
 
         y += 12
         w = self._label(L, y, "En classe de", "In the class of")
-        classe = st.classe.code if st.classe else ""
-        self._value(L + w, y, classe, color=GREEN, size=11)
+        classe = self.classroom.code if self.classroom else ""
+        self._value(L + w, y, classe, color=GREEN, size=11, line_w=60)
 
         # --- 4. année + matricule ---------------------------------------
         y += 13
-        w = self._field(L, y, "Année scolaire", "Academic year", self.year)
-        self._field(L + 78, y, "sous le matricule numéro", "Registration number", st.unique_id, size=10)
+        w = self._field(L, y, "Année scolaire", "Academic year", self.year, line_w=34)
+        self._field(L + 78, y, "sous le matricule numéro", "Registration number",
+                    getattr(st, "unique_id", "") if st else "", size=10, line_w=40)
 
         # --- 5. formule de délivrance -----------------------------------
         y += 14
@@ -1608,21 +1724,22 @@ class EnrollmentCertificate(FPDF):
         self.set_text_color(*DARK)
         self.set_xy(L, y)
         self.multi_cell(R - L, 4.6, "En foi de quoi le présent certificat lui est délivré pour servir et valoir "
-                                  "ce que de droit.", align="L")
+                                    "ce que de droit.", align="L")
         self.set_font("inter", "I", 8)
         self.set_text_color(*self.GREY)
         self.set_xy(L, self.get_y() + 0.5)
-        self.multi_cell(R - L, 4.3, "In witness whereof the present certificate is issued to serve and avail "
-                                    "as of right.", align="L")
+        self.multi_cell(R - L, 4.3, "In witness whereof the present certificate is issued to serve and avail as "
+                                    "of right.", align="L")
 
         # --- 6. lieu, date, signature, cachet ---------------------------
         y = self.get_y() + 14
         localite = s.localite
         w = self._label(R - 82, y, f"Fait à {localite}, le", f"Done in {localite}, on")
-        if self._visa_bytes and self._cachet_bytes:
+        # date en rouge seulement si les tampons sont là ET hors version vierge
+        if self._visa_bytes and self._cachet_bytes and not self.blank:
             self._value(R - 82 + w, y, f"{date.today():%d/%m/%Y}", size=10, color=RED)
         else:
-            self.line(R - 82 + w, y + 4, R - 52 + w, y + 4)
+            self._rule(R - 82 + w, y, 30)
 
         y += 13
         self.set_font("inter", "B", 10)
@@ -1634,8 +1751,10 @@ class EnrollmentCertificate(FPDF):
         self.set_xy(R - 82, y + 4.6)
         self.cell(82, 4, "The Principal", align="C")
 
-        paste_stamp(self, self._cachet_bytes, x=120, y=y + 10, w=40)
-        paste_stamp(self, self._visa_bytes, x=155, y=y + 25, w=50)
+        # cachet + visa : jamais sur une version vierge
+        if not self.blank:
+            paste_stamp(self, self._cachet_bytes, x=120, y=y + 10, w=40)
+            paste_stamp(self, self._visa_bytes, x=155, y=y + 25, w=50)
 
 
 """
@@ -1914,8 +2033,7 @@ class StudentsIdentityCardsCNI(FPDF):
         fy = field("Noms & Prénoms", "Name & First Names", full_name, fy, BLUE, 7.5)
 
         # Né(e) le + À (deux demi-colonnes)
-        born = format_date(student.date_naissance, format="short", locale="fr_FR") \
-            if student.date_naissance else "—"
+        born = format_date(student.date_naissance)
         self.set_xy(fx, fy)
         self.set_font('inter', '', 4.2); self.set_text_color(*GREY)
         self.cell(fw / 2, 1.8, "Né(e) le  /  Born", align='L')
@@ -2126,7 +2244,7 @@ class StudentsIdentityCards(FPDF):
                 row = table.row()
                 row.cell("**Né(e) le :**")
                 self.set_font_size(9)
-                row.cell(f"**{format_date(student.date_naissance, format="long", locale="fr_FR")}**", rowspan=2)
+                row.cell(f"**{format_date(student.date_naissance)}**", rowspan=2)
                 row = table.row()
                 self.set_font_size(7)
                 row.cell("__Born on__")
@@ -2194,7 +2312,7 @@ class StudentsIdentityCards(FPDF):
 
                 row = table.row()
                 row.cell("**N° Matricule :**")
-                self.set_text_color(255, 0, 0)
+                self.set_text_color(*RED)
                 self.set_font_size(9)
                 row.cell(f"**{student.unique_id if student.unique_id else ' '}**", rowspan=2)
                 self.set_text_color(0)
@@ -2353,8 +2471,9 @@ class StudentsIdentityCards(FPDF):
                                       markdown=True)
                 self.set_xy(x + 39 + (l / 2), y + 44)
                 self.set_font_size(9)
-                self.set_text_color(255, 0, 0)
-                self.cell(w=18, h=3, text=f"**{format_date(datetime.now(), format="short", locale="fr_FR")}**",
+                self.set_text_color(*RED)
+                from babel.dates import format_date as babel_format_date
+                self.cell(w=18, h=3, text=f"**{babel_format_date(datetime.now(), format="short", locale="fr_FR")}**",
                           align='L', markdown=True)
                 self.set_text_color(0)
             self.set_font_size(7)
@@ -2465,7 +2584,7 @@ class StudentsIdentityCards(FPDF):
             number = f"--{' ' * 20}--" if isinstance(elt, int) else f"**{self.data['annee'][-2:]}{elt.csi_number}**"
             row.cell("**N°**", align='R')
             if not isinstance(elt, int):
-                self.set_text_color(255, 0, 0)
+                self.set_text_color(*RED)
             row.cell(number, align='L')
             self.set_text_color(0)
 

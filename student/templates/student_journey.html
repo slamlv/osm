@@ -32,6 +32,43 @@
   .rang { color:rgba(255,255,255,0.45); font-size:0.78rem; }
   .empty-state { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:3rem; text-align:center; color:rgba(255,255,255,0.4); }
 
+  /* ---- Ligne cliquable : ouvre le détail de l'année ---- */
+  .osm-table-outer tbody tr[data-enr] { cursor:pointer; transition:background 0.12s; }
+  .osm-table-outer tbody tr[data-enr]:hover { background-color:#1f4266!important; }
+  .row-hint { color:rgba(255,255,255,0.28); font-size:0.78rem; }
+  .osm-table-outer tbody tr[data-enr]:hover .row-hint { color:#8ec5ff; }
+
+  /* ---- Modale sombre ---- */
+  #enrModal .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45);
+    border:1px solid rgba(255,255,255,0.1); border-radius:18px; color:#fff; }
+  #enrModal .modal-header { background:linear-gradient(135deg,#152f45,#1e4266);
+    border-bottom:1px solid rgba(255,255,255,0.08); }
+  #enrModal .btn-close { filter:invert(1) grayscale(100%) brightness(200%); }
+
+  /* ---- Bloc trimestre : une carte par période ---- */
+  .term-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; }
+  .term-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
+    border-radius:13px; padding:11px 13px; position:relative; overflow:hidden; }
+  .term-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--tc,rgba(255,255,255,0.15)); }
+  .term-card .lbl { font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em;
+    color:rgba(255,255,255,0.42); font-weight:700; }
+  .term-card .moy { font-size:1.45rem; font-weight:800; line-height:1.1;
+    font-variant-numeric:tabular-nums; color:var(--tc,#fff); }
+  .term-card .rk { font-size:0.74rem; color:rgba(255,255,255,0.5); }
+  .term-card.empty .moy { color:rgba(255,255,255,0.2); font-size:1.1rem; }
+
+  /* jauge de progression sur 20 */
+  .gauge { height:4px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:7px; overflow:hidden; }
+  .gauge span { display:block; height:100%; background:var(--tc); border-radius:3px; }
+
+  /* ---- Lignes d'information de la modale ---- */
+  .info-line { display:flex; justify-content:space-between; gap:12px; padding:7px 0;
+    border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.86rem; }
+  .info-line:last-child { border-bottom:0; }
+  .info-line .k { color:rgba(255,255,255,0.45); }
+  .info-line .v { color:#fff; font-weight:600; text-align:right; }
+
   @media (max-width: 767.98px) {
     .osm-table-outer table { min-width:0; }
     .osm-table-outer thead th { padding:8px 8px; font-size:0.66rem; }
@@ -80,10 +117,28 @@
         <th class="text-center">Moy. annuelle</th>
         <th class="d-none d-sm-table-cell text-center">Rang</th>
         <th>Décision</th>
+        <th style="width:26px;"></th>
       </tr></thead>
       <tbody>
         {% for enr in enrollments %}
-        <tr {% if enr.school_year.is_current %}class="current-year"{% endif %}>
+        {# Chaque ligne porte ses données : la modale les lit sans requête, ce qui rend l'ouverture instantanée même sur mobile. #}
+        <tr {% if enr.school_year.is_current %}class="current-year"{% endif %}
+            data-enr
+            data-annee="{{ enr.school_year.libelle }}"
+            data-classe="{{ enr.classroom.code|default:'—' }}"
+            data-current="{% if enr.school_year.is_current %}1{% endif %}"
+            data-m1="{% if enr.moyenne_t1 is not None %}{{ enr.moyenne_t1|floatformat:2 }}{% endif %}"
+            data-r1="{{ enr.rang_t1|default_if_none:'' }}"
+            data-m2="{% if enr.moyenne_t2 is not None %}{{ enr.moyenne_t2|floatformat:2 }}{% endif %}"
+            data-r2="{{ enr.rang_t2|default_if_none:'' }}"
+            data-m3="{% if enr.moyenne_t3 is not None %}{{ enr.moyenne_t3|floatformat:2 }}{% endif %}"
+            data-r3="{{ enr.rang_t3|default_if_none:'' }}"
+            data-ma="{% if enr.moyenne_annuelle is not None %}{{ enr.moyenne_annuelle|floatformat:2 }}{% endif %}"
+            data-ra="{{ enr.rang_annuel|default_if_none:'' }}"
+            data-decision="{{ enr.decision|default:'' }}"
+            data-next="{{ enr.next_classroom.code|default:'' }}"
+            data-by="{{ enr.decided_by|default:'' }}"
+            data-at="{% if enr.decided_at %}{{ enr.decided_at|date:'d/m/Y' }}{% endif %}">
           <td class="fw-semibold">{{ enr.school_year.libelle }}</td>
           <td>{{ enr.classroom.code|default:"—" }}</td>
 
@@ -128,6 +183,7 @@
               <span class="badge text-bg-light text-dark">En cours</span>
             {% endif %}
           </td>
+          <td class="text-end"><i class="bi bi-chevron-right row-hint"></i></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -135,6 +191,7 @@
   </div>
   <p class="pj-meta mt-2 mb-0">
     <i class="bi bi-info-circle me-1"></i>L'année en cours est repérée par un liseré jaune.
+    Touchez une ligne pour voir le détail des trimestres.
   </p>
 
   {% else %}
@@ -145,4 +202,94 @@
   {% endif %}
 
 </div>
+
+{# ================= MODALE : détail d'une année ================= #}
+<div class="modal fade" id="enrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h6 class="modal-title fw-bold mb-0" id="enr-annee"></h6>
+          <span class="pj-meta" id="enr-classe"></span>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="pj-meta mb-2" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">
+          Résultats par période</p>
+        <div class="term-grid mb-3" id="enr-terms"></div>
+        <p class="pj-meta mb-2" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">
+          Fin d'année</p>
+        <div id="enr-info"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var el = document.getElementById('enrModal');
+  if (!el) return;
+
+  // Couleur selon la moyenne : rouge sous 10, ambre jusqu'à 12, vert au-delà.
+  function tone(m) {
+    if (m === null) return 'rgba(255,255,255,0.15)';
+    if (m < 10) return '#ff8a95';
+    if (m < 12) return '#ffb066';
+    if (m < 14) return '#5dd48e';
+    return '#f0c75e';                       // mention : or
+  }
+
+  function card(label, moy, rang, big) {
+    var m = moy ? parseFloat(moy) : null;
+    var c = tone(m);
+    var pct = m === null ? 0 : Math.max(0, Math.min(100, m * 5));
+    return '<div class="term-card' + (m === null ? ' empty' : '') +
+             '" style="--tc:' + c + ';' + (big ? 'grid-column:1/-1;' : '') + '">' +
+             '<div class="lbl">' + label + '</div>' +
+             '<div class="moy">' + (m === null ? '—' : m.toFixed(2)) + '</div>' +
+             '<div class="rk">' + (rang ? rang + '<sup>e</sup>' : '&nbsp;') + '</div>' +
+             '<div class="gauge"><span style="width:' + pct + '%"></span></div>' +
+           '</div>';
+  }
+
+  function line(k, v) {
+    return '<div class="info-line"><span class="k">' + k +
+           '</span><span class="v">' + (v || '—') + '</span></div>';
+  }
+
+  el.addEventListener('show.bs.modal', function (ev) {
+    var tr = ev.relatedTarget;
+    if (!tr) return;
+    var d = tr.dataset;
+
+    document.getElementById('enr-annee').textContent = 'Année ' + d.annee;
+    document.getElementById('enr-classe').textContent =
+      d.classe + (d.current ? ' • année en cours' : '');
+
+    document.getElementById('enr-terms').innerHTML =
+      card('Trimestre 1', d.m1, d.r1) +
+      card('Trimestre 2', d.m2, d.r2) +
+      card('Trimestre 3', d.m3, d.r3) +
+      card('Moyenne annuelle', d.ma, d.ra, true);
+
+    var dec = d.decision || 'Non statuée';
+    if (d.next) dec += ' → ' + d.next;
+    var info = line('Décision', dec);
+    if (d.by) info += line('Décidée par', d.by);
+    if (d.at) info += line('Le', d.at);
+    document.getElementById('enr-info').innerHTML = info;
+  });
+
+  // Ouverture au clic (et au clavier, pour l'accessibilité)
+  var modal = new bootstrap.Modal(el);
+  document.querySelectorAll('tr[data-enr]').forEach(function (tr) {
+    tr.setAttribute('tabindex', '0');
+    tr.addEventListener('click', function () { modal.show(tr); });
+    tr.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modal.show(tr); }
+    });
+  });
+})();
+</script>
 {% endblock %}

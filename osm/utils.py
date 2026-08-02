@@ -1918,3 +1918,16 @@ def safe_redirect_back(request, fallback_name="index", **fallback_kwargs):
     ):
         return redirect(referer)
     return redirect(reverse(fallback_name, kwargs=fallback_kwargs or None))
+
+
+def format_date(base_date):
+    from babel.dates import format_date
+    try:
+        if isinstance(base_date, str):
+            base_date =datetime.strptime(base_date, "%Y-%m-%d").date()
+        text_date = format_date(base_date, format="d MMMM yyyy", locale="fr")
+        if base_date.day == 1:
+            text_date = text_date.replace("1 ", "1er ", 1)
+        return text_date
+    except:
+        return base_date
