@@ -724,10 +724,10 @@ class ClassRoom(models.Model):
             matieres_data.append(data_matiere)
 
         if len(evals) == 6:
-            self.set_rang(students_data, "moyenne1", "rang1", seuil=seuil)
-            self.set_rang(students_data, "moyenne2", "rang2", seuil=seuil)
-            self.set_rang(students_data, "moyenne3", "rang3", seuil=seuil)
-        moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data, seuil=seuil)
+            self.set_rang(students_data, "moyenne1", "rang1")
+            self.set_rang(students_data, "moyenne2", "rang2")
+            self.set_rang(students_data, "moyenne3", "rang3")
+        moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data)
 
         return {
             'classroom_data': self.classroom_to_dict(),
