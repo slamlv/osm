@@ -861,7 +861,7 @@ class Bulletin(LoggedAdminView):
             trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
                          [evl == 3], "ANNUEL")[evl == 4]
             filename = f"Bulletin Scolaire {trimestre.title()} {classroom.code}.pdf"
-            data = classroom.reportcard_data(evl_in, with_competences, seuil=seuil)
+            data = classroom.reportcard_data(evl_in, with_competences)
             user = User.objects.select_related('school').get(id=self.request.user.id)
             data['school_data'] = user.school.school_to_dict()
             data['trimestre'], data['annee'], data['filename'], data['seuil'] = trimestre, school_year(), filename, seuil
