@@ -1,3 +1,4 @@
+# Create your views here.
 import datetime
 import os.path
 import threading
@@ -7,9 +8,12 @@ from io import BytesIO
 import uuid
 import django.db.models
 from urllib.parse import quote
+
+from django.db.models.expressions import result
+
 from osm.utils import formated_float, resized_image, school_year, message, LoggedUserView, LoggedAdminView, \
     logged_user_view, logged_admin_view, resize_image, truncate_str, base_infos, base_header, pdf_response, check_notes, \
-    zip_pdfs_response, filigrane, stamp_bytes, paste_stamp, add_fonts, seuils_par_pk
+    zip_pdfs_response, filigrane, stamp_bytes, paste_stamp, add_fonts
 from django.db.models import Sum
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -23,8 +27,7 @@ from note.forms import MarksForm, SelectForm, PeriodForm, CheckForm, LevelMarksF
 from django.utils import timezone
 from fpdf import FPDF
 from fpdf.fonts import FontFace
-from fpdf.table import CellBordersLayout, Table
-from fpdf.enums import TableHeadingsDisplay, VAlign
+from fpdf.table import CellBordersLayout, VAlign, Table, TableHeadingsDisplay, Row, Cell
 from authentification.models import User
 from pandas import DataFrame
 from openpyxl import load_workbook
@@ -102,7 +105,7 @@ class LivretBEPC(LoggedAdminView):
         rows = []
 
         for classroom in classrooms:
-            students_data = classroom.reportcard_data(evals=self.EVALS_ANNUELLES, freeze=False, for_livret=True)
+            students_data = classroom.reportcard_data(evals=self.EVALS_ANNUELLES, for_livret=True)
 
             for student_data in students_data:
                 mat_values = list(student_data.get('matieres_data', {}).values())
@@ -298,9 +301,6 @@ class TLevelMarks(LoggedUserView):
     title = "Remplissage des Notes trimestrielles par niveau"
 
     def get(self, *args, **kwargs):
-        from archives.models import year_is_locked
-        if year_is_locked(self.request.user.school):
-            return render(self.request, "404.html", {'year_is_locked': True})
         msg, enseignements = Marks.check(self)
         if msg:
             context = {'title': self.title, 'msg': msg}
@@ -386,9 +386,6 @@ class LevelMarks(LoggedUserView):
     title = "Remplissage des Notes par niveau"
 
     def get(self, *args, **kwargs):
-        from archives.models import year_is_locked
-        if year_is_locked(self.request.user.school):
-            return render(self.request, "404.html", {'year_is_locked': True})
         msg, enseignements = Marks.check(self)
         if msg:
             context = {'title': self.title, 'msg': msg}
@@ -465,9 +462,6 @@ class TrimesterMarks(LoggedUserView):
     title = "Remplissage des Notes trimestrielles"
 
     def get(self, *args, **kwargs):
-        from archives.models import year_is_locked
-        if year_is_locked(self.request.user.school):
-            return render(self.request, "404.html", {'year_is_locked': True})
         msg, enseignements = Marks.check(self)
         if msg:
             context = {'title': self.title, 'msg': msg}
@@ -541,9 +535,6 @@ class Marks(LoggedUserView):
         return msg, enseignements
 
     def get(self, *args, **kwargs):
-        from archives.models import year_is_locked
-        if year_is_locked(self.request.user.school):
-            return render(self.request, "404.html", {'year_is_locked': True})
         msg, enseignements = Marks.check(self)
         if msg:
             context = {'title': self.title, 'msg': msg}
@@ -835,26 +826,15 @@ class Bulletin(LoggedAdminView):
     title = "Bulletin Scolaire"
 
     def get(self, *args, **kwargs):
-        context = {"title": self.title, "form": CheckForm(context={"transcript": True}),
-                   "seuils": seuils_par_pk(ClassRoom.objects.all())}
+        context = {"title": self.title, "form": CheckForm(context={"transcript": True})}
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
         clsrm, evl = int(self.request.POST["clsrm"]), int(self.request.POST["evl"])
-        with_competences = True if ('checkbox' in self.request.POST.keys() and self.request.POST['checkbox'] == "on") else False
-        try:
-            seuil = float(self.request.POST.get("moyenne_min_admission"))
-        except:
-            seuil = None
+        with_competences = True if 'checkbox' in self.request.POST.keys() else False
+        seuil = float(self.request.POST["seuil"])
         evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
         classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=clsrm)
-        if seuil:
-            classroom.update_seuil(seuil)
-        if not classroom.students.exists():
-            return JsonResponse({
-                'success': False,
-                'message': f"Aucun élève en {classroom.code}."
-            })
         rapport = "Certaines notes de "
         checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
         for status in checks:
@@ -878,25 +858,14 @@ class Bulletin(LoggedAdminView):
                 prefetch_related('students__pere', 'students__mere', 'students__discipline', 'matieres__sujet').
                 get(pk=clsrm)
             )
-            from archives.models import ArchiveRef, DocType
             trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
                          [evl == 3], "ANNUEL")[evl == 4]
             filename = f"Bulletin Scolaire {trimestre.title()} {classroom.code}.pdf"
-            doc_type = DocType.BULLETIN if (not with_competences or evl == 4) else DocType.BULLETIN_WITH_COMPETENCES
-            ref = ArchiveRef(self.request.user.school, doc_type, classroom, user=self.request.user,
-                             term_index=evl if evl != 4 else 0)
-            hit = ref.response(filename)
-            if hit:
-                return hit
-            data = classroom.reportcard_data(evl_in, with_competences, year=self.request.user.school.establishment_year)
+            data = classroom.reportcard_data(evl_in, with_competences, seuil=seuil)
             user = User.objects.select_related('school').get(id=self.request.user.id)
             data['school_data'] = user.school.school_to_dict()
-            data['trimestre'], data['annee'], data['filename'] = trimestre, school_year(), filename
-            pdf = ReportCard(data=data)
-            students = list(classroom.students.all().order_by("nom", "prenom"))
-            nb = pdf.nb_pages                   # pages PAR élève
-            ref.page_map = {s.id: [i*nb + 1, (i+1)*nb] for i, s in enumerate(students)}
-            return pdf_response(pdf, filename, archive=ref)
+            data['trimestre'], data['annee'], data['filename'], data['seuil'] = trimestre, school_year(), filename, seuil
+            return pdf_response(ReportCard(data=data), filename)
 
 
 class MarksReport(LoggedAdminView):
@@ -966,13 +935,12 @@ class ExamReport(LoggedAdminView):
 
     def get(self, *args, **kwargs):
         form = CheckForm(context={'transcript': True, 'all': True})
-        context = {"title": self.title, "form": form, 'marks_report': True,
-                   "seuils": seuils_par_pk(ClassRoom.objects.all())}
+        context = {"title": self.title, "form": form, 'marks_report': True}
         return render(self.request, self.template_name, context)
 
     # Construit le PDF d'UNE classe, ou renvoie la RAISON de saut (str).
     @staticmethod
-    def build_pdf_or_reason(classroom, evl_in, pv_ordered, annee, school, trimestre):
+    def build_pdf_or_reason(classroom, evl_in, pv_ordered, seuil, annee, school, trimestre):
         reason = check_notes(classroom, evl_in)
         if reason is not None:
             return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
@@ -983,21 +951,17 @@ class ExamReport(LoggedAdminView):
             .get(pk=classroom.pk)
         )
         filename = f"Procès Verbal {trimestre.title()} {classroom.code}.pdf"
-        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered)
+        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered, seuil=seuil)
         data['school_data'] = school
-        data['trimestre'], data['annee'], data['filename'] = (
-            trimestre, annee, filename
+        data['trimestre'], data['annee'], data['filename'], data['seuil'] = (
+            trimestre, annee, filename, seuil
         )
         return ExamRecord(data=data)
 
     def post(self, *args, **kwargs):
-        from archives.models import ArchiveRef, DocType
         evl = int(self.request.POST["evl"])
         pv_ordered = 'checkbox' in self.request.POST.keys()
-        try:
-            seuil = float(self.request.POST.get("moyenne_min_admission"))
-        except:
-            seuil = None
+        seuil = float(self.request.POST["seuil"])
         evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
         trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
                       "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUEL")[evl == 4]
@@ -1014,12 +978,8 @@ class ExamReport(LoggedAdminView):
 
             def build(clsrm):
                 return self.build_pdf_or_reason(
-                    clsrm, evl_in, pv_ordered, annee, school, trimestre
+                    clsrm, evl_in, pv_ordered, seuil, annee, school, trimestre
                 )
-
-            def archive_for(clsrm):
-                return ArchiveRef(self.request.user.school, DocType.PV, clsrm, user=self.request.user,
-                                  term_index=evl if evl != 4 else 0)
 
             def namer(clsrm):
                 return f"{clsrm.code} Procès Verbal {trimestre.title()}.pdf"
@@ -1029,23 +989,16 @@ class ExamReport(LoggedAdminView):
                 classrooms=classrooms,
                 zip_filename=f"Procès Verbaux {'Annuels' if trimestre == 'ANNUEL' else trimestre.title()} - Toutes les classes.zip",
                 per_file_namer=namer,
-                archive_for=archive_for,
             )
 
         # -------- Cas "une seule classe" --------
         classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=int(selected))
-        classroom.update_seuil(seuil)
-        archive = ArchiveRef(self.request.user.school, DocType.PV, classroom, user=self.request.user,
-                             term_index=evl if evl != 4 else 0)
-        hit = archive.response(f"Procès Verbal {trimestre.title()} {classroom.code}.pdf")
-        if hit:
-            return hit
-        result = self.build_pdf_or_reason(classroom, evl_in, pv_ordered, annee, school, trimestre)
+        result = self.build_pdf_or_reason(classroom, evl_in, pv_ordered, seuil, annee, school, trimestre)
         if isinstance(result, str):
             # notes incomplètes -> message d'erreur
             return JsonResponse({'success': False, 'message': result})
         # result est l'objet ExamRecord ; son filename a été mis dans data.
-        return pdf_response(result, result.data['filename'], archive=archive)
+        return pdf_response(result, result.data['filename'])
 
 
 class TableauHonneur(LoggedAdminView):
@@ -1104,10 +1057,6 @@ class TableauHonneur(LoggedAdminView):
             return JsonResponse({'success': False, 'message': result})
         filename = f"Tableaux d'honneur {'Annuels' if trimestre == 'ANNUELLE' else trimestre.title()} {classroom.code}.pdf"
         return pdf_response(result, filename)
-
-
-GREY1 = (232, 236, 242)
-GREY = (242, 240, 236)
 
 
 class TableaudHonneur(FPDF):
@@ -1219,7 +1168,7 @@ class ExamRecord(FPDF):
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
 
         th = table.row()
-        self.set_fill_color(*GREY)
+        self.set_fill_color(220)
         for head in header:
             th.cell(f"**{head}**")
 
@@ -1323,7 +1272,7 @@ class TMarksReport(FPDF):
         table = Table(self, line_height=4, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
         th = table.row()
-        self.set_fill_color(*GREY)
+        self.set_fill_color(220)
         th.cell("**N°**", rowspan=2)
         th.cell("**Nom(s) et Prénom(s)**", rowspan=2)
         for head in header:
@@ -1377,7 +1326,7 @@ class ReportCard(FPDF):
         self.bold = FontFace(emphasis='B')
         self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         data = kwargs.pop('data')
-        self.set_title(data['filename'].removesuffix(".pdf"))
+        self.set_title(data['filename'])
         school_data = data['school_data']
         school_data['logo'] = resize_image(school_data['logo'], new_width=308)
         self.default_student_photo = resize_image("static/image/student.jpg", id_card=True, ratio=(26, 30))
@@ -1392,7 +1341,7 @@ class ReportCard(FPDF):
         total_coef = classroom_data['total_coef']
         with_competences = data['with_competences']
         self.seuil = data['seuil']
-        self.nb_pages = 1
+        self.nb_pages = 3
         for i in range(len(data['students_data'])):
             self.i = i
             if i == 0:
@@ -1534,7 +1483,7 @@ class ReportCard(FPDF):
 
     def infos(self, pdf, trimestre, annee):
         pdf.set_font("inter", 'B', 12)
-        pdf.set_text_color(10, 61, 98)
+        pdf.set_text_color(0, 0, 255)
         pdf.cell(0, 7, f"BULLETIN SCOLAIRE {trimestre}", align='C')
         pdf.set_text_color(0)
         pdf.ln()
@@ -1579,7 +1528,7 @@ class ReportCard(FPDF):
         table = Table(pdf, line_height=4, col_widths=widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.NONE)
         th = table.row()
-        self.set_fill_color(*GREY)
+        self.set_fill_color(220)
         for head in header:
             th.cell(f"**{head}**")
         self.set_fill_color(0)
@@ -1615,12 +1564,10 @@ class ReportCard(FPDF):
                 else student_notes[matiere_data['id']].get('note2', '/')
             self.colored_cell(tr2, note2)
         trn = table.row()
-        self.set_fill_color(*GREY)
         trn.cell("**TOTAL**", colspan=4, align='R', padding=(0.5, 0))
         trn.cell(f"**{total_coef}**")
         trn.cell(f"**{total_notes}**")
         trn.cell(f"**MOYENNE : {moyenne if moyenne else '/'}**", align="L", colspan=3)
-        self.set_fill_color(0)
         table.render()
 
     def annual_student_notes(self, pdf, matieres_data, total_coef, total_notes, student_notes, moyenne, groupes,
@@ -1631,7 +1578,7 @@ class ReportCard(FPDF):
         table = Table(pdf, line_height=5, col_widths=widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.NONE)
         th = table.row()
-        self.set_fill_color(*GREY)
+        self.set_fill_color(220)
         for head in header:
             th.cell(f"**{head}**")
         self.set_fill_color(0)
@@ -1679,22 +1626,19 @@ class ReportCard(FPDF):
                     break
             moyenneg = formated_float(total_notesg / total_coefg)
             trg = table.row()
-            self.set_fill_color(*GREY1)
             trg.cell(f"**{groupe}**", colspan=6, align='R')
             trg.cell(f"**{total_coefg}**")
             trg.cell(f"**{formated_float(total_notesg)}**")
             trg.cell(f"**MOYENNE : {moyenneg if moyenneg else '/'}**", align="L", colspan=3)
-            self.set_fill_color(0)
         trn = table.row()
-        self.set_fill_color(*GREY)
         trn.cell(f"**Trim1 : {moyennes[0]}; {rangs[0]} | Trim2 : {moyennes[1]}; {rangs[1]} | Trim3 : {moyennes[2]}; "
                  f"{rangs[2]}**", colspan=5, align='L', padding=(0.5, 0))
         trn.cell("**TOTAL**", align='R')
         trn.cell(f"**{total_coef}**")
         trn.cell(f"**{total_notes}**")
         trn.cell(f"**MOYENNE : {moyenne if moyenne else '/'}**", align="L", colspan=3)
-        self.set_fill_color(0)
         table.render()
+        # trim1 trim2 trim3
 
     def student_notes_without_competences(self, pdf, matieres_data, total_coef, total_notes, student_notes, moyenne,
                                           groupes):
@@ -1704,7 +1648,7 @@ class ReportCard(FPDF):
         table = Table(pdf, line_height=5, col_widths=widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.NONE)
         th = table.row()
-        self.set_fill_color(*GREY)
+        self.set_fill_color(220)
         for head in header:
             th.cell(f"**{head}**")
         self.set_fill_color(0)
@@ -1749,19 +1693,15 @@ class ReportCard(FPDF):
                     break
             moyenneg = formated_float(total_notesg / total_coefg)
             trg = table.row()
-            self.set_fill_color(*GREY1)
             trg.cell(f"**{groupe}**", colspan=5, align='R')
             trg.cell(f"**{total_coefg}**")
             trg.cell(f"**{formated_float(total_notesg) if total_notesg else '/'}**")
             trg.cell(f"**MOYENNE : {moyenneg if moyenneg else '/'}**", align="L", colspan=3)
-            self.set_fill_color(0)
         trn = table.row()
-        self.set_fill_color(*GREY)
         trn.cell("**TOTAL**", colspan=5, align='R', padding=(0.5, 0))
         trn.cell(f"**{total_coef}**")
         trn.cell(f"**{total_notes}**")
         trn.cell(f"**MOYENNE : {moyenne if moyenne else '/'}**", align="L", colspan=3)
-        self.set_fill_color(0)
         table.render()
 
     def discipline(self, pdf, discipline, total_notes, appr, total_coef, moyenne, rang, cote, moy_gen, taux,
@@ -1772,11 +1712,9 @@ class ReportCard(FPDF):
         table = Table(pdf, line_height=4.5, col_widths=widths, text_align="L", markdown=True,
                       repeat_headings=TableHeadingsDisplay.NONE)
         th = table.row()
-        self.set_fill_color(*GREY)
-        th.cell("**Discipline**", colspan=4, align='C')
-        th.cell("**Travail de l'élève**", colspan=4, align='C')
-        th.cell("**Profil de la classe**", colspan=2, align='C')
-        self.set_fill_color(0)
+        th.cell("Discipline", colspan=4, align='C')
+        th.cell("Travail de l'élève", colspan=4, align='C')
+        th.cell("Profil de la classe", colspan=2, align='C')
 
         tr = table.row()
         tr.cell("Abs. non J (h)")
