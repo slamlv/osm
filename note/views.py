@@ -500,6 +500,9 @@ class SetPeriods(LoggedAdminView):
     title = "Périodes de remplissage"
 
     def get(self, *args, **kwargs):
+        from archives.models import year_is_locked
+        if year_is_locked(self.request.user.school):
+            return render(self.request, "404.html", {'year_is_locked': True})
         periods = Period.objects.order_by("evalx")
         period_form = PeriodForm(context={'request': self.request, 'periods': periods})
         context = {"form": period_form, "title": self.title, "periods": periods}
