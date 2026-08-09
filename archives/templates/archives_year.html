@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .folder { display:flex; align-items:center; gap:14px; padding:15px 18px; border-radius:14px; text-decoration:none;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            transition:background .12s, transform .12s, border-color .12s; height:100%; }
+  .folder:hover { background:rgba(13,110,253,0.12); border-color:rgba(13,110,253,0.45); transform:translateY(-2px); }
+  .folder i.big { font-size:1.5rem; color:#8ec5ff; }
+  .folder .ttl { color:#fff; font-weight:600; font-size:0.95rem; }
+  .folder .meta { color:rgba(255,255,255,0.45); font-size:0.75rem; }
+  .crumb a { color:rgba(255,255,255,0.55); text-decoration:none; }
+  .crumb a:hover { color:#fff; }
+  .lock { font-size:0.64rem; padding:2px 7px; border-radius:6px; background:rgba(25,149,72,0.18); color:#5dd48e; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
+  <p class="crumb small mb-3">
+    <a href="{% url 'archives_index' %}"><i class="bi bi-archive me-1"></i>Archives</a>
+    <span class="text-white-50 mx-1">/</span><span class="text-white fw-semibold">{{ year }}</span>
+  </p>
+
+  <div class="row g-3">
+    {% for g in groups %}
+    <div class="col-12 col-sm-6">
+      <div class="position-relative h-100">
+        <a class="folder" href="{% url 'archives_type' year g.type %}">
+          <i class="bi bi-folder2-open big"></i>
+          <span class="flex-grow-1">
+            <span class="ttl d-block">{{ g.label }}
+              {% if not g.deletable %}<span class="lock ms-1"><i class="bi bi-lock-fill"></i> protégé</span>{% endif %}</span>
+            <span class="meta">{{ g.count }} fichier{{ g.count|pluralize }} • {{ g.size|filesizeformat }}</span>
+          </span>
+        </a>
+        {% if g.deletable %}
+        <form method="post" action="{% url 'archive_delete_group' year g.type %}"
+              class="position-absolute" style="top:10px; right:10px;"
+              data-confirm="Supprimer les {{ g.count }} archive(s) « {{ g.label }} » de {{ year }} ?">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-danger py-0 px-1" data-bs-toggle="tooltip"
+                  title="Supprimer tout ce dossier"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('submit', function (ev) {
+  const f = ev.target.closest('form[data-confirm]');
+  if (f && !window.confirm(f.dataset.confirm)) ev.preventDefault();
+});
+</script>
+{% endblock %}

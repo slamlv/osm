@@ -261,7 +261,7 @@
       <div class="container-fluid w-xxl-75 px-0">
 
         <a class="navbar-brand" href="{% url 'index' %}">
-          <img src="{% static 'image/logo.png' %}" alt="OSM">
+          <img src="{% static 'image/logo.png' %}" alt="OSM" width="32" height="32" loading="eager">
           <span class="brand-text">OSM</span>
         </a>
 
@@ -275,25 +275,31 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-xxl-0">
 
-            {% if user.is_admin %}
             <!-- Personnel -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fa fa-users me-2 d-xxl-none"></i>Personnel
               </a>
               <ul class="dropdown-menu">
+                {% if user.is_min_admin %}
                 <li><a class="dropdown-item" href="{% url 'staff' %}"><i class="bi bi-people me-2 text-success"></i>Liste du Personnel</a></li>
                 <li><a class="dropdown-item" href="{% url 'add_staff_member' %}"><i class="bi bi-person-plus me-2 text-success"></i>Ajouter un membre</a></li>
                 <li><a class="dropdown-item" href="{% url 'activities' %}"><i class="bi bi-megaphone me-2 text-info"></i>Activités</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'users' %}"><i class="bi bi-person-badge me-2 text-warning"></i>Comptes utilisateurs</a></li>
                 <li><a class="dropdown-item" href="{% url 'add_user' %}"><i class="bi bi-person-plus me-2 text-warning"></i>Nouvel utilisateur</a></li>
+                {% endif %}
+                {% if user.is_super_admin or user.is_principal %}
                 <li><a class="dropdown-item" href="{% url 'delegated_roles' %}"><i class="bi bi-key me-2 text-danger"></i>Délégation des Rôles</a></li>
+                {% endif %}
+                {% if user.is_min_admin %}
                 <li><hr class="dropdown-divider"></li>
+                {% endif %}
                 <li><a class="dropdown-item" href="{% url 'service_documents' %}"><i class="bi bi-file-earmark-text me-2 text-white-50"></i>Documents administratifs</a></li>
               </ul>
             </li>
 
+            {% if user.is_min_admin %}
             <!-- Élèves -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -315,7 +321,7 @@
             </li>
             {% endif %}
 
-            {% if user.is_financial_user %}
+            {% if user.is_financial_user or user.is_principal %}
             <!-- Finances -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -335,14 +341,14 @@
             </li>
             {% endif %}
 
-            {% if user.is_admin or user.is_titulaire %}
+            {% if user.is_min_admin or user.is_titulaire %}
             <!-- Classes -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fa fa-chalkboard-teacher me-2 d-xxl-none"></i>Classes
               </a>
               <ul class="dropdown-menu">
-                {% if user.is_admin %}
+                {% if user.is_min_admin %}
                 <li><a class="dropdown-item" href="{% url 'classrooms' %}"><i class="bi bi-grid me-2 text-info"></i>Liste des Classes</a></li>
                 <li><a class="dropdown-item" href="{% url 'classroom-add' %}"><i class="bi bi-plus-square me-2 text-info"></i>Ajouter une Classe</a></li>
                 <li><a class="dropdown-item" href="{% url 'titulaire_assignment' %}"><i class="bi bi-person-check me-2 text-warning"></i>Attribution des titulaires</a></li>
@@ -355,7 +361,7 @@
                 <li><a class="dropdown-item" href="{% url 'subject-add' %}"><i class="bi bi-book-fill me-2 text-warning"></i>Ajouter une Matière</a></li>
                 <li><hr class="dropdown-divider"></li>
                 {% endif %}
-                {% if user.is_admin or user.is_titulaire %}
+                {% if user.is_min_admin or user.is_titulaire %}
                 <li><a class="dropdown-item" href="{% url 'end_year_assignment' %}"><i class="bi bi-signpost-2 me-2 text-info"></i>Décisions de fin d'année</a></li>
                 <li><a class="dropdown-item" href="{% url 'class_album' %}"><i class="bi bi-image me-2 text-info"></i>Album Photo de Classe</a></li>
                 {% endif %}
@@ -363,7 +369,7 @@
             </li>
             {% endif %}
 
-            {% if user.is_admin %}
+            {% if user.is_min_admin %}
             <!-- Résultats -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -397,7 +403,7 @@
                 </li>
                 <li><a class="dropdown-item" href="{% url 'marks-copy' %}"><i class="bi bi-arrow-repeat me-2 text-info"></i>Reconduction</a></li>
                 <li><a class="dropdown-item" href="{% url 'marks-sheet' %}"><i class="bi bi-file-ruled me-2 text-info"></i>Fiche de Notes</a></li>
-                {% if user.is_admin %}
+                {% if user.is_min_admin %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'set_periods' %}"><i class="bi bi-calendar-range me-2 text-warning"></i>Périodes de remplissage</a></li>
                 <li><a class="dropdown-item" href="{% url 'marks_check' %}"><i class="bi bi-check2-square me-2 text-warning"></i>Vérifier le remplissage</a></li>
@@ -416,7 +422,7 @@
                 <li><a class="dropdown-item" href="{% url 'user-details' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Mes informations</a></li>
                 <li><a class="dropdown-item" href="{% url 'user-timetable' %}"><i class="bi bi-calendar-week me-2 text-info"></i>Mon emploi du temps</a></li>
                 <li><a class="dropdown-item" href="{% url 'progression' id=user.staff_member.id %}"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ma progression</a></li>
-                {% if user.is_admin %}
+                {% if user.is_min_admin %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-warning"></i>Informations Établissement</a></li>
                 {% endif %}
@@ -439,7 +445,7 @@
 
     <!-- ═══════════ HEADER ÉCOLE ═══════════ -->
     <div class="school-header">
-      <a href="{% if user.is_admin %}{% url 'school_details' %}{% else %}#{% endif %}"
+      <a href="{% if user.is_min_admin %}{% url 'school_details' %}{% else %}#{% endif %}"
          class="d-flex align-items-center gap-2 w-100">
         {% if not user.school.logo %}
         <img src="{% static 'image/no_image.jpg' %}" class="school-logo" alt="Logo">
@@ -968,6 +974,88 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('input[type=date][data-max-now]')
           .forEach(i => i.max = today);
 });
+</script>
+
+{% if seuils %}{{ seuils|json_script:"seuils-classes" }}{% endif %}
+
+<script>
+(function () {
+  const DEFAUT = "10.0";
+
+  // ---- Registre partagé -----------------------------------------
+  // Un seul objet par map-id, parsé une fois puis réutilisé PAR
+  // RÉFÉRENCE par tous les .js-seuil qui pointent dessus. Le muter
+  // via OSM.Seuils.set(...) suffit à propager la correction partout,
+  // sans reparser le JSON ni recharger la page.
+  window.OSM = window.OSM || {};
+  window.OSM.Seuils = (function () {
+    const caches = {};
+
+    function table(mapId) {
+      if (!caches[mapId]) {
+        const noeud = document.getElementById(mapId);
+        caches[mapId] = noeud ? JSON.parse(noeud.textContent) : {};
+      }
+      return caches[mapId];
+    }
+
+    function set(mapId, cle, valeur) {
+      table(mapId)[String(cle)] = valeur;
+    }
+
+    return { table: table, set: set };
+  })();
+
+  function initSeuils(root) {
+    (root || document).querySelectorAll(".js-seuil").forEach(function (cible) {
+      const source = document.querySelector(cible.dataset.seuilSource);
+      const mapId  = cible.dataset.seuilMap || "seuils-classes";
+      const table  = window.OSM.Seuils.table(mapId);
+      if (!source) return;
+
+      const defaut = cible.dataset.seuilDefaut || DEFAUT;
+      const bloc   = cible.closest(".js-seuil-bloc");
+
+      // valeurs d'option qui masquent le bloc, ex. "__all__" ou "all,tout"
+      const aMasquer = (cible.dataset.seuilCacherSi || "")
+        .split(",")
+        .map(function (s) { return s.trim(); })
+        .filter(Boolean);
+
+      function sync() {
+        const masquer = aMasquer.includes(source.value);
+
+        if (bloc) bloc.classList.toggle("d-none", masquer);
+        cible.disabled = masquer;        // un champ disabled n'est pas soumis
+        if (masquer) return;
+
+        const v = table[source.value];
+        cible.value = (v === undefined || v === null) ? defaut : v;
+      }
+
+      source.addEventListener("change", sync);
+      sync();   // état initial au chargement de la page
+
+      // Sync optimiste : au submit du formulaire, on suppose que la
+      // valeur envoyée sera celle enregistrée (évite d'attendre une
+      // confirmation serveur — voir section 5 plus bas).
+      const form = cible.closest("form");
+      if (form && !form.dataset.seuilSubmitHooked) {
+        form.dataset.seuilSubmitHooked = "1";
+        form.addEventListener("submit", function () {
+          form.querySelectorAll(".js-seuil").forEach(function (input) {
+            if (input.disabled) return;   // cas "toutes les classes"
+            const src2 = document.querySelector(input.dataset.seuilSource);
+            const map2 = input.dataset.seuilMap || "seuils-classes";
+            if (src2) window.OSM.Seuils.set(map2, src2.value, input.value);
+          });
+        });
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () { initSeuils(); });
+})();
 </script>
 
 </body>

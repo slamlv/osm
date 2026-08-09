@@ -30,7 +30,10 @@
           <div class="col-sm-6"><label class="text-white control-label">Classe</label>{{ form.clsrm }}</div>
           <div class="col-sm-6"><label class="text-white control-label">Trimestre</label>{{ form.evl }}</div>
           {% if form.checkbox and not tableau %}
-          <div class="col-sm-6"><label class="text-white">Moyenne minimale d'admission</label><input name="seuil" id="seuil" type="number" class="form-control fw-bold" value="10" step="0.01"></div>
+          <div class="col-sm-6 js-seuil-bloc"><label class="text-white">Moyenne minimale d'admission</label>
+              <input type="number" class="form-control fw-bold js-seuil" value="10" step="0.01"
+                     min="0" max="20" id="id_moyenne_min" name="moyenne_min_admission" data-seuil-source="#classe"
+                     data-seuil-cacher-si="__all__" data-seuil-defaut="10.0"></div>
           <div class="col-sm-6 d-flex align-items-center gap-2 pt-sm-4">
             {{ form.checkbox }}
             <label class="text-white fw-semibold small mb-0">{% if not marks_report %}Inclure les compétences évaluées{% else %}Par ordre de mérite{% endif %}</label>

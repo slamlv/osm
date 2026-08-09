@@ -73,7 +73,7 @@ def admin_required(view_func):
     def _wrapped_vied(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect(reverse('signin'))
-        if not request.user.is_superuser and request.user.is_admin:
+        if not request.user.is_superuser and request.user.is_min_admin:
             return view_func(request, *args, **kwargs)
         elif request.user.is_superuser:
             return render(request, "404_unauthenticated.html")
@@ -101,7 +101,7 @@ def financial_user_required(view_func):
     def _wrapped_vied(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect(reverse('signin'))
-        if not request.user.is_superuser and request.user.is_financial_user:
+        if not request.user.is_superuser and (request.user.is_financial_user or request.user.is_principal):
             return view_func(request, *args, **kwargs)
         elif request.user.is_superuser:
             return render(request, "404_unauthenticated.html")
@@ -139,7 +139,7 @@ class AdminRequired:
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect(reverse('signin'))
-        if not request.user.is_superuser and request.user.is_admin:
+        if not request.user.is_superuser and request.user.is_min_admin:
             return super().dispatch(request, *args, **kwargs)
         elif request.user.is_superuser:
             return render(request, "404_unauthenticated.html")
@@ -387,7 +387,8 @@ class BaseStaffMemberTimetable(View):
         return StaffMemberTimeTable(data=data)
 
     def post(self, *args, **kwargs):
-        if int(self.kwargs.get('id', 0)) == 0:
+        staffmember_id = int(self.kwargs.get('id', 0)) if self.request.path != "/user-timetable" else self.request.user.staff_member.pk
+        if staffmember_id == 0:
             staff_members = (
                 Personnel.objects.prefetch_related('programmations')
             )
@@ -927,26 +928,44 @@ def _safe_filename(name):
     return name or "document"
 
 
-def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename, per_file_namer, empty_message=None):
+def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename,
+                      per_file_namer, empty_message=None, archive_for=None):
     """
     build_pdf_for_classroom(classroom) -> FPDF | str (raison) | None
     classrooms      : itérable de ClassRoom.
     zip_filename    : nom du ZIP final.
     per_file_namer(classroom) -> nom du PDF dans le ZIP (sans extension).
-    empty_message   : message renvoyé si AUCUN PDF n'a pu être généré. (défaut : message générique.)
+    empty_message   : message renvoyé si AUCUN PDF n'a pu être généré.
+    archive_for(classroom) -> ArchiveRef | None
+
+        Si fourni, chaque classe est d'abord vérifiée dans les archives :
+        - à jour  -> ses octets sont repris tels quels, build_pdf_for_classroom
+                     n'est même pas appelée (c'est ici que se gagne le temps,
+                     puisque la génération est isolée classe par classe) ;
+        - absente ou périmée -> génération normale, puis archivage du résultat.
+        Ne rien passer laisse le comportement STRICTEMENT identique à avant.
+
     Retour :
       - FileResponse (ZIP) si au moins 1 PDF généré ;
       - JsonResponse(success=False) si aucun PDF.
     """
-    # Phase 1 : on construit les PDF en mémoire, en notant les sauts.
-    produced = []         # (filename_sans_ext, bytes)
-    skipped = []          # (classe, raison)
+    produced = []
+    skipped = []
 
     for classroom in classrooms:
         if classroom is None:
             code = "Global"
         else:
             code = classroom.code if isinstance(classroom, ClassRoom) else classroom.short_name
+
+        # ▸ Classe déjà archivée et à jour : on ne génère rien.
+        ref = archive_for(classroom) if archive_for else None
+        if ref is not None:
+            cached = ref.cached_bytes()
+            if cached is not None:
+                produced.append((_safe_filename(per_file_namer(classroom)), cached))
+                continue          # ni build_pdf_for_classroom, ni output()
+
         try:
             result = build_pdf_for_classroom(classroom)
         except Exception as exc:
@@ -960,27 +979,31 @@ def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename, per_fil
             skipped.append((str(code), result))
             continue
 
-        # result est un objet FPDF.
         try:
-            # IMPORTANT : on s'aligne sur pdf_response -> on NE
-            # FERME PAS le buffer. fpdf2.output() peut re-seek le buffer, et un
-            # buf.close() provoque "seek of closed file" (erreur avalée -> classe
-            # sautée). On récupère les octets sans fermer.
             buf = BytesIO()
             result.output(buf)
             buf.seek(0)
-            produced.append((_safe_filename(per_file_namer(classroom)), buf.read()))
+            data = buf.read()
+
+            # ▸ La classe vient d'être régénérée : on archive.
+            #   store() n'échoue jamais bruyamment : un incident d'archivage
+            #   ne doit pas faire échouer le ZIP.
+            if ref is not None:
+                try:
+                    pages = result.page_no()
+                except Exception:
+                    pages = 0
+                ref.store(data, page_count=pages)
+
+            produced.append((_safe_filename(per_file_namer(classroom)), data))
             del result
         except Exception as exc:
             skipped.append((str(code), f"échec génération PDF ({exc})"))
 
-    # Phase 2 : décision.
     if not produced:
-        # Aucun document -> message d'échec (pas de ZIP vide).
         if empty_message:
             msg = empty_message
         elif skipped:
-            # Récap concis des raisons (limité pour rester lisible).
             details = " ; ".join(f"{c} : {r}" for c, r in skipped[:5])
             extra = "" if len(skipped) <= 5 else f" (et {len(skipped) - 5} autre(s))"
             msg = f"Aucun document n'a pu être généré. {details}{extra}"
@@ -988,7 +1011,6 @@ def zip_pdfs_response(build_pdf_for_classroom, classrooms, zip_filename, per_fil
             msg = "Aucun document n'a pu être généré (aucune classe éligible)."
         return JsonResponse({"success": False, "message": msg})
 
-    # Au moins un PDF -> on assemble le ZIP.
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for fname, content in produced:
@@ -1050,18 +1072,48 @@ def check_notes(classroom, evl_in, pv=False, trim="", marks_sheet=False):
     return None   # tout est rempli
 
 
-def pdf_response(fpdf_object, final_filename):
-    """Retourne directement un FileResponse en mémoire — aucun fichier temp."""
+def pdf_response(fpdf_object, final_filename, archive=None, return_bytes=False):
+    """Retourne directement un FileResponse en mémoire — aucun fichier temp.
+    archive      : ArchiveRef facultatif. Le document est alors enregistré
+                   dans les archives de l'année en cours (création ou mise à
+                   jour de l'unité correspondante).
+    return_bytes : True pour récupérer (bytes, réponse) au lieu de la seule
+                   réponse — utile aux vues qui empaquettent plusieurs
+                   documents dans un ZIP."""
     buffer = BytesIO()
     fpdf_object.output(buffer)
     buffer.seek(0)
+    # --- archivage : on réutilise les octets déjà produits, sans régénérer --
+    data = None
+    if archive is not None or return_bytes:
+        data = buffer.getvalue()
+        buffer.seek(0)          # le flux doit repartir de zéro pour la réponse
+    if archive is not None:
+        try:
+            pages = fpdf_object.page_no()
+        except Exception:
+            pages = 0
+        # store() avale ses propres erreurs : un incident d'archivage ne doit
+        # jamais priver l'utilisateur de son document.
+        archive.store(data, page_count=pages)
     filename_ascii = final_filename.encode('ascii', 'ignore').decode('ascii')
     quoted = quote(final_filename)
     response = FileResponse(buffer, as_attachment=True, filename=filename_ascii)
     response['Content-Disposition'] = (
         f"attachment; filename='{filename_ascii}'; filename*=UTF-8''{quoted}"
     )
-    return response
+    return (data, response) if return_bytes else response
+
+
+def seuils_par_pk(queryset, champ="moyenne_min_admission"):
+    """Pour un ModelChoiceField : les options valent le PK.
+    values_list ne crée aucune instance de modèle et ne ramène que les
+    deux colonnes.
+    """
+    return {
+        str(pk): float(valeur)
+        for pk, valeur in queryset.values_list("id", champ)
+    }
 
 
 def add_minutes(my_time: time, minutes: int):
@@ -1114,6 +1166,14 @@ def default_competences(level, matiere, evalx):
                 6: "Orthographier correctement un texte narratif ou bien y corriger des erreurs volontairement insérées"
             },
             'Étude de texte': {
+                1: "Répondre correctement à des questions sur un dialogue et sur une lettre privée",
+                2: "Répondre correctement à des questions sur un dialogue et sur une lettre privée",
+                3: "Répondre correctement à des questions sur un texte descriptif (portrait/description d'un objet ou d'un lieu)",
+                4: "Répondre correctement à des questions sur un texte descriptif (portrait/description d'un objet ou d'un lieu)",
+                5: "Répondre correctement à des questions sur un texte narratif",
+                6: "Répondre correctement à des questions sur un texte narratif"
+            },
+            'Étude de Texte': {
                 1: "Répondre correctement à des questions sur un dialogue et sur une lettre privée",
                 2: "Répondre correctement à des questions sur un dialogue et sur une lettre privée",
                 3: "Répondre correctement à des questions sur un texte descriptif (portrait/description d'un objet ou d'un lieu)",
@@ -1251,6 +1311,14 @@ def default_competences(level, matiere, evalx):
                 5: "Répondre correctement à des questions sur un texte narratif intégrant des dialogues et/ou l'expression des sentiments",
                 6: "Répondre correctement à des questions sur un texte narratif intégrant des dialogues et/ou l'expression des sentiments"
             },
+            'Étude de Texte': {
+                1: "Répondre correctement à des questions sur une lettre officielle et sur une description associée au récit",
+                2: "Répondre correctement à des questions sur une lettre officielle et sur une description associée au récit",
+                3: "Répondre correctement à des questions sur un texte descriptif intégrant l'expression des sentiments ou sur un dialogue associé au récit",
+                4: "Répondre correctement à des questions sur un texte descriptif intégrant l'expression des sentiments ou sur un dialogue associé au récit",
+                5: "Répondre correctement à des questions sur un texte narratif intégrant des dialogues et/ou l'expression des sentiments",
+                6: "Répondre correctement à des questions sur un texte narratif intégrant des dialogues et/ou l'expression des sentiments"
+            },
             'Expression': {
                 1: "Produire dans une langue correcte et usuelle, une lettre officielle et une description associée au récit",
                 2: "Produire dans une langue correcte et usuelle, une lettre officielle et une description associée au récit",
@@ -1374,6 +1442,14 @@ def default_competences(level, matiere, evalx):
                 6: "Orthographier correctement un texte ou bien y corriger des erreurs volontairement insérées"
             },
             'Étude de texte': {
+                1: "Répondre correctement à des questions sur un texte",
+                2: "Répondre correctement à des questions sur un texte",
+                3: "Répondre correctement à des questions sur un texte",
+                4: "Répondre correctement à des questions sur un texte",
+                5: "Répondre correctement à des questions sur un texte",
+                6: "Répondre correctement à des questions sur un texte"
+            },
+            'Étude de Texte': {
                 1: "Répondre correctement à des questions sur un texte",
                 2: "Répondre correctement à des questions sur un texte",
                 3: "Répondre correctement à des questions sur un texte",
@@ -1528,6 +1604,14 @@ def default_competences(level, matiere, evalx):
                 6: "Orthographier correctement un texte ou bien y corriger des erreurs volontairement insérées"
             },
             'Étude de texte': {
+                1: "Répondre correctement à des questions sur un texte",
+                2: "Répondre correctement à des questions sur un texte",
+                3: "Répondre correctement à des questions sur un texte",
+                4: "Répondre correctement à des questions sur un texte",
+                5: "Répondre correctement à des questions sur un texte",
+                6: "Répondre correctement à des questions sur un texte"
+            },
+            'Étude de Texte': {
                 1: "Répondre correctement à des questions sur un texte",
                 2: "Répondre correctement à des questions sur un texte",
                 3: "Répondre correctement à des questions sur un texte",

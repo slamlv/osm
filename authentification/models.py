@@ -4,11 +4,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from datetime import time
 
-from fontTools.ttx import process
-
-
-# Create your models here.
-
 
 class SchoolYear(models.Model):
     """
@@ -132,8 +127,7 @@ class School(TenantMixin):
     # Année scolaire où l'établissement se trouve RÉELLEMENT. La table globale des années dit ce qui EXISTE ; ce champ
     # dit où EN EST cet établissement. C'est la clôture qui le fait avancer -> aucun décalage silencieux quand l'année
     # courante globale change avant que l'établissement ait clôturé.
-    school_year = models.CharField(max_length=9, blank=True, default="",
-                                   help_text="Année scolaire en cours dans cet établissement.")
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, default=1, null=True, blank=True, related_name="school_started")
 
     # pour ne retraiter QUE si le fichier a changé
     __original_cachet = None
@@ -155,9 +149,13 @@ class School(TenantMixin):
     def establishment_year(self):
         """Année scolaire où l'établissement se trouve RÉELLEMENT. Priorité à School.school_year ;
         repli sur le helper global si le champ n'est pas encore renseigné."""
-        if self and getattr(self, "school_year", ""):
-            return self.school_year
         from osm.utils import school_year as global_year
+        if self.school_year_id:
+            from archives.services import YearClosure
+            year_closure = YearClosure.objects.filter(school_year=self.school_year.libelle).first()
+            if not year_closure or (year_closure and year_closure.status != YearClosure.Status.CLOSED):
+                return self.school_year.libelle
+            return self.school_year
         return global_year()
 
     def save(self, *args, **kwargs):
@@ -259,6 +257,12 @@ class User(AbstractUser):
     named_financial_user_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="financial_users_named")
     named_financial_user_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_min_admin(self):
+        if self.is_principal or self.is_super_admin or self.is_admin:
+            return True
+        return False
 
     @property
     def is_principal(self):

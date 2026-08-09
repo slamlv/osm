@@ -645,9 +645,12 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
 
 class EndYearAssignment(LoggedAdminOrTitulaireView):
     template_name = "edit_marks.html"
-    title = "Attribution des classe pour l'année prochaine"
+    title = "Décisions de fin d'année"
 
     def get(self, *args, **kwargs):
+        from archives.models import year_is_locked
+        if year_is_locked(self.request.user.school):
+            return render(self.request, "404.html", {'year_is_locked': True})
         select_form = SelectForm(context={"request": self.request, 'trim': False, 'marks_sheet': True,
                                           'enseignements': None, 'end_year_assignment': True})
         context = {'end_year_assignment': True, 'title': self.title, 'select_form': select_form}
@@ -1290,7 +1293,11 @@ def age_sex_stats(request):
 # ---------------------------------------------------------------------------
 @logged_admin_view
 def age_sex_stats_pdf(request):
-    data = build_age_sex_table(school_year())
+    from archives.models import DocType, ArchiveRef
+    archive = ArchiveRef(request.user.school, DocType.STATS_AGE_SEXE, user=request.user)
+    hit = archive.response(f"Répartition par Age et par Sexe {request.user.school.establishment_year}.pdf")
+    if hit:
+        return hit
     if not Student.objects.exists() or not ClassRoom.objects.exists():
         if not Student.objects.exists():
             msg = "Aucun élève enregistré."
@@ -1298,8 +1305,9 @@ def age_sex_stats_pdf(request):
             msg = "Aucune classe enregistrée."
         message(request, msg, msg_type="error")
         return safe_redirect_back(request)
+    data = build_age_sex_table(request.user.school.establishment_year)
     pdf = AgeSexTablePDF(data, request.user.school)
-    return pdf_response(pdf, f"Répartition par Age et par Sexe {data['year']}.pdf")
+    return pdf_response(pdf, f"Répartition par Age et par Sexe {data['year']}.pdf", archive=archive)
 
 
 # ---------------------------------------------------------------------------

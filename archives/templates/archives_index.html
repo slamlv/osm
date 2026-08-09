@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .fin-card input { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .folder { display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:14px; text-decoration:none;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            transition:background .12s, transform .12s, border-color .12s; height:100%; }
+  .folder:hover { background:rgba(240,199,94,0.1); border-color:rgba(240,199,94,0.4); transform:translateY(-2px); }
+  .folder i.big { font-size:1.7rem; color:#f0c75e; }
+  .folder .yr { color:#fff; font-weight:700; font-size:1.05rem; }
+  .folder .meta { color:rgba(255,255,255,0.45); font-size:0.76rem; }
+  .badge-live { font-size:0.64rem; padding:2px 7px; border-radius:6px; background:rgba(13,110,253,0.2); color:#8ec5ff; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h6 class="text-white fw-bold mb-0"><i class="bi bi-archive me-2 text-warning"></i>Archives</h6>
+    <form method="get" action="{% url 'archives_search' %}" class="d-flex gap-2">
+      <input type="text" name="q" class="form-control form-control-sm" placeholder="Rechercher un élève...">
+      <button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip"
+              title="Retrouver les bulletins d'un élève"><i class="bi bi-search"></i></button>
+    </form>
+  </div>
+
+  <div class="row g-3">
+    {% for y in years %}
+    <div class="col-12 col-sm-6 col-lg-4">
+      <a class="folder" href="{% url 'archives_year' y.year %}">
+        <i class="bi bi-folder-fill big"></i>
+        <span>
+          <span class="yr d-block">{{ y.year }}
+            {% if y.year == current %}<span class="badge-live ms-1">en cours</span>{% endif %}</span>
+          <span class="meta">{{ y.count }} document{{ y.count|pluralize }} • {{ y.size|filesizeformat }}</span>
+        </span>
+      </a>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="fin-card p-5 text-center text-white-50">
+        <i class="bi bi-archive fs-2 d-block mb-2"></i>
+        Aucune archive pour l'instant. Les documents s'archivent automatiquement
+        dès que vous les téléchargez.
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; position:relative; overflow:hidden; }
+  .fin-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--ac,transparent); opacity:0.9; z-index:1; }
+  .fin-card input, .fin-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .fin-title { font-size:0.74rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.45); font-weight:700; }
+  .fin-title i { color:var(--ac, rgba(255,255,255,0.4)); }
+
+  .steps { display:flex; flex-wrap:wrap; gap:6px; }
+  .step { display:flex; align-items:center; gap:5px; font-size:0.74rem; padding:5px 11px; border-radius:20px;
+          background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.08); }
+  .step.done { background:rgba(25,149,72,0.16); color:#5dd48e; border-color:rgba(25,149,72,0.35); }
+  .step.current { background:rgba(13,110,253,0.18); color:#8ec5ff; border-color:rgba(13,110,253,0.45); font-weight:700; }
+
+  .progress-outer { height:10px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden; }
+  .progress-inner { height:100%; width:0; background:linear-gradient(90deg,#199548,#5dd48e); transition:width .25s; }
+
+  .kpi-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .kpi { flex:1 1 120px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,0.04);
+         border:1px solid rgba(255,255,255,0.08); }
+  .kpi .n { font-size:1.35rem; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+  .kpi .l { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em; color:rgba(255,255,255,0.45); margin-top:4px; }
+  .n-fresh { color:#5dd48e; } .n-stale { color:#ffb066; } .n-miss { color:#ff8a95; }
+
+  .osm-table-outer { overflow-x:auto; border:1px solid rgba(255,255,255,0.08); border-radius:14px; max-height:300px; overflow-y:auto; }
+  .osm-table-outer table { margin-bottom:0; width:100%; }
+  .osm-table-outer thead th { color:rgba(255,255,255,0.65)!important; background:linear-gradient(135deg,#152f45,#1a3a57)!important; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-color:rgba(255,255,255,0.1)!important; padding:8px 12px; white-space:nowrap; position:sticky; top:0; z-index:2; }
+  .osm-table-outer tbody tr { background-color:#1b3a57!important; border-color:rgba(255,255,255,0.06)!important; }
+  .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.8rem; border-color:rgba(255,255,255,0.06)!important; padding:7px 12px; }
+
+  .doc-pick { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:12px;
+              background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); height:100%; }
+  .doc-pick.locked { background:rgba(25,149,72,0.12); border-color:rgba(25,149,72,0.3); }
+  .tag { font-size:0.64rem; padding:1px 6px; border-radius:5px; background:rgba(255,193,7,0.16); color:#ffd75e; }
+  .danger-box { background:rgba(220,53,69,0.1); border:1px solid rgba(220,53,69,0.35); border-radius:14px; padding:1rem 1.15rem; }
+</style>
+
+<div class="container py-3" style="max-width:1050px;">
+
+  <h6 class="text-white fw-bold mb-1"><i class="bi bi-archive me-2 text-warning"></i>Clôture de l'année {{ year }}</h6>
+  <p class="text-white-50 small mb-3">Les documents archivés au fil de l'année sont réutilisés tels quels :
+    seuls les documents <strong>manquants</strong> ou <strong>périmés</strong> (notes modifiées depuis
+    l'archivage, effectif ou seuil d'admission différent) sont régénérés ici.</p>
+
+  {# ---------- cohérence des années ---------- #}
+  {% if not coherence.aligned %}
+  <div class="alert alert-warning py-2 small rounded-3">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    L'année courante de la plateforme est <strong>{{ coherence.global }}</strong> alors que cet
+    établissement est encore en <strong>{{ coherence.local }}</strong>. Clôturez {{ coherence.local }}
+    pour aligner les deux.
+  </div>
+  {% endif %}
+
+  {# ---------- fil des étapes ---------- #}
+  {% if closure %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
+    <div class="steps mb-3">
+      {% for s in steps_view %}
+        <span class="step {% if s.done %}done{% elif s.current %}current{% endif %}">
+          {% if s.done %}<i class="bi bi-check-circle-fill"></i>{% endif %}{{ s.label }}</span>
+      {% endfor %}
+    </div>
+    <div class="progress-outer"><div class="progress-inner" style="width:{{ closure.progress_percent }}%;"></div></div>
+    <p class="text-white-50 small mt-2 mb-0">{{ closure.progress_percent }} % •
+      statut : <strong>{{ closure.get_status_display }}</strong></p>
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPES 1-2 : VÉRIFICATIONS ================= #}
+  {% if not closure %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:{% if holes %}#ef4444{% else %}#199548{% endif %};">
+    <p class="fin-title mb-2"><i class="bi bi-clipboard-check me-1"></i>Vérification des notes</p>
+    {% if holes %}
+      <p class="text-danger fw-bold small mb-2"><i class="bi bi-x-octagon me-1"></i>
+        <strong>{{ holes_total }} saisie(s) manquante(s)</strong> — la clôture est impossible
+        tant que toutes les évaluations ne sont pas renseignées.</p>
+      <div class="osm-table-outer mb-2">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Classe</th><th>Matière</th><th>Séquence</th><th>Enseignant</th></tr></thead>
+          <tbody>
+            {% for h in holes %}
+            <tr><td class="fw-semibold">{{ h.classe }}</td><td>{{ h.matiere }}</td>
+              <td>Séq. {{ h.sequence }}</td><td class="text-white-50">{% if h.enseignant %} {{ h.enseignant.short_firstname }} {% else %} / {% endif %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if holes_total > 60 %}<p class="text-white-50 small mb-0">… et {{ holes_total|add:"-60" }} autre(s).</p>{% endif %}
+    {% else %}
+      <p class="text-success small mb-3"><i class="bi bi-check-circle me-1"></i>Toutes les évaluations sont saisies.</p>
+      {% if not decisions.ok %}
+      <div class="alert alert-warning py-2 small rounded-3">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>{{ decisions.no_decision }}</strong> élève(s) sans décision et
+        <strong>{{ decisions.no_next_class }}</strong> sans classe d'accueil.
+        Vous pouvez poursuivre — les élèves concernés repartiront sans classe.
+        <a href="{% url 'end_year_assignment' %}" class="alert-link">Compléter maintenant</a>.
+      </div>
+      {% endif %}
+      <form method="post" action="{% url 'closure_start' %}">
+        {% csrf_token %}
+        <button class="btn btn-success fw-semibold"><i class="bi bi-play-circle me-1"></i>Démarrer la clôture</button>
+      </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 3 : CHOIX DES DOCUMENTS ================= #}
+  {% if closure and need_select %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#f0c75e;">
+    <p class="fin-title mb-2"><i class="bi bi-files me-1"></i>Documents à conserver</p>
+    <p class="text-white-50 small mb-3">Le bulletin est obligatoire et ne pourra jamais être supprimé.
+      Les autres documents sont facultatifs et supprimables depuis les archives.
+      Ceux marqués « notes » se périment si les notes changent tandis que les autres périment si l'effectif change.</p>
+    <form method="post" action="{% url 'closure_select' %}">
+      {% csrf_token %}
+      <div class="row g-2 mb-3">
+        {% for value, label, mandatory, note_dep in doc_types %}
+        <div class="col-12 col-sm-6">
+          <label class="doc-pick {% if mandatory %}locked{% endif %}">
+            <input type="checkbox" name="types" value="{{ value }}" class="form-check-input mt-1"
+                   {% if mandatory %}checked disabled{% endif %}>
+            <span class="text-white small">{{ label }}
+              {% if mandatory %}<span class="text-success" style="font-size:0.7rem;">— obligatoire</span>{% endif %}
+              {% if note_dep %}<span class="tag ms-1">notes</span>{% endif %}</span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="alert alert-info py-2 small rounded-3">
+        <i class="bi bi-lock me-1"></i>Dès la validation, la saisie des notes est
+        <strong>verrouillée</strong> pour {{ year }}.
+      </div>
+      <button class="btn btn-success fw-semibold"><i class="bi bi-check2 me-1"></i>Valider</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 4 : MISE À JOUR DES ARCHIVES ================= #}
+  {% if can_refresh and state %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#199548;">
+    <p class="fin-title mb-3"><i class="bi bi-arrow-repeat me-1"></i>Mise à jour des archives</p>
+
+    <div class="kpi-row mb-3">
+      <div class="kpi"><div class="n n-fresh">{{ state.fresh|length }}</div>
+        <div class="l">Déjà à jour</div></div>
+      <div class="kpi"><div class="n n-stale">{{ state.stale|length }}</div>
+        <div class="l">Périmés</div></div>
+      <div class="kpi"><div class="n n-miss">{{ state.missing|length }}</div>
+        <div class="l">Jamais archivés</div></div>
+    </div>
+
+    <div class="progress-outer mb-2"><div class="progress-inner" id="rf-bar"
+         style="width:{{ progress.percent }}%;"></div></div>
+    <p class="text-white-50 small mb-3" id="rf-label">
+      <span id="rf-count">{{ progress.done }} / {{ progress.total }}</span> —
+      {% if progress.todo %}{{ progress.todo }} document(s) à régénérer.
+      {% else %}Tout est à jour.{% endif %}</p>
+
+    {% if todo_preview %}
+    <div class="osm-table-outer mb-3">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Document à régénérer</th><th>Raison</th></tr></thead>
+        <tbody>
+          {% for u in todo_preview %}
+          <tr><td>{{ u.label }}</td>
+            <td><span class="{% if u.reason == 'Jamais archivé' %} n-miss {% else %} n-stale {% endif %}">
+                {{ u.reason }}</span></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2 flex-wrap">
+      {% if progress.todo %}
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-success fw-semibold" id="rf-run">
+          <i class="bi bi-play-fill me-1"></i>Mettre les archives à jour</button>
+        <button class="btn btn-outline-light btn-sm" id="rf-stop" style="display:none;">
+          <i class="bi bi-pause-fill me-1"></i>Suspendre</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'closure_verify' %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-info btn-sm fw-semibold">
+          <i class="bi bi-patch-check me-1"></i>Vérifier l'intégrité</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if progress.todo %}
+    <p class="text-white-50 mt-2 mb-0" style="font-size:0.75rem;">
+      <i class="bi bi-info-circle me-1"></i>Laissez cet onglet ouvert. En cas de coupure,
+      revenez ici : seules les unités restantes seront traitées.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 5 : VÉRIFICATION ================= #}
+  {% if verify and not need_consolidate and not cleanup_rows %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#14b8a6;">
+    <p class="fin-title mb-2"><i class="bi bi-patch-check me-1"></i>Vérification d'intégrité</p>
+    <p class="text-white-50 small mb-3">{{ verify.count }} document(s) archivé(s),
+      {{ verify.total_size|filesizeformat }}.
+      {% if verify.ok %}<span class="text-success">Aucune anomalie.</span>
+      {% else %}<span class="text-danger">{{ verify.missing }} manquant(s), {{ verify.stale }} périmé(s).</span>{% endif %}</p>
+    <form method="post" action="{% url 'closure_verify' %}">
+      {% csrf_token %}
+      <button class="btn btn-outline-info btn-sm fw-semibold">
+        <i class="bi bi-search me-1"></i>Vérifier</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 6 : CONSOLIDATION ================= #}
+  {% if need_consolidate %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#a855f7;">
+    <p class="fin-title mb-2"><i class="bi bi-shield-check me-1"></i>Consolidation des résultats</p>
+
+    {% if consolidation.ok %}
+      <p class="text-success small fw-bold mb-3"><i class="bi bi-check-circle me-1"></i>
+        Les parcours des élèves ont éte mis à jour avec leurs moyennes, rangs et données disciplinaires. La suppression
+        des notes et des données disciplinaires ne fera perdre aucune information consultable.</p>
+      <form method="post" action="{% url 'closure_consolidate' %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-info btn-sm fw-semibold">
+          <i class="bi bi-check2 me-1"></i>Valider cette étape</button>
+      </form>
+
+    {% else %}
+      <p class="text-white-50 small mb-2">
+        <strong class="text-warning">{{ consolidation.count }}</strong>
+        inscription(s) sans résultats figés. Ces élèves perdraient leurs
+        moyennes à la suppression des notes.</p>
+      <div class="osm-table-outer mb-3">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Élève</th><th>Classe</th><th>Périodes manquantes</th></tr></thead>
+          <tbody>
+            {% for h in consolidation.holes %}
+            <tr><td class="fw-semibold">{{ h.student }}</td>
+              <td>{{ h.classroom.code|default:"—" }}</td>
+              <td class="text-white-50">{{ h.manquants|join:", " }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <form method="post" action="{% url 'closure_consolidate' %}">
+        {% csrf_token %}
+        <input type="hidden" name="fill" value="1">
+        <button class="btn btn-warning fw-semibold">
+          <i class="bi bi-arrow-repeat me-1"></i>Régénérer les bulletins manquants</button>
+      </form>
+      <p class="text-white-50 mt-2 mb-0" style="font-size:0.75rem;">
+        <i class="bi bi-info-circle me-1"></i>Les moyennes ne sont jamais recalculées ici :
+        régénérer le bulletin fige les résultats par le chemin habituel.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 7 : NETTOYAGE ================= #}
+  {% if cleanup_rows and closure.status != "CLEANED" and closure.status != "CLOSED" %}
+  <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#ef4444;">
+    <p class="fin-title mb-2"><i class="bi bi-trash3 me-1"></i>Nettoyage des données</p>
+    <div class="danger-box mb-3">
+      <p class="text-white small mb-2"><strong>Opération irréversible.</strong> Sont conservés :
+        les archives, les parcours (moyennes, rangs et données disciplinaires), les élèves, le personnel et
+        <strong>l'intégralité des données financières et de paie</strong>.</p>
+      <ul class="text-white-50 small mb-0" style="padding-left:1.1rem;">
+        {% for row in cleanup_rows %}
+        <li>{{ row.label }} : <strong>{{ row.count|default:"?" }}</strong> enregistrement(s)</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <form method="post" action="{% url 'closure_cleanup' %}">
+      {% csrf_token %}
+      {% for row in cleanup_rows %}<input type="hidden" name="targets" value="{{ row.key }}">{% endfor %}
+      <label class="text-white small mb-1 d-block">Pour confirmer, saisissez l'année : <strong>{{ year }}</strong></label>
+      <div class="d-flex gap-2 flex-wrap">
+        <input type="text" name="confirm" class="form-control" style="max-width:200px;"
+               placeholder="{{ year }}" autocomplete="off" required>
+        <button class="btn btn-danger fw-semibold"><i class="bi bi-trash3 me-1"></i>Supprimer définitivement</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ================= ÉTAPE 8 : OUVERTURE ================= #}
+  {% if closure and closure.status == "CLEANED" %}
+  <div class="fin-card p-3 p-sm-4" style="--ac:#f0c75e;">
+    <p class="fin-title mb-2"><i class="bi bi-door-open me-1"></i>Ouvrir l'année {{ next_year }}</p>
+    <p class="text-white-50 small mb-3">Crée l'année suivante, y bascule les élèves selon leurs
+      décisions, et fait avancer l'année de l'établissement.</p>
+    <form method="post" action="{% url 'closure_promote' %}"
+          data-confirm="Ouvrir {{ next_year }} et réinscrire les élèves ?">
+      {% csrf_token %}
+      <button class="btn btn-success fw-semibold">
+        <i class="bi bi-arrow-right-circle me-1"></i>Ouvrir {{ next_year }} et clôturer</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  document.addEventListener('submit', function (ev) {
+    const f = ev.target.closest('form[data-confirm]');
+    if (f && !window.confirm(f.dataset.confirm)) ev.preventDefault();
+  });
+
+  const run = document.getElementById('rf-run');
+  if (!run) return;
+  const stop  = document.getElementById('rf-stop');
+  const bar   = document.getElementById('rf-bar');
+  const count = document.getElementById('rf-count');
+  const label = document.getElementById('rf-label');
+  const csrf  = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const URL   = "{% url 'refresh_next' %}";
+  let running = false, fails = 0;
+
+  async function loop() {
+    while (running) {
+      let d;
+      try {
+        const r = await fetch(URL, {method:'POST',
+          headers:{'X-CSRFToken':csrf, 'X-Requested-With':'XMLHttpRequest'}});
+        d = await r.json(); fails = 0;
+      } catch (e) {
+        if (++fails >= 3) { label.textContent = "Connexion interrompue — relancez pour reprendre."; halt(); return; }
+        await new Promise(r => setTimeout(r, 2000)); continue;
+      }
+      if (d.error) {
+        label.innerHTML = '<span class="text-danger fw-bold">Erreur : ' + d.error + '</span>';
+        halt(); return;
+      }
+      bar.style.width = d.percent + '%';
+      count.textContent = d.done + ' / ' + d.total;
+      if (d.label) label.innerHTML = '<span id="rf-count">' + d.done + ' / ' + d.total +
+                                     '</span> — ' + d.label;
+      if (d.finished) {
+        label.innerHTML = '<span class="text-success">Archives à jour.</span>';
+        halt(); setTimeout(() => location.reload(), 800); return;
+      }
+    }
+  }
+  function start() { running = true; run.disabled = true; stop.style.display = ''; loop(); }
+  function halt()  { running = false; run.disabled = false; stop.style.display = 'none'; }
+  run.addEventListener('click', start);
+  stop.addEventListener('click', () => { halt(); label.textContent = 'Suspendu — reprise possible à tout moment.'; });
+})();
+</script>
+{% endblock %}

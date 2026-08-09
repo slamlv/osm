@@ -144,21 +144,21 @@
 
           {# Trimestres : moyenne + rang (—  si non renseigné) #}
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t1 is not None %}{{ enr.moyenne_t1|floatformat:2 }}{% if enr.rang_t1 %} <span class="rang">{{ enr.rang_t1 }}e</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t1 is not None %}{{ enr.moyenne_t1 }}{% if enr.rang_t1 %} <span class="rang">{{ enr.rang_t1 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t2 is not None %}{{ enr.moyenne_t2|floatformat:2 }}{% if enr.rang_t2 %} <span class="rang">{{ enr.rang_t2 }}e</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t2 is not None %}{{ enr.moyenne_t2 }}{% if enr.rang_t2 %} <span class="rang">{{ enr.rang_t2 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t3 is not None %}{{ enr.moyenne_t3|floatformat:2 }}{% if enr.rang_t3 %} <span class="rang">{{ enr.rang_t3 }}e</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t3 is not None %}{{ enr.moyenne_t3 }}{% if enr.rang_t3 %} <span class="rang">{{ enr.rang_t3 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
 
           {# Moyenne annuelle (mise en avant) #}
           <td class="text-center fw-semibold">
-            {% if enr.moyenne_annuelle is not None %}{{ enr.moyenne_annuelle|floatformat:2 }}{% else %}—{% endif %}
+            {% if enr.moyenne_annuelle is not None %}{{ enr.moyenne_annuelle }}{% else %}—{% endif %}
           </td>
           <td class="d-none d-sm-table-cell text-center">
-            {% if enr.rang_annuel %}{{ enr.rang_annuel }}e{% else %}—{% endif %}
+            {% if enr.rang_annuel %}{{ enr.rang_annuel }}{% else %}—{% endif %}
           </td>
 
           {# Décision de fin d'année (badge coloré + traçabilité en tooltip) #}
@@ -241,14 +241,14 @@
   }
 
   function card(label, moy, rang, big) {
-    var m = moy ? parseFloat(moy) : null;
+    var m = moy ? parseFloat(String(moy).replace(',', '.')) : null;
     var c = tone(m);
     var pct = m === null ? 0 : Math.max(0, Math.min(100, m * 5));
     return '<div class="term-card' + (m === null ? ' empty' : '') +
              '" style="--tc:' + c + ';' + (big ? 'grid-column:1/-1;' : '') + '">' +
              '<div class="lbl">' + label + '</div>' +
              '<div class="moy">' + (m === null ? '—' : m.toFixed(2)) + '</div>' +
-             '<div class="rk">' + (rang ? rang + '<sup>e</sup>' : '&nbsp;') + '</div>' +
+             '<div class="rk">' + (rang ? rang : '&nbsp;') + '</div>' +
              '<div class="gauge"><span style="width:' + pct + '%"></span></div>' +
            '</div>';
   }

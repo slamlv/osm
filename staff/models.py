@@ -237,7 +237,7 @@ class Personnel(models.Model):
         pl2 = formated_float((nlf2 / nlp2) * 100) if nlp2 else 0
         pl3 = formated_float((nlf3 / nlp3) * 100) if nlp3 else 0
         pl = formated_float((nlf / nlp) * 100) if nlp else 0
-        print(pl)
+
         total = {
             'label': "Total",
             'nlpt1': nlpt1 if nlpt1 else "/",

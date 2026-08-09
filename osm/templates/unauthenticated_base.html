@@ -67,7 +67,7 @@
     <!-- Header -->
     <header class="unauth-header d-flex align-items-center justify-content-between">
       <a class="unauth-brand" href="{% url 'offline_index' %}">
-        <img src="{% static 'image/logo.png' %}" alt="OSM">
+        <img src="{% static 'image/logo.png' %}" alt="OSM" loading="eager">
         <span>Oméga School Manager</span>
       </a>
       {% if title %}

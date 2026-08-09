@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .crumb a { color:rgba(255,255,255,0.55); text-decoration:none; }
+  .crumb a:hover { color:#fff; }
+  .grp-title { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:#f0c75e; font-weight:700; }
+  .doc-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px;
+             background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); margin-bottom:8px; }
+  .doc-row:hover { background:rgba(255,255,255,0.08); }
+  .doc-row .nm { color:#fff; font-size:0.88rem; font-weight:600; }
+  .doc-row .meta { color:rgba(255,255,255,0.4); font-size:0.74rem; }
+  .doc-row a.download { text-decoration:none; flex-grow:1; display:flex; align-items:center; gap:12px; }
+  .stale { font-size:0.64rem; padding:2px 7px; border-radius:6px; background:rgba(253,126,20,0.18); color:#ffb066; }
+</style>
+
+<div class="container py-3" style="max-width:900px;">
+  <p class="crumb small mb-3">
+    <a href="{% url 'archives_index' %}"><i class="bi bi-archive me-1"></i>Archives</a>
+    <span class="text-white-50 mx-1">/</span>
+    <a href="{% url 'archives_year' year %}">{{ year }}</a>
+    <span class="text-white-50 mx-1">/</span><span class="text-white fw-semibold">{{ label }}</span>
+  </p>
+
+  {% if not deletable %}
+  <p class="text-white-50 small mb-3"><i class="bi bi-lock-fill me-1 text-success"></i>
+    Ces documents sont protégés : ils ne peuvent pas être supprimés.</p>
+  {% endif %}
+
+  {% for classe, docs in by_class %}
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <p class="grp-title mb-3"><i class="bi bi-mortarboard me-1"></i>{{ classe }}</p>
+    {% for d in docs %}
+    <div class="doc-row">
+      <a class="download" href="{% url 'archive_download' d.id %}" download data-bs-toggle="tooltip" title="Télécharger le document">
+        <i class="bi bi-file-earmark-pdf text-info fs-5"></i>
+        <span class="flex-grow-1">
+          <span class="nm d-block">{{ d.term_label|default:d.title }}
+            {% if d.is_stale %}<span class="stale ms-1">{{ d.stale_reason }}</span>{% endif %}</span>
+          <span class="meta">{{ d.size_display }}{% if d.page_count %} • {{ d.page_count }} page{{ d.page_count|pluralize }}{% endif %}
+            • archivé le {{ d.archived_at|date:"d/m/Y à H:i" }}{% if d.versions > 1 %} • v{{ d.versions }}{% endif %}</span>
+        </span>
+      </a>
+      {% if d.is_deletable %}
+      <form method="post" action="{% url 'archive_delete' d.pk %}" class="d-inline"
+            data-confirm="Supprimer « {{ d }} » ?">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Supprimer">
+          <i class="bi bi-trash"></i></button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+document.addEventListener('submit', function (ev) {
+  const f = ev.target.closest('form[data-confirm]');
+  if (f && !window.confirm(f.dataset.confirm)) ev.preventDefault();
+});
+</script>
+{% endblock %}

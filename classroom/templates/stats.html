@@ -26,7 +26,10 @@
         <div class="row g-3 mb-4">
           <div class="col-sm-6"><label class="text-white control-label">Classe</label>{{ check_form.clsrm }}</div>
           <div class="col-sm-6"><label class="text-white control-label">Trimestre</label>{{ check_form.evl }}</div>
-          <div class="col-sm-6"><label class="text-white">Moyenne minimale d'admission</label><input name="seuil" id="seuil" type="number" class="form-control fw-bold" value="10" step="0.01"></div>
+          <div class="col-sm-6 js-seuil-bloc"><label class="text-white">Moyenne minimale d'admission</label>
+              <input type="number" class="form-control fw-bold js-seuil" value="10" step="0.01"
+                     min="0" max="20" id="id_moyenne_min" name="moyenne_min_admission" data-seuil-source="#classe"
+                     data-seuil-cacher-si="__all__" data-seuil-defaut="10.0"></div>
         </div>
         <div class="d-flex justify-content-center">
           <button class="btn btn-primary fw-semibold px-5" type="submit" hx-include="#choices" data-with-spinner>

@@ -490,6 +490,10 @@ class Student(models.Model):
         if not for_livret:
             results['cote'], results['appr'], results['appreciation'] = cote, appr, appreciation
             results['discipline'] = self.discipline_to_dict(trim)
+            if len(evals) == 6:
+                results['discipline_t1'] = self.discipline_to_dict(1)
+                results['discipline_t2'] = self.discipline_to_dict(2)
+                results['discipline_t3'] = self.discipline_to_dict(3)
 
         if len(evals) == 6:
             results['moyenne1'] = formated_float(moyenne1)
@@ -677,13 +681,17 @@ class StudentEnrollment(models.Model):
     # Moyennes et tangs FIGÉESau moment de la clôture. On la stocke ici pour
     # garder une trace consultable même après le nettoyage des notes en base.
     moyenne_t1 = models.FloatField(null=True, blank=True)
-    rang_t1 = models.IntegerField(null=True, blank=True)
+    rang_t1 = models.CharField(max_length=8, null=True, blank=True)
     moyenne_t2 = models.FloatField(null=True, blank=True)
-    rang_t2 = models.IntegerField(null=True, blank=True)
+    rang_t2 = models.CharField(max_length=8, null=True, blank=True)
     moyenne_t3 = models.FloatField(null=True, blank=True)
-    rang_t3 = models.IntegerField(null=True, blank=True)
+    rang_t3 = models.CharField(max_length=8, null=True, blank=True)
     moyenne_annuelle = models.FloatField(null=True, blank=True)
-    rang_annuel = models.IntegerField(null=True, blank=True)
+    rang_annuel = models.CharField(max_length=8, null=True, blank=True)
+    discipline_t1 = models.JSONField(null=True, blank=True)
+    discipline_t2 = models.JSONField(null=True, blank=True)
+    discipline_t3 = models.JSONField(null=True, blank=True)
+    discipline = models.JSONField(null=True, blank=True)
 
     # Traçabilité de la décision : qui l'a prise et quand.
     decided_by = models.CharField(max_length=80, null=True, blank=True)

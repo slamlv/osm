@@ -19,16 +19,16 @@ class DForm(DynamicFormMixin, forms.ModelForm):
         'class': "form-check-input", 'id': "excl"
     }))
     cons = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={
-        'class': "form-control fw-bold", 'id': "cons"
+        'class': "form-control fw-bold", 'id': "cons", "min": 0
     }))
     abs = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={
-        'class': "form-control fw-bold", 'id': "abs"
+        'class': "form-control fw-bold", 'id': "abs", "min": 0
     }))
     absj = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={
-        'class': "form-control fw-bold", 'id': "absj"
+        'class': "form-control fw-bold", 'id': "absj", "min": 0
     }))
     retards = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={
-        'class': "form-control fw-bold", 'id': "retards"
+        'class': "form-control fw-bold", 'id': "retards", "min": 0
     }))
 
     def clean(self):

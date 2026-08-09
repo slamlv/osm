@@ -90,7 +90,7 @@
 <!-- ===== NAVBAR ===== -->
 <nav class="osm-navbar navbar navbar-expand-md px-3 px-md-5">
     <a class="navbar-brand text-warning fw-bold d-flex align-items-center gap-2" href="#">
-        <img src="{% static 'image/logo.png' %}" alt="OSM" width="32" height="32">
+        <img src="{% static 'image/logo.png' %}" alt="OSM" width="32" height="32" loading="eager">
         <span>Oméga School Manager</span>
     </a>
     <button class="navbar-toggler text-warning border-warning" type="button"
@@ -120,8 +120,8 @@
 
 <!-- ===== HERO ===== -->
 <section class="hero-section py-5">
-    <div class="container w-md-75 w-lg-50 text-center py-3">
-        <img src="{% static 'image/logo.png' %}" alt="Oméga" width="100" class="mb-3">
+    <div class="container w-md-75 w-lg-50 text-center py-1">
+        <img src="{% static 'image/logo.png' %}" alt="Oméga" width="120" class="mb-3">
         <h1 class="fw-bold text-white mb-1">Oméga School Manager</h1>
         <p class="lead text-info mb-4">Un outil de gestion au service de l'éducation</p>
         <p class="text-white-50 mb-4">
@@ -153,7 +153,7 @@
                 <div class="feature-card rounded-3 px-3 py-4 h-100">
                     <i class="bi bi-people fs-1 text-primary mb-3 d-block"></i>
                     <h5 class="text-white fw-bold">Élèves</h5>
-                    <p class="text-white-50 small">Inscriptions, dossiers, discipline et cartes scolaires.</p>
+                    <p class="text-white-50 small">Inscriptions, parcours, discipline et cartes scolaires.</p>
                 </div>
             </div>
             <div class="col-md-4">
@@ -164,20 +164,29 @@
                 </div>
             </div>
             <div class="col-md-4">
+              <div class="feature-card rounded-3 px-3 py-4 h-100">
+                <div class="icon-wrap mb-3">
+                  <i class="bi bi-cash-coin fs-1 text-success mb-3 d-block"></i>
+                </div>
+                <h5 class="text-white fw-bold">Finances</h5>
+                <p class="text-white-50 small">Encaissements avec reçus, salaires, caisse et états.</p>
+              </div>
+            </div>
+            <div class="col-md-4">
                 <div class="feature-card rounded-3 px-3 py-4 h-100">
                     <i class="fa fa-chalkboard-teacher fs-1 text-info mb-3 d-block"></i>
                     <h5 class="text-white fw-bold">Classes</h5>
                     <p class="text-white-50 small">Gestion des classes, matières et taux de couverture. Bulletins,
-                    tableaux d'honneur et procès verbaux</p>
+                    tableaux d'honneur et procès-verbaux</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <!-- div class="col-md-4">
                 <div class="feature-card rounded-3 px-3 py-4 h-100">
                     <i class="bi bi-file-text fs-1 text-warning mb-3 d-block"></i>
                     <h5 class="text-white fw-bold">Notes</h5>
                     <p class="text-white-50 small">Saisie par classe, par niveau ou par trimestre.</p>
                 </div>
-            </div>
+            </div-->
             <div class="col-md-4">
                 <div class="feature-card rounded-3 px-3 py-4 h-100">
                     <i class="bi bi-calendar-week fs-1 text-danger mb-3 d-block"></i>

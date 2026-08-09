@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oméga School Manager — Guide de l'utilisateur</title>
+<style>
+:root{
+  --bg:#0e2032; --card:#16324b; --card2:#12293e; --line:rgba(255,255,255,.10);
+  --txt:#eaf1f8; --dim:rgba(234,241,248,.66); --dim2:rgba(234,241,248,.45);
+  --gold:#f0c75e; --green:#5dd48e; --blue:#8ec5ff; --red:#ff8a95;
+  --violet:#c99bf5; --teal:#5fd4c4; --orange:#ffb066;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--txt);
+     font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+b,strong{color:#fff}
+
+/* ============ EN-TÊTE ============ */
+.hero{background:linear-gradient(140deg,#0d2c46 0%,#123a5c 55%,#0f2f4a 100%);
+      border-bottom:1px solid var(--line);padding:34px 20px 26px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;
+  background:linear-gradient(90deg,#0a7d3f 0 33.3%,#d21f3c 33.3% 66.6%,#f9d616 66.6% 100%)}
+.hero-in{max-width:960px;margin:0 auto}
+.hero h1{margin:0 0 6px;font-size:1.72rem;letter-spacing:.2px}
+.hero h1 span{color:var(--gold)}
+.hero p{margin:0;color:var(--dim);font-size:.98rem;max-width:640px}
+
+/* ============ BARRE D'OUTILS ============ */
+.tools{position:sticky;top:0;z-index:40;background:rgba(14,32,50,.96);
+  backdrop-filter:blur(9px);border-bottom:1px solid var(--line);padding:11px 20px}
+.tools-in{max-width:960px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sbox{flex:1 1 240px;position:relative;min-width:200px}
+.sbox input{width:100%;padding:9px 32px 9px 34px;border-radius:11px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.17);
+  color:#fff;font-size:.92rem;outline:none}
+.sbox input:focus{border-color:#0d6efd;box-shadow:0 0 0 3px rgba(13,110,253,.22)}
+.sbox .ic{position:absolute;left:12px;top:8px;color:var(--dim2)}
+.tbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+  color:var(--dim);border-radius:10px;padding:8px 13px;font-size:.83rem;cursor:pointer;
+  white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.13);color:#fff}
+.count{font-size:.78rem;color:var(--dim2);white-space:nowrap}
+
+/* ============ CONTENU ============ */
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 80px}
+
+/* sommaire en tuiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px;margin:6px 0 30px}
+.tile{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:13px;
+  background:var(--card);border:1px solid var(--line);cursor:pointer;
+  transition:transform .12s,border-color .12s,background .12s}
+.tile:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.28);background:#1a3a58}
+.tile .dot{width:30px;height:30px;border-radius:9px;flex:0 0 30px;display:flex;
+  align-items:center;justify-content:center;font-weight:800;font-size:.85rem;
+  background:rgba(255,255,255,.09);color:var(--ac,#fff)}
+.tile .tt{font-size:.87rem;font-weight:600;line-height:1.3}
+
+/* sections dépliables */
+.sec{background:var(--card);border:1px solid var(--line);border-radius:15px;
+  margin-bottom:13px;overflow:hidden;position:relative}
+.sec::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,#888)}
+.sec-head{display:flex;align-items:center;gap:13px;padding:15px 18px 15px 20px;cursor:pointer;
+  user-select:none;transition:background .12s}
+.sec-head:hover{background:rgba(255,255,255,.045)}
+.sec-head .num{width:31px;height:31px;border-radius:9px;flex:0 0 31px;display:flex;
+  align-items:center;justify-content:center;font-weight:800;font-size:.86rem;
+  background:rgba(255,255,255,.09);color:var(--ac)}
+.sec-head h2{margin:0;font-size:1.04rem;flex:1 1 auto;font-weight:700}
+.sec-head .sub{display:block;font-size:.78rem;color:var(--dim2);font-weight:400;margin-top:1px}
+.chev{width:11px;height:11px;border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);
+  transform:rotate(45deg);transition:transform .2s;flex:0 0 auto;margin-right:4px}
+.sec.open .chev{transform:rotate(-135deg)}
+.sec-body{display:none;padding:2px 20px 20px 20px;border-top:1px solid var(--line)}
+.sec.open .sec-body{display:block}
+
+h3{font-size:.96rem;margin:20px 0 6px;color:var(--ac)}
+h3:first-child{margin-top:14px}
+p{margin:8px 0}
+ul{margin:8px 0 8px 20px;padding:0} li{margin:5px 0}
+
+/* étapes numérotées */
+ol.steps{counter-reset:st;list-style:none;margin:12px 0;padding:0}
+ol.steps>li{counter-increment:st;position:relative;padding:0 0 0 38px;margin:11px 0}
+ol.steps>li::before{content:counter(st);position:absolute;left:0;top:1px;width:25px;height:25px;
+  border-radius:50%;background:var(--ac);color:#0e2032;font-weight:800;font-size:.79rem;
+  display:flex;align-items:center;justify-content:center}
+
+/* encadrés */
+.box{border-radius:12px;padding:11px 14px;margin:13px 0;font-size:.92rem;
+  display:flex;gap:11px;align-items:flex-start}
+.box .bi{font-weight:800;flex:0 0 auto;font-size:1rem;line-height:1.5}
+.tip{background:rgba(25,149,72,.11);border:1px solid rgba(25,149,72,.34)} .tip .bi{color:var(--green)}
+.warn{background:rgba(220,53,69,.11);border:1px solid rgba(220,53,69,.36)} .warn .bi{color:var(--red)}
+.info{background:rgba(13,110,253,.11);border:1px solid rgba(13,110,253,.34)} .info .bi{color:var(--blue)}
+
+table{width:100%;border-collapse:collapse;margin:13px 0;font-size:.88rem}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--card2);color:var(--dim);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+.badge{display:inline-block;font-size:.71rem;font-weight:700;padding:2px 9px;border-radius:7px}
+.b-gr{background:rgba(25,149,72,.2);color:var(--green)}
+.b-or{background:rgba(253,126,20,.2);color:var(--orange)}
+.b-rd{background:rgba(220,53,69,.2);color:var(--red)}
+.b-bl{background:rgba(13,110,253,.2);color:var(--blue)}
+.b-gd{background:rgba(240,199,94,.2);color:var(--gold)}
+kbd{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;
+  padding:1px 7px;font-size:.82rem;font-family:inherit}
+mark{background:rgba(240,199,94,.4);color:#fff;padding:0 2px;border-radius:3px}
+.hidden{display:none!important}
+.empty{text-align:center;color:var(--dim2);padding:34px}
+
+footer{max-width:960px;margin:0 auto;padding:0 20px 50px;color:var(--dim2);font-size:.82rem;
+  text-align:center}
+
+@media(max-width:620px){
+  .hero h1{font-size:1.35rem} .sec-head h2{font-size:.95rem}
+  .sec-body{padding:2px 14px 16px 14px}
+}
+@media print{
+  body{background:#fff;color:#111}
+  .tools,.tiles{display:none}
+  .hero{background:#fff;color:#111;border-bottom:2px solid #333}
+  .hero h1 span{color:#111} .hero p{color:#333}
+  .sec{border-color:#bbb;background:#fff;break-inside:avoid}
+  .sec-body{display:block!important;border-color:#ddd}
+  .sec-head{background:#f2f2f2} .sec-head h2,.sec-head .num{color:#111}
+  .chev{display:none} h3{color:#111}
+  .box{background:#f6f6f6;border-color:#ccc} th{background:#eee;color:#111}
+  .badge,kbd{border:1px solid #bbb;color:#111}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <h1>Guide de l'utilisateur — Oméga <span>School Manager</span></h1>
+    <p>Tout ce qu'il faut savoir pour utiliser la plateforme au quotidien : inscrire les élèves,
+       saisir les notes, éditer les bulletins, encaisser les frais et clôturer l'année.
+       Cliquez sur le titre d'une section pour l'ouvrir ou la refermer.</p>
+  </div>
+</div>
+
+<div class="tools">
+  <div class="tools-in">
+    <div class="sbox">
+      <span class="ic">⌕</span>
+      <input id="q" type="search" placeholder="Rechercher : bulletin, reçu, remise, clôture…" autocomplete="off">
+    </div>
+    <button class="tbtn" id="openAll">Tout ouvrir</button>
+    <button class="tbtn" id="closeAll">Tout fermer</button>
+    <span class="count" id="count"></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ================= SOMMAIRE EN TUILES ================= -->
+  <div class="tiles" id="tiles"></div>
+
+  <div id="doc">
+
+  <!-- ============================================================ 1 -->
+  <section class="sec" style="--ac:#8ec5ff" data-title="Premiers pas">
+    <div class="sec-head"><span class="num">1</span>
+      <h2>Premiers pas<span class="sub">Se connecter, comprendre l'écran d'accueil</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Se connecter</h3>
+      <ol class="steps">
+        <li>Ouvrez l'adresse de la plateforme dans votre navigateur.</li>
+        <li>Saisissez votre nom d'utilisateur et votre mot de passe, puis validez.</li>
+        <li>Vous arrivez sur le tableau de bord de votre établissement.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Un espace par établissement.</b> Chaque établissement dispose de ses propres données.
+        Vous ne voyez jamais les élèves, le personnel ni les finances d'un autre établissement.
+      </div></div>
+
+      <h3>Le tableau de bord</h3>
+      <p>L'accueil présente les modules sous forme de cartes colorées : élèves, classes, notes,
+      résultats, finances, archives… Chaque carte mène à son module. Certaines affichent un
+      compteur (nombre d'élèves, de classes, de membres du personnel).</p>
+
+      <h3>Se déplacer dans la plateforme</h3>
+      <ul>
+        <li>Le <b>menu du haut</b> regroupe les grandes rubriques.</li>
+        <li>Un <b>fil d'Ariane</b> apparaît dans les pages profondes (par exemple dans les archives) :
+            cliquez sur un maillon pour remonter.</li>
+        <li>Sur téléphone, les tableaux se font glisser horizontalement du doigt.</li>
+      </ul>
+      <div class="box info"><span class="bi">i</span><div>
+        <b>Si un écran semble figé ou mal affiché</b> après une mise à jour, actualisez la page
+        avec <kbd>Ctrl</kbd> + <kbd>F5</kbd> (ou en navigation privée). Il s'agit presque toujours
+        d'une ancienne version conservée en mémoire par le navigateur.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 2 -->
+  <section class="sec" style="--ac:#c99bf5" data-title="Qui peut faire quoi">
+    <div class="sec-head"><span class="num">2</span>
+      <h2>Qui peut faire quoi<span class="sub">Les rôles et leurs permissions</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <table>
+        <tr><th>Rôle</th><th>Ce qu'il peut faire</th></tr>
+        <tr><td><b>Chef d'établissement</b></td>
+            <td>Tout. C'est lui — et lui seul — qui désigne les super administrateurs.</td></tr>
+        <tr><td><b>Super administrateur</b></td>
+            <td>Archiver et clôturer l'année, désigner les responsables financiers.</td></tr>
+        <tr><td><b>Responsable financier</b></td>
+            <td>Encaisser, tenir la caisse, payer les salaires, éditer les états financiers.</td></tr>
+        <tr><td><b>Administrateur</b></td>
+            <td>Gestion courante : élèves, classes, notes, discipline, éditions.</td></tr>
+        <tr><td><b>Enseignant</b></td>
+            <td>Saisir les notes des matières qui lui sont attribuées.</td></tr>
+      </table>
+
+      <h3>Désigner un responsable</h3>
+      <ol class="steps">
+        <li>Ouvrez la page des <b>rôles délégués</b>.</li>
+        <li>Choisissez la personne dans la liste déroulante de la section voulue.</li>
+        <li>Cliquez sur <b>Désigner</b>. La date et l'auteur de la désignation sont enregistrés.</li>
+      </ol>
+      <div class="box info"><span class="bi">i</span><div>
+        <b>Pourquoi cette traçabilité ?</b> Confier la caisse ou la clôture d'une année est un acte
+        de confiance. La plateforme conserve qui a nommé qui, et quand — y compris après un retrait
+        de droits.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 3 -->
+  <section class="sec" style="--ac:#5fd4c4" data-title="Paramétrer l'établissement">
+    <div class="sec-head"><span class="num">3</span>
+      <h2>Paramétrer l'établissement<span class="sub">Identité, logo, cachet, visa</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <p>Ces informations apparaissent en en-tête de <b>tous</b> les documents officiels. Prenez le
+      temps de bien les renseigner une fois pour toutes.</p>
+      <table>
+        <tr><th>Information</th><th>À quoi elle sert</th></tr>
+        <tr><td>Nom en français et en anglais</td><td>En-tête bilingue de tous les documents</td></tr>
+        <tr><td>Région et département</td><td>Lignes « Délégation régionale » et « Délégation départementale »</td></tr>
+        <tr><td>Localité</td><td>Mention « Fait à … » sur les certificats</td></tr>
+        <tr><td>Immatriculation, téléphone</td><td>Bandeau d'identification</td></tr>
+        <tr><td>Intitulé du chef</td><td>Proviseur, Principal ou Directeur — repris sur les signatures</td></tr>
+        <tr><td>Logo</td><td>En-tête et filigrane des documents</td></tr>
+        <tr><td>Cachet et visa</td><td>Apposés automatiquement sur les cartes, reçus et certificats</td></tr>
+      </table>
+
+      <h3>Réussir le cachet et le visa</h3>
+      <ol class="steps">
+        <li>Photographiez le cachet sur une feuille <b>blanche</b>, bien éclairée, sans ombre.</li>
+        <li>Cadrez au plus près du tampon, sans bordure sombre autour.</li>
+        <li>Téléversez l'image : le fond est détouré automatiquement.</li>
+      </ol>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Évitez de recadrer avec l'éditeur du téléphone</b> : certains ajoutent un fin liseré noir
+        autour de l'image, qui laisse ensuite des traces sur les documents.
+      </div></div>
+      <div class="box tip"><span class="bi">✓</span><div>
+        La date n'apparaît sur une carte scolaire que si le cachet <i>et</i> le visa sont présents.
+        Un document non tamponné reste volontairement sans date, pour être complété à la main.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 4 -->
+  <section class="sec" style="--ac:#5dd48e" data-title="Élèves et inscriptions">
+    <div class="sec-head"><span class="num">4</span>
+      <h2>Élèves et inscriptions<span class="sub">Créer, rechercher, suivre un parcours</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Inscrire un élève</h3>
+      <ol class="steps">
+        <li>Ouvrez le module <b>Élèves</b> puis <b>Ajouter</b>.</li>
+        <li>Renseignez l'identité, le sexe, la date et le lieu de naissance, le matricule.</li>
+        <li>Indiquez les parents ou tuteurs et leurs contacts — utiles pour les convocations.</li>
+        <li>Ajoutez la photo, puis choisissez la classe.</li>
+        <li>Enregistrez.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Photos :</b> une photo de face, cadrage buste, sur fond uni. La plateforme la recadre
+        automatiquement au format identité et la compresse — inutile de la retoucher avant.
+      </div></div>
+
+      <h3>Rechercher un élève</h3>
+      <p>Presque partout, la recherche accepte le <b>nom</b>, le <b>prénom</b> ou le
+      <b>matricule</b>. Quelques lettres suffisent.</p>
+
+      <h3>Le parcours scolaire</h3>
+      <p>La fiche d'un élève donne accès à son parcours : une ligne par année, avec la classe, les
+      moyennes et rangs de chaque trimestre, la moyenne annuelle et la décision de fin d'année.
+      L'année en cours est repérée par un liseré jaune.</p>
+      <div class="box info"><span class="bi">i</span><div>
+        Ce parcours reste consultable <b>même après la clôture</b> des années passées : les
+        moyennes et les rangs y sont conservés définitivement.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 5 -->
+  <section class="sec" style="--ac:#ffb066" data-title="Classes, matières et personnel">
+    <div class="sec-head"><span class="num">5</span>
+      <h2>Classes, matières et personnel<span class="sub">Organiser l'année</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Deux notions à distinguer</h3>
+      <ul>
+        <li><b>Le niveau</b> (Sixième, Terminale…) éventuellement avec une série (A4, C, D,
+            Bilingue). Il porte les matières enseignées et leurs coefficients.</li>
+        <li><b>La salle de classe</b> (6<sup>ème</sup> A, 6<sup>ème</sup> B…) : l'effectif réel,
+            avec son professeur titulaire.</li>
+      </ul>
+      <p>Créez donc d'abord les niveaux et leurs matières, puis les salles de classe qui en
+      découlent.</p>
+
+      <h3>Attribuer les matières aux enseignants</h3>
+      <ol class="steps">
+        <li>Ouvrez la classe concernée.</li>
+        <li>Pour chaque matière, désignez l'enseignant responsable.</li>
+        <li>Désignez le professeur titulaire de la classe.</li>
+      </ol>
+      <div class="box warn"><span class="bi">!</span><div>
+        Sans attribution, l'enseignant ne verra pas la matière dans son espace de saisie des notes,
+        et la matière n'apparaîtra pas au bulletin.
+      </div></div>
+
+      <h3>Le personnel</h3>
+      <p>Renseignez pour chaque membre : identité, sexe, contact, poste, grade et matricule.
+      Ajoutez la <b>discipline de formation</b> (par exemple Informatique) : elle sert aux documents
+      de carrière.</p>
+
+      <h3>Seuil d'admission</h3>
+      <p>Chaque classe porte une <b>moyenne minimale d'admission</b>, fixée à 10 par défaut.
+      Modifiez-la si votre établissement applique un autre seuil : elle sera utilisée par les
+      bulletins, les procès-verbaux et les statistiques.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 6 -->
+  <section class="sec" style="--ac:#0d6efd" data-title="Saisir les notes">
+    <div class="sec-head"><span class="num">6</span>
+      <h2>Saisir les notes<span class="sub">Les six séquences de l'année</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Comment l'année est découpée</h3>
+      <table>
+        <tr><th>Trimestre</th><th>Séquences</th></tr>
+        <tr><td>1<sup>er</sup> trimestre</td><td>Séquences 1 et 2</td></tr>
+        <tr><td>2<sup>e</sup> trimestre</td><td>Séquences 3 et 4</td></tr>
+        <tr><td>3<sup>e</sup> trimestre</td><td>Séquences 5 et 6</td></tr>
+      </table>
+
+      <h3>Saisir</h3>
+      <ol class="steps">
+        <li>Choisissez la <b>classe</b> (ou le <b>niveau</b> pour traiter plusieurs classes d'un coup),
+            la <b>matière</b> et la <b>séquence</b>.</li>
+        <li>Saisissez les notes sur 20 dans la colonne prévue. Laissez vide une note non attribuée.</li>
+        <li>Renseignez les compétences évaluées si votre classe en utilise.</li>
+        <li>Cliquez sur <b>Sauvegarder</b>.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        Le bouton <b>Sauvegarder</b> reste visible en bas de l'écran pendant tout le défilement :
+        pour corriger la note d'un seul élève au milieu de quatre-vingts, nul besoin de remonter.
+        Un compteur indique combien de notes sont déjà saisies.
+      </div></div>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Sauvegardez avant de changer de matière ou de séquence.</b> Les notes saisies et non
+        enregistrées sont perdues.
+      </div></div>
+
+      <h3>Corriger une note plus tard</h3>
+      <p>Revenez sur le même écran, modifiez, sauvegardez. Si un bulletin avait déjà été édité, la
+      plateforme le régénérera automatiquement au moment de la clôture, pour qu'il reflète la note
+      corrigée.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 7 -->
+  <section class="sec" style="--ac:#ff8a95" data-title="Discipline">
+    <div class="sec-head"><span class="num">7</span>
+      <h2>Discipline<span class="sub">Absences, retards, sanctions</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <ol class="steps">
+        <li>Choisissez le <b>trimestre</b> et recherchez l'élève.</li>
+        <li>Cliquez sur sa carte : la fiche disciplinaire s'ouvre en fenêtre.</li>
+        <li>Renseignez les absences justifiées et non justifiées (en heures), les retards
+            (en nombre), les consignes (en heures) et l'exclusion définitive le cas échéant.</li>
+        <li>Enregistrez : la fenêtre se referme.</li>
+      </ol>
+      <div class="box info"><span class="bi">i</span><div>
+        Ces éléments apparaissent dans le bloc « Discipline » du bulletin trimestriel.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 8 -->
+  <section class="sec" style="--ac:#f0c75e" data-title="Éditer les documents">
+    <div class="sec-head"><span class="num">8</span>
+      <h2>Éditer les documents<span class="sub">Bulletins, cartes, listes, albums, certificats</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <table>
+        <tr><th>Document</th><th>Quand l'utiliser</th></tr>
+        <tr><td><b>Bulletin scolaire</b></td><td>Fin de trimestre, et bulletin annuel en fin d'année</td></tr>
+        <tr><td><b>Procès-verbal de délibération</b></td><td>Après le conseil de classe</td></tr>
+        <tr><td><b>Liste des élèves</b></td><td>Appel, remise de documents, contrôles</td></tr>
+        <tr><td><b>Carte scolaire</b></td><td>Rentrée, ou remplacement d'une carte perdue</td></tr>
+        <tr><td><b>Album photos de classe</b></td><td>Souvenir de fin d'année</td></tr>
+        <tr><td><b>Certificat de scolarité</b></td><td>Demandes des parents (allocations familiales, dossiers)</td></tr>
+      </table>
+
+      <h3>Générer un document</h3>
+      <ol class="steps">
+        <li>Ouvrez le module correspondant et choisissez la classe (et le trimestre si demandé).</li>
+        <li>Cliquez sur le bouton de génération : le PDF s'ouvre dans un nouvel onglet.</li>
+        <li>Imprimez ou enregistrez depuis votre navigateur.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Le deuxième téléchargement est immédiat.</b> Chaque document produit est conservé ;
+        si les notes n'ont pas changé entre-temps, la plateforme vous rend le document déjà
+        préparé au lieu de le refabriquer.
+      </div></div>
+      <div class="box info"><span class="bi">i</span><div>
+        La génération d'une grande classe peut demander quelques instants la première fois.
+        Ne fermez pas l'onglet pendant ce temps.
+      </div></div>
+
+      <h3>Le certificat de scolarité</h3>
+      <ol class="steps">
+        <li>Ouvrez la page des <b>certificats de scolarité</b>.</li>
+        <li>Choisissez l'<b>année scolaire</b> concernée — le certificat portera la classe que
+            l'élève occupait cette année-là.</li>
+        <li>Recherchez l'élève. La colonne « Situation » indique s'il est à jour de ses frais.</li>
+        <li>Cliquez sur <b>Certificat</b>.</li>
+      </ol>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Le certificat n'est délivré qu'à un élève à jour</b> des frais qui entrent dans la caisse
+        de l'établissement. Si ce n'est pas le cas, la plateforme affiche le détail du reste dû.
+        Les frais reversés à l'État (frais exigibles, frais d'examen) n'entrent pas dans cette
+        condition.
+      </div></div>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Besoin de certificats d'avance ?</b> Utilisez « Certificat vierge » : le document sort
+        avec des lignes à remplir à la main, sans cachet.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 9 -->
+  <section class="sec" style="--ac:#0a3d62" data-title="Documents du personnel">
+    <div class="sec-head"><span class="num">9</span>
+      <h2>Documents administratifs du personnel<span class="sub">Prise et reprise de service, présence effective</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <table>
+        <tr><th>Document</th><th>Dans quel cas</th></tr>
+        <tr><td><b>Prise de service</b></td><td>Un agent nouvellement affecté s'installe au poste</td></tr>
+        <tr><td><b>Reprise de service</b></td><td>Un agent revient après un congé ou une absence</td></tr>
+        <tr><td><b>Présence effective</b></td><td>Attester qu'un agent est bien en poste</td></tr>
+      </table>
+      <ol class="steps">
+        <li>Choisissez le type de document.</li>
+        <li>Sélectionnez le membre du personnel : les champs se remplissent avec ce qui est
+            déjà connu de sa fiche.</li>
+        <li>Complétez ou corrigez : numéro de décision, date de la décision, discipline,
+            provenance, date de prise ou reprise de service, qualité.</li>
+        <li>Cliquez sur <b>Générer le document</b>.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        Laissez cochée l'option d'enregistrement dans la fiche : les informations saisies seront
+        reprises automatiquement la prochaine fois.
+      </div></div>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Ces documents ne sont pas cachetés par la plateforme.</b> Ce sont des pièces de carrière :
+        elles doivent être <b>signées et cachetées à la main</b> par le chef d'établissement.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 10 -->
+  <section class="sec" style="--ac:#f0c75e" data-title="Finances : préparer l'année">
+    <div class="sec-head"><span class="num">10</span>
+      <h2>Finances : préparer l'année<span class="sub">La grille tarifaire</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <p>Avant d'encaisser quoi que ce soit, indiquez à la plateforme <b>ce que chaque élève doit</b>.
+      C'est le rôle de la grille tarifaire.</p>
+
+      <h3>Créer une ligne de grille</h3>
+      <ol class="steps">
+        <li>Ouvrez la <b>grille tarifaire</b> et vérifiez l'année affichée.</li>
+        <li>Cliquez sur <b>Nouvelle ligne</b>.</li>
+        <li>Choisissez le type de frais, puis le montant.</li>
+        <li>Laissez le niveau vide si le frais concerne <b>tous les élèves</b> ; sinon choisissez
+            le niveau, et la série si le frais ne concerne que certaines spécialités.</li>
+        <li>Ajoutez éventuellement des tranches (libellé, montant, date limite).</li>
+        <li>Enregistrez.</li>
+      </ol>
+
+      <h3>Exemples courants</h3>
+      <table>
+        <tr><th>Situation</th><th>Comment la saisir</th></tr>
+        <tr><td>APEE, même montant pour tous</td><td>Une ligne, niveau laissé vide</td></tr>
+        <tr><td>APEE plus élevée en Terminale</td><td>Une ligne « tous niveaux » + une ligne « Terminale »</td></tr>
+        <tr><td>Scolarité variable par niveau</td><td>Une ligne par niveau</td></tr>
+        <tr><td>Frais de laboratoire pour les scientifiques</td><td>Une ligne par niveau <i>et</i> série (Terminale C, Terminale D…)</td></tr>
+        <tr><td>Frais d'examen</td><td>Une ligne pour la Troisième, une pour la Première, une pour la Terminale</td></tr>
+      </table>
+      <div class="box info"><span class="bi">i</span><div>
+        <b>La ligne la plus précise l'emporte.</b> Si un frais possède une ligne « tous niveaux » et
+        une ligne « Terminale », les élèves de Terminale paieront le montant de la seconde.
+      </div></div>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>À la rentrée suivante</b>, n'ressaisissez rien : le bouton <b>Dupliquer</b> recopie
+        la grille de l'année précédente, dates de tranches décalées d'un an. Vous n'avez plus qu'à
+        ajuster les montants.
+      </div></div>
+
+      <h3>Frais reversés à l'État</h3>
+      <p>Les frais exigibles et les frais d'examen sont marqués comme n'entrant pas dans la caisse.
+      Ils sont <b>suivis</b> — vous savez qui a payé et pouvez éditer les listes d'insolvables — mais
+      ils n'apparaissent jamais dans le solde de l'établissement, puisque cet argent est reversé.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 11 -->
+  <section class="sec" style="--ac:#5dd48e" data-title="Finances : encaisser">
+    <div class="sec-head"><span class="num">11</span>
+      <h2>Finances : encaisser<span class="sub">Le geste quotidien du caissier</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <ol class="steps">
+        <li>Ouvrez la page <b>Encaissement</b> et recherchez l'élève.</li>
+        <li>Cliquez sur <b>Situation</b> : vous voyez, frais par frais, le dû, le payé et le reste.</li>
+        <li>Dans « Nouveau paiement », choisissez le type de frais, saisissez le montant, le mode
+            de paiement et la date.</li>
+        <li>Cliquez sur <b>Encaisser</b>.</li>
+        <li>Cliquez sur <b>Imprimer le reçu</b> : le PDF contient deux exemplaires — un pour le
+            parent, un pour la souche.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Les avances sont libres.</b> Un parent peut verser 5 000 aujourd'hui et 10 000 la
+        semaine prochaine : chaque versement fait son reçu, et le reste se met à jour tout seul.
+      </div></div>
+
+      <h3>Lire la situation d'un élève</h3>
+      <table>
+        <tr><th>État</th><th>Signification</th></tr>
+        <tr><td><span class="badge b-gr">Soldé</span></td><td>Ce frais est entièrement payé</td></tr>
+        <tr><td><span class="badge b-or">Reste …</span></td><td>Il reste à payer, sans retard sur les échéances</td></tr>
+        <tr><td><span class="badge b-rd">Retard …</span></td><td>Une tranche échue n'est pas couverte</td></tr>
+      </table>
+
+      <h3>Corriger une erreur</h3>
+      <p>Un paiement enregistré par erreur ne se supprime pas : il s'<b>annule</b>. Cliquez sur la
+      croix dans l'historique et indiquez le motif. La ligne reste visible, grisée, avec son motif.</p>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>C'est volontaire.</b> En matière d'argent, on garde la trace de ce qui a été corrigé et
+        pourquoi. Un reçu annulé sans explication serait impossible à justifier lors d'un contrôle.
+      </div></div>
+
+      <h3>Accorder une remise</h3>
+      <ol class="steps">
+        <li>Ouvrez la page <b>Remises</b> et recherchez l'élève.</li>
+        <li>Choisissez le frais concerné, le montant de la remise et le motif (bourse, enfant
+            d'enseignant, cas social…).</li>
+        <li>Enregistrez : le montant dû est immédiatement réduit partout.</li>
+      </ol>
+      <div class="box info"><span class="bi">i</span><div>
+        Une remise ne peut pas dépasser le montant de la grille. Pour la modifier, refaites
+        simplement l'opération : elle remplace la précédente.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 12 -->
+  <section class="sec" style="--ac:#c99bf5" data-title="Finances : caisse et salaires">
+    <div class="sec-head"><span class="num">12</span>
+      <h2>Finances : caisse et salaires<span class="sub">Dépenses, recettes, paie</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Démarrer la caisse</h3>
+      <p>Si l'établissement possédait déjà des fonds au moment d'adopter la plateforme, indiquez ce
+      montant une seule fois dans <b>Paramètres</b> de la page Caisse, avec sa date. Tous les soldes
+      partiront de là.</p>
+
+      <h3>Enregistrer une dépense ou une recette</h3>
+      <ol class="steps">
+        <li>Sur la page <b>Caisse</b>, cliquez sur <b>Nouvelle opération</b>.</li>
+        <li>Choisissez la catégorie (fournitures, entretien, eau et électricité, subvention…).</li>
+        <li>Saisissez le montant, le libellé, le mode de paiement et la date.</li>
+        <li>Ajoutez la référence de la pièce justificative si vous en avez une.</li>
+      </ol>
+      <div class="box info"><span class="bi">i</span><div>
+        <b>Le journal de caisse</b> affiche tous les mouvements de la période — paiements d'élèves
+        et dépenses mélangés — avec le solde qui évolue ligne après ligne.
+      </div></div>
+
+      <h3>Préparer les salaires</h3>
+      <ol class="steps">
+        <li>Ouvrez <b>Attribution des salaires</b>.</li>
+        <li>Pour chaque personne, choisissez le mode :
+            <b>Non rémunéré</b> (fonctionnaire payé par l'État), <b>Fixe</b> (forfait mensuel)
+            ou <b>À l'heure</b> (taux horaire négocié).</li>
+        <li>Renseignez le montant ou le taux, et les heures habituelles pour les horaires.</li>
+        <li>Enregistrez.</li>
+      </ol>
+
+      <h3>Payer un mois</h3>
+      <ol class="steps">
+        <li>Ouvrez <b>Paie mensuelle</b> et choisissez le mois.</li>
+        <li>Pour les rémunérations à l'heure, ajustez les heures réellement faites : le montant se
+            recalcule immédiatement.</li>
+        <li>Décochez éventuellement les personnes à ne pas payer ce mois-ci.</li>
+        <li>Choisissez le mode de paiement et cliquez sur <b>Payer la sélection</b>.</li>
+        <li>Imprimez la <b>fiche d'émargement</b> pour recueillir les signatures.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        Une personne déjà payée pour le mois apparaît verrouillée : <b>impossible de la payer deux
+        fois</b>, même par erreur de manipulation.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 13 -->
+  <section class="sec" style="--ac:#ffb066" data-title="Relances et états financiers">
+    <div class="sec-head"><span class="num">13</span>
+      <h2>Relances et états financiers<span class="sub">Insolvables, convocations, recouvrement</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <table>
+        <tr><th>État</th><th>À quoi il sert</th></tr>
+        <tr><td><b>Insolvables par classe</b></td><td>Savoir qui doit quoi, pour les relances et les renvois</td></tr>
+        <tr><td><b>Convocations des parents</b></td><td>Un courrier par élève concerné, deux par page à découper</td></tr>
+        <tr><td><b>Recouvrement par classe</b></td><td>Comparer l'attendu et l'encaissé, classe par classe</td></tr>
+        <tr><td><b>Journal de caisse</b></td><td>Tous les mouvements d'une période, avec le solde</td></tr>
+        <tr><td><b>Dépenses par catégorie</b></td><td>Voir où passe l'argent sur une période</td></tr>
+      </table>
+      <ol class="steps">
+        <li>Ouvrez la page <b>États financiers</b>.</li>
+        <li>Choisissez la classe, le frais concerné et le critère.</li>
+        <li>Cliquez sur <b>PDF</b> : le document s'ouvre dans un nouvel onglet.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        Pour les <b>convocations</b>, renseignez la date et l'heure du rendez-vous : elles seront
+        imprimées dans le texte de chaque courrier, avec le montant restant dû en toutes lettres.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 14 -->
+  <section class="sec" style="--ac:#5fd4c4" data-title="Statistiques">
+    <div class="sec-head"><span class="num">14</span>
+      <h2>Statistiques<span class="sub">Répartition par âge et par sexe</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <p>Le tableau croise les classes (en lignes) et les âges (en colonnes), chaque âge étant
+      détaillé en <b>F</b> (filles), <b>G</b> (garçons) et <b>T</b> (total), avec les totaux en
+      bout de ligne et en bas de tableau.</p>
+      <div class="box info"><span class="bi">i</span><div>
+        L'âge retenu est l'<b>âge au 31 décembre</b> de l'année de rentrée, comme le veut la
+        convention des statistiques scolaires officielles.
+      </div></div>
+      <p>Le tableau s'exporte en <b>PDF</b> (pour le dossier officiel) ou en <b>tableur</b> (pour
+      retravailler les chiffres).</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 15 -->
+  <section class="sec" style="--ac:#8ec5ff" data-title="Fin d'année : décisions">
+    <div class="sec-head"><span class="num">15</span>
+      <h2>Fin d'année : les décisions<span class="sub">Qui passe, qui redouble, qui part</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <ol class="steps">
+        <li>Ouvrez l'écran d'<b>assignation de fin d'année</b> et choisissez la classe.</li>
+        <li>Pour aller vite, utilisez la barre du haut : appliquez une décision à toute la classe.</li>
+        <li>Ajustez ensuite les cas particuliers, ligne par ligne.</li>
+        <li>Indiquez la classe d'accueil pour les promus et les redoublants.</li>
+        <li>Enregistrez.</li>
+      </ol>
+      <table>
+        <tr><th>Décision</th><th>Effet</th></tr>
+        <tr><td><span class="badge b-gr">Promu</span></td><td>Passe au niveau supérieur — indiquez la classe d'accueil</td></tr>
+        <tr><td><span class="badge b-gd">Redoublant</span></td><td>Reprend le même niveau — sa classe actuelle est proposée d'office</td></tr>
+        <tr><td><span class="badge b-bl">Transféré</span></td><td>Part dans un autre établissement</td></tr>
+        <tr><td><span class="badge b-bl">Sorti</span></td><td>Quitte l'établissement</td></tr>
+        <tr><td><span class="badge b-rd">Exclu</span></td><td>Quitte l'établissement sur décision disciplinaire</td></tr>
+      </table>
+      <div class="box info"><span class="bi">i</span><div>
+        Pour les décisions sortantes, la classe d'accueil est automatiquement désactivée : il n'y a
+        rien à renseigner.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 16 -->
+  <section class="sec" style="--ac:#ff8a95" data-title="Clôturer l'année">
+    <div class="sec-head"><span class="num">16</span>
+      <h2>Clôturer l'année<span class="sub">L'opération de fin d'année, étape par étape</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Opération réservée</b> au chef d'établissement et aux super administrateurs. Elle
+        supprime définitivement certaines données. Lisez cette section en entier avant de commencer.
+      </div></div>
+
+      <h3>Avant de commencer</h3>
+      <ul>
+        <li>Toutes les notes des six séquences doivent être saisies, dans toutes les matières.</li>
+        <li>Les décisions de fin d'année doivent être renseignées (ce n'est pas obligatoire, mais
+            fortement conseillé).</li>
+        <li>Vérifiez que les bulletins déjà édités correspondent bien aux notes définitives.</li>
+      </ul>
+
+      <h3>Les étapes</h3>
+      <ol class="steps">
+        <li><b>Vérification des notes.</b> Si des saisies manquent, la plateforme affiche
+            précisément lesquelles (classe, matière, séquence) pour que vous relanciez les
+            enseignants concernés. Tant qu'il en manque, la clôture est impossible.</li>
+        <li><b>Décisions.</b> Le nombre d'élèves sans décision ou sans classe d'accueil est
+            signalé, avec un lien pour compléter. Vous pouvez poursuivre malgré tout.</li>
+        <li><b>Choix des documents.</b> Le bulletin est conservé d'office ; cochez ce que vous
+            souhaitez garder en plus. <b>À partir de là, la saisie des notes est verrouillée.</b></li>
+        <li><b>Mise à jour des archives.</b> Seuls les documents jamais édités ou dont les notes
+            ont changé depuis sont refabriqués. Une barre indique l'avancement.</li>
+        <li><b>Vérification.</b> La plateforme contrôle que tout est bien archivé.</li>
+        <li><b>Consolidation.</b> Les moyennes et rangs sont inscrits définitivement dans le
+            parcours de chaque élève.</li>
+        <li><b>Nettoyage.</b> Suppression des données de l'année. Vous devez saisir l'année en
+            toutes lettres pour confirmer.</li>
+        <li><b>Ouverture de l'année suivante.</b> Les élèves sont basculés dans leur nouvelle
+            classe selon leurs décisions.</li>
+      </ol>
+
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Vous pouvez être interrompu sans risque.</b> Coupure d'électricité, connexion perdue,
+        onglet fermé : revenez sur la page, tout ce qui était fait est conservé et l'opération
+        reprend là où elle s'était arrêtée.
+      </div></div>
+
+      <h3>Ce qui est supprimé, ce qui est gardé</h3>
+      <table>
+        <tr><th>Supprimé</th><th>Conservé</th></tr>
+        <tr><td>
+          Notes détaillées des évaluations<br>
+          Données de discipline<br>
+          Attributions des matières aux enseignants<br>
+          Professeurs titulaires (à redéfinir)
+        </td><td>
+          <b>Tous les documents archivés</b><br>
+          Parcours des élèves (moyennes et rangs)<br>
+          Élèves et personnel<br>
+          <b>Toutes les données financières et de paie</b>
+        </td></tr>
+      </table>
+      <div class="box info"><span class="bi">i</span><div>
+        Les notes détaillées disparaissent, mais elles restent lisibles dans les <b>bulletins
+        archivés</b>. Et les moyennes et rangs, eux, restent consultables directement dans le
+        parcours de l'élève.
+      </div></div>
+      <p>À la fin, un <b>rapport de clôture</b> est produit et archivé : il indique qui a clôturé,
+      quand, ce qui a été archivé et ce qui a été supprimé.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 17 -->
+  <section class="sec" style="--ac:#f0c75e" data-title="Consulter les archives">
+    <div class="sec-head"><span class="num">17</span>
+      <h2>Consulter les archives<span class="sub">Retrouver un document des années plus tard</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <p>Les archives se parcourent comme des dossiers : <b>année</b>, puis <b>type de document</b>,
+      puis <b>classe</b>.</p>
+
+      <h3>Retrouver le bulletin d'un ancien élève</h3>
+      <ol class="steps">
+        <li>Ouvrez les <b>Archives</b> et utilisez la recherche.</li>
+        <li>Saisissez le nom de l'élève.</li>
+        <li>Cliquez sur le bulletin voulu : vous obtenez <b>ses pages uniquement</b>, pas celles de
+            toute sa classe.</li>
+      </ol>
+      <div class="box tip"><span class="bi">✓</span><div>
+        C'est la réponse la plus fréquente au guichet : un ancien élève revient chercher un
+        duplicata de bulletin plusieurs années après.
+      </div></div>
+
+      <h3>Faire de la place</h3>
+      <p>Les documents facultatifs (albums, listes, statistiques…) peuvent être supprimés, un par
+      un ou par dossier entier.</p>
+      <div class="box warn"><span class="bi">!</span><div>
+        <b>Les bulletins ne peuvent pas être supprimés.</b> Ils sont protégés : c'est le document
+        que l'on vous réclamera le plus longtemps après.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ 18 -->
+  <section class="sec" style="--ac:#5dd48e" data-title="Questions fréquentes">
+    <div class="sec-head"><span class="num">18</span>
+      <h2>Questions fréquentes<span class="sub">Les situations qui reviennent souvent</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Un bouton ne réagit pas</h3>
+      <p>Actualisez la page avec <kbd>Ctrl</kbd> + <kbd>F5</kbd>. Si le problème persiste, vérifiez
+      que les données nécessaires existent : par exemple, la grille tarifaire a besoin qu'au moins
+      un type de frais soit défini.</p>
+
+      <h3>Un élève n'apparaît pas dans une liste</h3>
+      <p>Vérifiez qu'il est bien affecté à une classe, et que vous consultez la bonne année.</p>
+
+      <h3>Une matière manque au bulletin</h3>
+      <p>Elle n'est probablement pas attribuée à un enseignant pour cette classe, ou aucune note
+      n'y a été saisie.</p>
+
+      <h3>Le certificat est refusé</h3>
+      <p>L'élève n'est pas à jour de ses frais. Le message affiche le détail du reste dû, frais par
+      frais.</p>
+
+      <h3>Le cachet laisse des traces sur les documents</h3>
+      <p>L'image du cachet comporte une bordure sombre. Reprenez la photo sans recadrage par
+      l'éditeur du téléphone, puis téléversez-la de nouveau.</p>
+
+      <h3>Je ne peux plus modifier une note</h3>
+      <p>La clôture de l'année a été lancée : la saisie est verrouillée pour éviter d'archiver des
+      documents périmés. Seul un super administrateur peut vous renseigner sur l'état de la clôture.</p>
+
+      <h3>J'ai payé un salaire en double</h3>
+      <p>C'est impossible : la plateforme refuse un second paiement pour le même mois et la même
+      personne. Si un montant est erroné, annulez l'opération depuis le journal de caisse en
+      indiquant le motif, puis ressaisissez-la.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ 19 -->
+  <section class="sec" style="--ac:#c99bf5" data-title="Bons réflexes">
+    <div class="sec-head"><span class="num">19</span>
+      <h2>Bons réflexes<span class="sub">Pour un usage serein toute l'année</span></h2>
+      <span class="chev"></span></div>
+    <div class="sec-body">
+      <h3>Au quotidien</h3>
+      <ul>
+        <li>Sauvegardez avant de quitter un écran de saisie.</li>
+        <li>Remettez systématiquement le reçu au parent : c'est sa preuve de paiement.</li>
+        <li>Enregistrez les dépenses au fil de l'eau plutôt qu'en fin de mois.</li>
+      </ul>
+
+      <h3>À chaque trimestre</h3>
+      <ul>
+        <li>Éditez les bulletins dès que toutes les notes sont saisies : ils sont alors archivés
+            automatiquement, ce qui allègera d'autant la clôture.</li>
+        <li>Vérifiez l'état de recouvrement pour anticiper les relances.</li>
+      </ul>
+
+      <h3>En fin d'année</h3>
+      <ul>
+        <li>Renseignez les décisions <b>avant</b> de lancer la clôture.</li>
+        <li>Éditez l'album photo de classe pendant que les photos sont à jour.</li>
+        <li>Lancez la clôture à un moment calme, avec une connexion stable.</li>
+      </ul>
+
+      <div class="box tip"><span class="bi">✓</span><div>
+        <b>Le meilleur conseil :</b> téléchargez vos documents au fil de l'année plutôt que tout à
+        la fin. Chaque document édité est conservé, et la clôture n'aura presque plus rien à
+        refabriquer.
+      </div></div>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="empty hidden" id="empty">Aucune section ne correspond à cette recherche.</div>
+</div>
+
+<footer>Oméga School Manager — Guide de l'utilisateur</footer>
+
+<script>
+(function () {
+  var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+  var input = document.getElementById('q');
+  var count = document.getElementById('count');
+  var empty = document.getElementById('empty');
+  var tiles = document.getElementById('tiles');
+
+  function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+
+  // ---------- préparation : id, texte indexé, sommaire en tuiles ----------
+  secs.forEach(function (s, i) {
+    s.id = 'sec' + (i + 1);
+    s._t = norm(s.textContent);
+    s._body = s.querySelector('.sec-body');
+    s._bodyHTML = s._body.innerHTML;
+
+    var tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.setProperty('--ac', getComputedStyle(s).getPropertyValue('--ac'));
+    tile.innerHTML = '<span class="dot">' + (i + 1) + '</span>' +
+                     '<span class="tt">' + s.dataset.title + '</span>';
+    tile.addEventListener('click', function () {
+      open(s, true);
+      s.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    tiles.appendChild(tile);
+  });
+
+  // ---------- ouverture / fermeture ----------
+  function open(s, force){ s.classList.toggle('open', force === undefined ? !s.classList.contains('open') : force); }
+  secs.forEach(function (s) {
+    s.querySelector('.sec-head').addEventListener('click', function(){ open(s); });
+  });
+  document.getElementById('openAll').addEventListener('click', function(){
+    secs.forEach(function(s){ if(!s.classList.contains('hidden')) open(s, true); });
+  });
+  document.getElementById('closeAll').addEventListener('click', function(){
+    secs.forEach(function(s){ open(s, false); });
+  });
+
+  // ---------- recherche : filtre, ouvre et surligne ----------
+  function highlight(sec, terms){
+    var html = sec._bodyHTML;
+    terms.forEach(function(t){
+      if(t.length < 2) return;
+      var re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi');
+      html = html.replace(/(>[^<]+)/g, function(chunk){ return chunk.replace(re,'<mark>$1</mark>'); });
+    });
+    sec._body.innerHTML = html;
+  }
+
+  input.addEventListener('input', function () {
+    var raw = input.value.trim();
+    if (!raw) {
+      secs.forEach(function(s){ s.classList.remove('hidden'); s._body.innerHTML = s._bodyHTML; open(s,false); });
+      empty.classList.add('hidden'); count.textContent = ''; tiles.classList.remove('hidden');
+      return;
+    }
+    tiles.classList.add('hidden');
+    var terms = norm(raw).split(/\s+/).filter(Boolean);
+    var found = 0;
+    secs.forEach(function (s) {
+      var ok = terms.every(function(t){ return s._t.indexOf(t) !== -1; });
+      s.classList.toggle('hidden', !ok);
+      s._body.innerHTML = s._bodyHTML;
+      if (ok) { found++; open(s, true); highlight(s, raw.split(/\s+/).filter(Boolean)); }
+      else open(s, false);
+    });
+    empty.classList.toggle('hidden', found > 0);
+    count.textContent = found + ' section' + (found > 1 ? 's' : '');
+  });
+
+  // ---------- confort ----------
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== input) { e.preventDefault(); input.focus(); }
+    if (e.key === 'Escape' && document.activeElement === input) { input.value=''; input.dispatchEvent(new Event('input')); input.blur(); }
+  });
+  // à l'impression : tout ouvrir
+  window.addEventListener('beforeprint', function(){ secs.forEach(function(s){ open(s,true); }); });
+  // ouvrir la section visée par une ancre
+  if (location.hash) { var t = document.querySelector(location.hash); if (t && t.classList.contains('sec')) open(t, true); }
+  // première section ouverte par défaut
+  if (secs.length) open(secs[0], true);
+})();
+</script>
+</body>
+</html>

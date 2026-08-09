@@ -1,4 +1,3 @@
-# Create your views here.
 import os
 from io import BytesIO
 
@@ -8,7 +7,7 @@ from fpdf.enums import TableHeadingsDisplay
 from authentification.models import TrancheHoraire, School, User
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
-    base_header, base_infos, delete_image, zip_pdfs_response, check_notes, add_fonts
+    base_header, base_infos, delete_image, zip_pdfs_response, check_notes, add_fonts, seuils_par_pk
 from django.db.models import Q, Prefetch
 from django.forms import model_to_dict
 from django.http import Http404, HttpResponse, JsonResponse
@@ -889,7 +888,8 @@ class StatsCheck(LoggedAdminView):
 
     def get(self, *args, **kwargs):
         check_form = CheckForm(context={'transcript': True, 'stats': True, 'all':True})
-        context = {"title": self.title, "check_form": check_form, "stats": False}
+        context = {"title": self.title, "check_form": check_form, "stats": False,
+                   'seuils': seuils_par_pk(ClassRoom.objects.all())}
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
@@ -904,7 +904,10 @@ class Stats(LoggedAdminView):
     def get(self, *args, **kwargs):
         classroom_id = 0 if self.request.GET['clsrm'] == "__all__" else int(self.request.GET['clsrm'])
         evl = int(self.request.GET["evl"])
-        seuil = float(self.request.GET["seuil"])
+        try:
+            seuil = float(self.request.GET.get("moyenne_min_admission"))
+        except:
+            seuil = None
         trim = ((("du premier trimestre", "du deuxième trimesre")[evl == 2], "du troisième trimeste")[evl == 3],
                 "annuelles")[evl == 4]
         evl_in = ((([1, 2], [3, 4])[evl == 2], [5, 6])[evl == 3], [1, 2, 3, 4, 5, 6])[evl == 4]
@@ -933,7 +936,8 @@ class Stats(LoggedAdminView):
             else:
                 rapport = None
                 status = True
-                data = classroom.marks_report_data(evl_in, for_stats=True, seuil=seuil)
+                classroom.update_seuil(seuil)
+                data = classroom.marks_report_data(evl_in, for_stats=True)
         # Statistiques Établissement
         else:
             classrooms = list(
@@ -943,14 +947,14 @@ class Stats(LoggedAdminView):
             rapport = checks_notes(classrooms, evl_in)
             status = False if rapport else True
             if status:
-                data = self.school_stats(classrooms, evl_in, seuil=seuil)
+                data = self.school_stats(classrooms, evl_in)
         context = {'status': status, 'rapport': rapport, 'trim': trim, 'data': data,
                    'global_stats': False if classroom_id else True}
         return render(self.request, self.template_name, context)
 
     @staticmethod
-    def school_stats(classrooms, evals, seuil=10.0, download=False):
-        result = [classroom.marks_report_data(evals, for_stats=True, for_global_stats=True, seuil=seuil) for classroom
+    def school_stats(classrooms, evals, download=False):
+        result = [classroom.marks_report_data(evals, for_stats=True, for_global_stats=True) for classroom
                   in classrooms]
         effectif = nbfe = nbfr = nbge = nbgr = nbe = nbr = total_moyenne = nbft = nbgt = 0
         if download:
@@ -1022,7 +1026,7 @@ class Stats(LoggedAdminView):
             data['label'] = "Global"
         return data
 
-    def build_pdf_or_reason(self, classroom, evl_in, seuil, annee, school, trimestre):
+    def build_pdf_or_reason(self, classroom, evl_in, annee, school, trimestre):
         if classroom is None:
             classrooms = list(
                 ClassRoom.objects.select_related('classe').
@@ -1031,22 +1035,22 @@ class Stats(LoggedAdminView):
             rapport = checks_notes(classrooms, evl_in)
             if rapport:
                 return rapport
-            data = self.school_stats(classrooms, evl_in, seuil=seuil, download=True)
+            data = self.school_stats(classrooms, evl_in, download=True)
         else:
             reason = check_notes(classroom, evl_in)
             if reason is not None:
                 return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
-            data = classroom.marks_report_data(evl_in, for_stats=True, seuil=seuil)
-        data['school_data'], data['trimestre'], data['annee'], data['seuil'] = (
-            school, trimestre, annee, seuil
+            data = classroom.marks_report_data(evl_in, for_stats=True)
+        data['school_data'], data['trimestre'], data['annee'] = (
+            school, trimestre, annee
         )
         return Statistiques(data=data)
 
     def post(self, *args, **kwargs):
+        from archives.models import ArchiveRef, DocType
         scope = self.request.POST.get('scope')  # 'pdf' ou 'zip'
         clsrm = self.request.POST.get('clsrm')  # '__all__' ou 'classroom.id'
         evl = int(self.request.POST['evl'])
-        seuil = float(self.request.POST.get('seuil', 10))
         annee = school_year()
         trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
                       "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUELLES")[evl == 4]
@@ -1061,7 +1065,11 @@ class Stats(LoggedAdminView):
             )
             classrooms.insert(0, None)
             def build(clsrm):
-                return self.build_pdf_or_reason(clsrm, evl_in, seuil, annee, school, trimestre)
+                return self.build_pdf_or_reason(clsrm, evl_in, annee, school, trimestre)
+
+            def archive_for(clsrm):
+                return ArchiveRef(self.request.user.school, DocType.STATS_REUSSITE, clsrm, user=self.request.user,
+                                 term_index=evl if evl != 4 else 0)
 
             def namer(clsrm):
                 return f"{'' if clsrm is None else clsrm.code + ' '}Statistiques {'Globales' if clsrm is None else ''} {trimestre.title()}.pdf"
@@ -1071,6 +1079,7 @@ class Stats(LoggedAdminView):
                 classrooms=classrooms,
                 zip_filename=f"Statistques {trimestre.title()} - Toutes les classes.zip",
                 per_file_namer=namer,
+                archive_for=archive_for,
             )
 
         elif scope == 'pdf':
@@ -1085,10 +1094,15 @@ class Stats(LoggedAdminView):
                     get(pk=int(clsrm))
                 )
             filename = f"Statistiques {'Globales' if classroom is None else ''} {trimestre.title()}{'' if classroom is None else ' ' + classroom.code}.pdf"
-            result = self.build_pdf_or_reason(classroom, evl_in, seuil, annee, school, trimestre)
+            archive = ArchiveRef(self.request.user.school, DocType.STATS_REUSSITE, classroom, user=self.request.user,
+                                 term_index=evl if evl != 4 else 0)
+            hit = archive.response(filename)
+            if hit:
+                return hit
+            result = self.build_pdf_or_reason(classroom, evl_in, annee, school, trimestre)
             if isinstance(result, str):
                 return JsonResponse({'success': False, 'message': result})
-            return pdf_response(result, filename)
+            return pdf_response(result, filename, archive=archive)
         else:
             return JsonResponse({'success': False, 'message': "Action inconnue."})
 
@@ -1114,6 +1128,7 @@ class ClassAlbum(LoggedAdminView):
         return ClassPhotoAlbum(data=data)
 
     def post(self, *args, **kwargs):
+        from archives.models import DocType, ArchiveRef
         classrooms = (
             ClassRoom.objects.prefetch_related(
                 Prefetch(
@@ -1140,6 +1155,9 @@ class ClassAlbum(LoggedAdminView):
             def build(clsrm):
                 return self.build_pdf_or_reason(clsrm, annee, school_data)
 
+            def archive_for(clsrm):
+                return ArchiveRef(self.request.user.school, DocType.ALBUM, clsrm, user=self.request.user)
+
             def namer(clsrm):
                 return f"{clsrm.code} {filename}.pdf"
 
@@ -1148,14 +1166,19 @@ class ClassAlbum(LoggedAdminView):
                 classrooms=classrooms,
                 zip_filename=f"Albums Photos - Toutes les classes.zip",
                 per_file_namer=namer,
+                archive_for=archive_for,
             )
 
         # -------- Cas "une seule classe" --------
         classroom = classrooms.get(pk=int(selected))
+        archive = ArchiveRef(self.request.user.school, DocType.ALBUM, classroom, user=self.request.user)
+        hit = archive.response(f"{filename} {classroom.code}.pdf")
+        if hit:
+            return hit
         result = self.build_pdf_or_reason(classroom, annee, school_data)
         if isinstance(result, str):
             return JsonResponse({'success': False, 'message': result})
-        return pdf_response(result, f"{filename} {classroom.code}.pdf")
+        return pdf_response(result, f"{filename} {classroom.code}.pdf", archive=archive)
 
 
 """
@@ -1821,7 +1844,6 @@ class ClassroomsLists(LoggedAdminView):
 
         filename = f"Liste des élèves {classroom.code}.pdf"
         cls_list = ClassroomList(classroom=classroom, annee=annee, school=school)
-        cls_list.set_title(filename)
         return cls_list
 
     def post(self, *args, **kwargs):
@@ -1832,6 +1854,10 @@ class ClassroomsLists(LoggedAdminView):
         def build(clsrm):
             return self.build_pdf_or_reason(clsrm, annee, school)
 
+        def archive_for(clsrm):
+            from archives.models import DocType, ArchiveRef
+            return ArchiveRef(self.request.user.school, DocType.CLASS_LIST, clsrm, user=self.request.user)
+
         def namer(clsrm):
             return f"{clsrm.code} Liste des élèves.pdf"
 
@@ -1840,24 +1866,24 @@ class ClassroomsLists(LoggedAdminView):
             classrooms=classrooms,
             zip_filename=f"Liste des élèves - Toutes les classes.zip",
             per_file_namer=namer,
+            archive_for=archive_for,
         )
 
 
 @logged_admin_view
 def classroom_list(request, id):
+    from archives.models import DocType, ArchiveRef
     annee = school_year()
     classroom = (
         ClassRoom.objects.prefetch_related('students').
         get(pk=id))
     filename = f"Liste des élèves {classroom.code}.pdf"
+    archive = ArchiveRef(request.user.school, DocType.CLASS_LIST, classroom, user=request.user)
+    hit = archive.response(filename)
+    if hit:
+        return hit
     cls_list = ClassroomList(classroom=classroom, annee=annee, school=request.user.school)
-    cls_list.set_title(filename)
-    buffer = BytesIO()
-    cls_list.output(buffer)
-    buffer.seek(0)
-    response = HttpResponse(buffer, content_type="application/pdf")
-    response['Content-Disposition'] = f"attachment; filename={filename}"
-    return response
+    return pdf_response(cls_list, filename, archive)
 
 
 class ClassroomList(FPDF):
@@ -1873,6 +1899,7 @@ class ClassroomList(FPDF):
         self.annee = kwargs['annee']
         self.classroom = kwargs['classroom']
         self.school = kwargs['school']
+        self.set_title(f"Liste des élèves {self.classroom.code}")
         self.add_page()
         base_header(self)
         students = self.classroom.students

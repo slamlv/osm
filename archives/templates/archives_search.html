@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .fin-card { background:linear-gradient(145deg,#1b3a57,#172e45); border:1px solid rgba(255,255,255,0.08); border-radius:16px; }
+  .fin-card input { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
+  .fin-card input:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
+  .doc-row { display:flex; align-items:center; gap:12px; padding:9px 13px; border-radius:12px; text-decoration:none;
+             background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); margin-bottom:7px; }
+  .doc-row:hover { background:rgba(255,255,255,0.09); }
+  .doc-row .nm { color:#fff; font-size:0.86rem; font-weight:600; }
+  .doc-row .meta { color:rgba(255,255,255,0.4); font-size:0.74rem; }
+</style>
+
+<div class="container py-3" style="max-width:820px;">
+  <h6 class="text-white fw-bold mb-3"><i class="bi bi-search me-2 text-info"></i>Rechercher dans les archives</h6>
+
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <form method="get" class="d-flex gap-2">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Nom de l'élève..." autofocus>
+      <button class="btn btn-info fw-semibold"><i class="bi bi-search"></i></button>
+    </form>
+    <p class="text-white-50 small mt-2 mb-0">Retrouve les bulletins archivés d'un ancien élève,
+      toutes années confondues. Le document délivré ne contient <strong>que ses pages</strong>.</p>
+  </div>
+
+  {% for r in results %}
+  <div class="fin-card p-3 p-sm-4 mb-3">
+    <p class="text-white fw-bold mb-1">{{ r.student }}</p>
+    <p class="text-white-50 small mb-3">{{ r.student.unique_id|default:"—" }}</p>
+    {% for d in r.docs %}
+    <a class="doc-row" href="{% url 'student_bulletin' d.id r.student.id %}">
+      <i class="bi bi-file-earmark-pdf text-info fs-5"></i>
+      <span class="flex-grow-1">
+        <span class="nm d-block">{%if d.doc_type == "BULLETIN" %} Bulletin {% else %} Bulletin (avec compétences) {% endif %}
+            {{ d.term_label }} - {{ d.school_year }}</span>
+        <span class="meta">{{ d.classroom_label }}</span>
+      </span>
+      <i class="bi bi-download text-info"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% empty %}
+    {% if q %}<p class="text-white-50 small">Aucun résultat pour « {{ q }} ».</p>{% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
