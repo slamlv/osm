@@ -209,18 +209,6 @@ class ClassRoom(models.Model):
 
         return max([d for d in dates if d], default=None)
 
-    def touch_notes(self, term_index=None, sequence=None):
-        """Marque les notes d'un trimestre comme modifiées MAINTENANT.
-        Accepte soit le trimestre(1 - 3), soit la séquence(1 - 6)."""
-        from django.utils import timezone
-        if term_index is None and sequence:
-            term_index = (int(sequence) + 1) // 2  # 1,2->1 3,4->2 5,6->3
-        if term_index not in (1, 2, 3):
-            return
-        field = f"notes_updated_t{term_index}"
-        setattr(self, field, timezone.now())
-        self.save(update_fields=[field])
-
     def classroom_defaulters(self, school_year, fee_type=None, on_installments=False):
         """Liste des élèves de la classe n'ayant pas soldé.
           fee_type=None        -> tous les frais confondus
@@ -492,6 +480,23 @@ class ClassRoom(models.Model):
         }
         return data
 
+    def update_seuil(self, seuil):
+        from django.db import connection, transaction
+        try:
+            if seuil and self.moyenne_min_admission != seuil:
+                self.moyenne_min_admission = seuil
+                self.save(update_fields=["moyenne_min_admission"])
+
+                # ▸ Préchauffage des bulletins en tâche de fond, déclenché seulement après que
+                #   CETTE transaction soit validée (jamais avant, jamais si elle est annulée).
+                from archives.tasks import maybe_prewarm_bulletin
+                schema_name = connection.schema_name  # figé MAINTENANT
+                pk, idx = self.pk, None  # évite toute ambiguïté de closure
+                transaction.on_commit(
+                    lambda: maybe_prewarm_bulletin.delay(schema_name, pk, idx))
+        except Exception:
+            pass
+
     def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False):
         from note.models import Note
         from osm.utils import formated_float
@@ -580,7 +585,7 @@ class ClassRoom(models.Model):
             if for_stats:
                 moyenne_generale, taux, min_max, nb, nb_admis, result['nbfe'], result['nbfr'], result['nbge'],\
                     result['nbgr'], result['pcf'], result['pcg'], result['min_std'], result['max_std'], result['min'],\
-                    result['max'] = self.set_rang(students_data, for_stats=True, seuil=seuil)
+                    result['max'] = self.set_rang(students_data, for_stats=True)
                 result['ppf'], result['ppg'], result['ppt'], result['titulaire'] = (
                     formated_float((result['nbfe'] / result['filles']) * 100) if result['filles'] else 0,
                     formated_float((result['nbge'] / result['garcons']) * 100) if result['garcons'] else 0,
@@ -590,9 +595,9 @@ class ClassRoom(models.Model):
             elif pv:
                 if pv_ordered:
                     students_data, moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data,
-                                                                                                 pv_orderd=True, seuil=seuil)
+                                                                                                 pv_orderd=True)
                 else:
-                    moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data, seuil=seuil)
+                    moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data)
             result['moyenne_generale'], result['taux'], result['min_max'] = moyenne_generale, taux, min_max
             result['nbe'], result['nbr'] = nb, nb_admis
         if not for_stats:
@@ -601,6 +606,7 @@ class ClassRoom(models.Model):
             result['matieres_data'] = matieres_data
             if not for_stats:
                 result['max_words'] = max_words
+        result['seuil'] = self.moyenne_min_admission
         return result
 
     def set_rang(self, datas, cle_moyenne="moyenne", cle_rang="rang", for_stats=False, pv_orderd=False):
@@ -632,8 +638,11 @@ class ClassRoom(models.Model):
             else:
                 nb_ex_aequo += 1
                 if nb_ex_aequo == 2:
-                    ordered_data[i - 1][cle_rang] = f"{rang}ᵉ ex."
+                    ordered_data[i - 1][cle_rang] = ordered_data[i - 1][cle_rang] + " ex."
                 rang_str = f"{rang}ᵉ ex."
+            if rang == 1:
+                sexe = data['sexe'] if 'sexe' in data else data['student']['sexe']
+                rang_str = rang_str.replace("ᵉ", "ᵉʳ") if sexe == "M" else rang_str.replace("ᵉ", "ʳᵉ")
             data[cle_rang] = rang_str
             if cle_moyenne == "moyenne":
                 total_moyennes += moy
@@ -669,11 +678,9 @@ class ClassRoom(models.Model):
                 return ordered_data, moyenne_generale, taux, min_max, nb, nb_admis
             return moyenne_generale, taux, min_max, nb, nb_admis
 
-    def reportcard_data(self, evals, with_competences=True, for_livret=False):
+    def reportcard_data(self, evals, with_competences=True, for_livret=False, year=None, freeze=True):
         from note.models import Note
-        from osm.utils import formated_float
 
-        seuil = self.moyenne_min_admission
         notes = (
             Note.objects.select_related('enseignement__matiere__sujet', 'enseignement__enseignant').
             filter(eleve__classe_id=self.pk, eval__in=evals)
@@ -724,10 +731,18 @@ class ClassRoom(models.Model):
             matieres_data.append(data_matiere)
 
         if len(evals) == 6:
-            self.set_rang(students_data, "moyenne1", "rang1", seuil=seuil)
-            self.set_rang(students_data, "moyenne2", "rang2", seuil=seuil)
-            self.set_rang(students_data, "moyenne3", "rang3", seuil=seuil)
-        moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data, seuil=seuil)
+            self.set_rang(students_data, "moyenne1", "rang1")
+            self.set_rang(students_data, "moyenne2", "rang2")
+            self.set_rang(students_data, "moyenne3", "rang3")
+        moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data)
+
+        # ------------------------------------------------------------------
+        #  Figer les résultats dans le parcours de l'élève
+        #  Les valeurs sont celles qui viennent d'être calculées : on ne
+        #  recalcule rien, on enregistre.
+        # ------------------------------------------------------------------
+        if freeze:
+            freeze_enrollment_results(evals, students_data, year)
 
         return {
             'classroom_data': self.classroom_to_dict(),
@@ -739,8 +754,122 @@ class ClassRoom(models.Model):
             'nb_admis': nb_admis,
             'min-max': min_max,
             'with_competences': with_competences,
-            'groupes': groupes
+            'groupes': groupes,
+            'seuil': self.moyenne_min_admission
         }
+
+    #  Le schéma courant est capturé AVANT on_commit(), dans une variable locale :
+    #  on_commit() peut s'exécuter après que le thread ait déjà changé de contexte
+    #  (requête suivante), donc lire connection.schema_name AU MOMENT du commit
+    #  serait risqué. On le fige à l'appel.
+    # -----------------------------------------------------------------------------
+    def touch_notes(self, term_index=None, sequence=None):
+        from django.db import connection, transaction
+        from django.utils import timezone
+
+        if term_index is None and sequence:
+            term_index = (int(sequence) + 1) // 2
+        if term_index not in (1, 2, 3):
+            return
+
+        field = f"notes_updated_t{term_index}"
+        setattr(self, field, timezone.now())
+        self.save(update_fields=[field])
+
+        # ▸ Préchauffage en tâche de fond, déclenché seulement après que CETTE transaction
+        #   soit validée (jamais avant, jamais si elle est annulée).
+        from archives.tasks import maybe_prewarm_bulletin
+        schema_name = connection.schema_name          # figé MAINTENANT
+        pk, idx = self.pk, term_index                  # évite toute ambiguïté de closure
+        transaction.on_commit(
+            lambda: maybe_prewarm_bulletin.delay(schema_name, pk, idx))
+
+
+"""Écriture des résultats consolidés dans le parcours de l'élève."""
+#: correspondance term_index -> (champ moyenne, champ rang)
+_FIELDS = {
+    (1, 2, 3, 4, 5, 6): ("moyenne_t1", "rang_t1", "moyenne_t2", "rang_t2", "moyenne_t3", "rang_t3",
+                         "moyenne_annuelle", "rang_annuel", "discipline_t1", "discipline_t2",
+                         "discipline_t3", "discipline"),
+    (1, 2):             ("moyenne_t1", "rang_t1", "discipline_t1"),
+    (3, 4):             ("moyenne_t2", "rang_t2", "discipline_t2"),
+    (5, 6):             ("moyenne_t3", "rang_t3", "discipline_t3"),
+}
+
+
+def freeze_enrollment_results(evals, students_data, year):
+    """Fige moyennes et rangs déjà calculés dans StudentEnrollment.
+
+    evals               : le même paramètre passé à reportcard_data de ClassRoom
+    students_data       : itérable de données d'élèves — AUCUN recalcul ici
+
+    Coût : une lecture filtrée + un bulk_update limité aux lignes réellement
+    modifiées. Sur une classe déjà figée, zéro écriture.
+    """
+    from student.models import StudentEnrollment, EnrollmentStatus
+    from django.db import connection
+    from authentification.models import School
+
+    if evals != (1, 2, 3, 4, 5, 6):
+        wanted = {student['student']['pk']: (student["moyenne"], student["rang"],
+                                             student["discipline"]) for student in students_data}
+    else:
+        wanted = {student['student']['pk']: (student["moyenne1"], student["rang1"], student["moyenne2"], student["rang2"],
+                                             student["moyenne3"], student["rang3"], student["moyenne"], student["rang"],
+                                             student["discipline_t1"], student["discipline_t2"], student["discipline_t3"],
+                                             student["discipline"]) for student in students_data}
+    if not wanted:
+        return 0
+
+    fields = _FIELDS[evals]
+
+    changed = []
+    qs = (StudentEnrollment.objects
+          .filter(school_year__libelle=year, student_id__in=wanted.keys())
+          .only("id", "student_id", *fields))          # colonnes utiles
+    for enr in qs:
+        if evals != (1, 2, 3, 4, 5, 6):
+            moy, rang, dst = wanted[enr.student_id]
+            f_moy, f_rang, f_dst = fields
+            if dst['excl_def']:
+                enr.decision = EnrollmentStatus.EXCLU
+                enr.save(update_fields=["decision"])
+            if getattr(enr, f_moy) != moy or getattr(enr, f_rang) != rang or getattr(enr, f_dst) != dst:
+                setattr(enr, f_moy, moy)
+                setattr(enr, f_rang, rang)
+                setattr(enr, f_dst, dst)
+                changed.append(enr)
+        else:
+            moy1, rang1, moy2, rang2, moy3, rang3, moy, rang, dst1, dst2, dst3, dst = wanted[enr.student_id]
+            f_moy1, f_rang1, f_moy2, f_rang2, f_moy3, f_rang3, f_moy, f_rang, f_dst1, f_dst2, f_dst3, f_dst = fields
+            if dst1['excl_def'] or dst2['excl_def'] or dst3['excl_def'] or dst['excl_def']:
+                enr.decision = EnrollmentStatus.EXCLU
+                enr.save(update_fields=["decision"])
+            elif moy >= 10:
+                school = School.objects.filter(schema_name=connection.schema_name).first()
+                if ((school.type_ets in (School.Type.GSS, School.Type.GBSS, School.Type.GTSS) and enr.classroom.classe.niveau in ("Troisième", "4ème Année", "From Four"))
+                    or (school.type_ets in (School.Type.GHS, School.Type.GBHS, School.Type.COL, School.Type.GTHS) and enr.classroom.classe.niveau in ("Terminale", "Upper Sixth"))):
+                    enr.decision = EnrollmentStatus.SORTI
+                else:
+                    enr.decision = EnrollmentStatus.PROMU
+                enr.save(update_fields=["decision"])
+            if (getattr(enr, f_moy1) != moy1 or getattr(enr, f_rang1) != rang1
+                or getattr(enr, f_moy2) != moy2 or getattr(enr, f_rang2) != rang2
+                or getattr(enr, f_moy3) != moy3 or getattr(enr, f_rang3) != rang3
+                or getattr(enr, f_moy) != moy or getattr(enr, f_rang) != rang
+                or getattr(enr, f_dst1) != dst1 or getattr(enr, f_dst2) != dst2
+                or getattr(enr, f_dst3) != dst3 or getattr(enr, f_dst) != dst):
+                setattr(enr, f_moy1, moy1); setattr(enr, f_rang1, rang1)
+                setattr(enr, f_moy2, moy2); setattr(enr, f_rang2, rang2)
+                setattr(enr, f_moy3, moy3); setattr(enr, f_rang3, rang3)
+                setattr(enr, f_moy, moy); setattr(enr, f_rang, rang)
+                setattr(enr, f_dst1, dst1); setattr(enr, f_dst2, dst2)
+                setattr(enr, f_dst3, dst3); setattr(enr, f_dst, dst)
+                changed.append(enr)
+
+    if changed:
+        StudentEnrollment.objects.bulk_update(changed, fields)
+    return len(changed)
 
 
 class EnseignementsQuerySet(models.QuerySet):
