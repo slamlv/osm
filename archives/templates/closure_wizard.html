@@ -274,6 +274,7 @@
         {% for row in cleanup_rows %}
         <li>{{ row.label }} : <strong>{{ row.count|default:"?" }}</strong> enregistrement(s)</li>
         {% endfor %}
+        <li>Données de progressions et de programmations des cours</li>
       </ul>
     </div>
     <form method="post" action="{% url 'closure_cleanup' %}">
