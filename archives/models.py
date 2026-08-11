@@ -467,8 +467,6 @@ class ArchiveRef:
     # ------------------------------------------------------------------
     def cached_bytes(self):
         """Contenu de l'archive si elle existe ET n'est pas périmée, sinon None."""
-        import requests
-
         if not self.enabled:
             return None
         from .services import find_archive
@@ -477,16 +475,10 @@ class ArchiveRef:
         if doc is None or doc.is_stale or not doc.file:
             return None
         try:
-            # Offline
-            if hasattr(doc.file.storage, 'path'):
-                doc.file.open("rb")
-                data = doc.file.read()
-                doc.file.close()
-                return data or None
-            # En prod (Cloudinary)
-            reponse = requests.get(doc.file.url, timeout=10)
-            if reponse.status_code == 200:
-                return reponse.content
+            doc.file.open("rb")
+            data = doc.file.read()
+            doc.file.close()
+            return data or None
         except Exception:
             return None          # fichier illisible : on régénérera
 

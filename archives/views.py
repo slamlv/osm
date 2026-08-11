@@ -265,9 +265,6 @@ def archive_delete(request, pk):
 def archive_download(request, pk):
     """Extrait les seules pages de l'élève : il reçoit SON bulletin."""
     from urllib.parse import quote
-    from io import BytesIO
-    import requests
-
     doc = get_object_or_404(ArchivedDocument, pk=pk)
     label = DocType(doc.doc_type).label
     trim = (
@@ -277,13 +274,7 @@ def archive_download(request, pk):
     filename = f"{label}{f' {cls} ' if cls else ' '}{f' {trim} ' if trim else ' '}{doc.school_year}.pdf"
     filename_ascii = filename.encode('ascii', 'ignore').decode('ascii')
     quoted = quote(filename)
-    if hasattr(doc.file.storage, 'path'):
-        file_obj = doc.file.open("rb")
-    else:
-        res = requests.get(doc.file.url, timeout=10)
-        res.raise_for_status()
-        file_obj = BytesIO(res.content)
-    resp = FileResponse(file_obj, as_attachment=True, filename=filename_ascii)
+    resp = FileResponse(doc.file.open('rb'), as_attachment=True, filename=filename_ascii)
     resp['Content-Disposition'] = (
         f"attachment; filename='{filename_ascii}'; filename*=UTF-8''{quoted}"
     )
@@ -336,24 +327,15 @@ def student_bulletin(request, doc_id, student_id):
         raise Http404("Bulletin introuvable dans cette archive.")
     from io import BytesIO
     from pypdf import PdfReader, PdfWriter
-    import requests
-
-    is_local = hasattr(doc.file.storage, 'path')
-    if is_local:
-        file_obj = doc.file.open("rb")
-    else:
-        res = requests.get(doc.file.url, timeout=10)
-        res.raise_for_status()
-        file_obj = BytesIO(res.content)
-    reader = PdfReader(file_obj)
+    doc.file.open("rb")
+    reader = PdfReader(doc.file)
     writer = PdfWriter()
     for p in range(pages[0] - 1, min(pages[1], len(reader.pages))):
         writer.add_page(reader.pages[p])
     buf = BytesIO()
     writer.write(buf)
+    doc.file.close()
     buf.seek(0)
-    if is_local:
-        doc.file.close()
 
     student = Student.objects.get(id=student_id)
     trim = ((("Trimestre 1", "Trimestre 2")[doc.term_index == 2], "Trimestre 3")[doc.term_index == 3], "Annuel")[doc.term_index == 0]
