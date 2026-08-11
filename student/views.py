@@ -1075,9 +1075,12 @@ class StudentEdit(LoggedAdminView):
             if student.classe and (student.classe.classe.__str__() != default_classroom):
                 notes = Note.objects.filter(eleve=student)
                 notes.delete()
+            classroom = student.classe
             student = model_to_dict(student)
             if student != default:
                 message(self.request, "Élève modifié avec succès.")
+                if classroom:
+                    classroom.touch_notes()
             else:
                 message(self.request, "Aucune modification effectuée.", msg_type="warning")
             return redirect("student-details", id=default_pk)

@@ -18,7 +18,7 @@ Garde-fous importants :
   - get_or_create rend le signal idempotent (pas de doublon).
 
 Interaction avec la CLÔTURE :
-  La bascule de fin d'année (changement de Student.classe pour les promus et éventuellement redoublantq)
+  La bascule de fin d'année (changement de Student.classe pour les promus et éventuellement redoublants)
   se fait en bulk_update, qui NE déclenche PAS les signaux. Couplé au
   garde-fou "decision == En cours", l'historique est doublement protégé.
 

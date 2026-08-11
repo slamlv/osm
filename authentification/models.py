@@ -155,7 +155,6 @@ class School(TenantMixin):
             year_closure = YearClosure.objects.filter(school_year=self.school_year.libelle).first()
             if not year_closure or (year_closure and year_closure.status != YearClosure.Status.CLOSED):
                 return self.school_year.libelle
-            return self.school_year
         return global_year()
 
     def save(self, *args, **kwargs):

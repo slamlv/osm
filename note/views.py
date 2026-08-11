@@ -980,18 +980,29 @@ class ExamReport(LoggedAdminView):
         if reason is not None:
             return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
 
+        if evl_in == (1, 2, 3, 4, 5, 6):
+            champs_students = 'students__enrollments'
+            annual = True
+            mentions = True
+            year = school.establishment_year
+        else:
+            annual = False
+            mentions = False
+            year = None
+            champs_students = 'students'
         classroom = (
             ClassRoom.objects.select_related('classe')
-            .prefetch_related('students', 'matieres')
+            .prefetch_related(champs_students, 'matieres')
             .get(pk=classroom.pk)
         )
         filename = f"Procès Verbal {trimestre.title()} {classroom.code}.pdf"
-        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered)
+        data = classroom.marks_report_data(evl_in, pv=True, pv_ordered=pv_ordered, annual=annual, mentions=mentions,
+                                           year=year)
         data['school_data'] = school
-        data['trimestre'], data['annee'], data['filename'] = (
-            trimestre, annee, filename
+        data['trimestre'], data['annee'], data['filename'], data['annual'] = (
+            trimestre, annee, filename, annual
         )
-        return ExamRecord(data=data)
+        return ExamRecord('P' if not annual else 'L', data=data)
 
     def post(self, *args, **kwargs):
         from archives.models import ArchiveRef, DocType
@@ -1036,7 +1047,7 @@ class ExamReport(LoggedAdminView):
             )
 
         # -------- Cas "une seule classe" --------
-        classroom = ClassRoom.objects.prefetch_related('matieres').get(pk=int(selected))
+        classroom = ClassRoom.objects.prefetch_related('matieres', 'students').get(pk=int(selected))
         classroom.update_seuil(seuil)
         archive = ArchiveRef(self.request.user.school, DocType.PV, classroom, user=self.request.user,
                              term_index=evl if evl != 4 else 0)
@@ -1111,6 +1122,7 @@ class TableauHonneur(LoggedAdminView):
 
 GREY1 = (232, 236, 242)
 GREY = (242, 240, 236)
+GREY_FOOTER   = (122, 134, 148)
 
 
 class TableaudHonneur(FPDF):
@@ -1161,7 +1173,7 @@ class TableaudHonneur(FPDF):
                 self.set_font('inter', '', 9)
                 self.ln()
                 texte = (f"\n      L'élève **{student['nom']}** de la classe de **{self.data['classe']}** a obtenu(e) "
-                         f"**{student['moyenne']}** comme moyenne {self.data['trimestre']} de l'année scolaire "
+                         f"**{student['moyenne']}** comme moyenne {self.data['trimestre'].lower()} de l'année scolaire "
                          f"**{self.data['annee']}**, en étant classé **{student['rang']}**. Ce résultat témoigne d'un travail "
                          f"remarquable et d'un engagement vers la quête de l'excellence scolaire. En foi de quoi le présent "
                          f"**TABLEAU D'HONNEUR** lui est remis pour servir et valoir ce que de droit.")
@@ -1189,8 +1201,8 @@ class TableaudHonneur(FPDF):
 
 class ExamRecord(FPDF):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__()
+    def __init__(self, orientation, *args, **kwargs):
+        super().__init__(orientation=orientation)
         self.add_font('inter', '', settings.INTER_REGULAR)
         self.add_font('inter', 'I', settings.INTER_ITALIC)
         self.add_font('inter', 'B', settings.INTER_BOLD)
@@ -1199,13 +1211,12 @@ class ExamRecord(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.data = kwargs.pop('data')
         self.school = self.data['school_data']
         self.add_page()
-        base_header(self)
+        base_header(self, mode=orientation)
         base_infos(self, f"PROCÈS VERBAL {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
-                   self.data['garcons'], self.data['redoublants'], self.data['label'])
+                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode=orientation)
         self.students_results()
 
     def students_results(self):
@@ -1213,10 +1224,10 @@ class ExamRecord(FPDF):
         self.set_font_size(8)
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
-        if self.data['trimestre'] == "ANNUEL":
-            col_widths = [10, 21, 70, 11, 11, 13, 13, 13, 13, 13, 10]
+        if self.data['annual']:
+            col_widths = (9, 20, 70, 10, 10, 13, 13, 13, 13, 11, 36, 36, 21)
             header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
-                      "DEC"]
+                      "Mérite", "Conduite", "Décision"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
@@ -1227,43 +1238,90 @@ class ExamRecord(FPDF):
             th.cell(f"**{head}**")
 
         self.set_fill_color(0)
-        students = self.data['students_data']
-        for i, student in enumerate(students):
-            row = table.row()
-            row.cell(f"{i + 1}")
-            row.cell(f"{student['student']['matricule']}")
-            row.cell(student['student']['nom'], align='L')
-            row.cell(student['student']['sexe'])
-            row.cell(student['student']['statut'])
-            if self.data['trimestre'] != "ANNUEL":
+        if self.data['annual']:
+            w = 285
+            students = self.data['students_data']
+            divergents = 0
+            for i, student in enumerate(students):
+                sexe = student['student']['sexe']
+                row = table.row()
+                row.cell(f"{i + 1}")
+                row.cell(f"{student['student']['matricule']}")
+                row.cell(student['student']['nom'], align='L')
+                row.cell(sexe)
+                row.cell(student['student']['statut'])
+                row.cell(f"{student['moy1']}" if student['moy1'] else "/")
+                row.cell(f"{student['moy2']}" if student['moy2'] else "/")
+                row.cell(f"{student['moy3']}" if student['moy3'] else "/")
+                row.cell(f"**{student['moyenne']}**" if student['moyenne'] else "**/**")
+                row.cell(f"**{student['rang']}**")
+                row.cell(student['merite'], align="L")
+                row.cell(student['conduite'], align="L")
+                self.set_font("inter", 'B', 8)
+                if student['divergente']:
+                    divergents += 1
+                    plus = 1 if student['decision'] == "Promu" else -1
+                    self.data['nbr'] += plus
+                    if sexe == 'F':
+                        self.data['nbfr'] += plus
+                    else:
+                        self.data['nbgr'] += plus
+                    self.set_text_color(10, 61, 98)
+                    row.cell(f"{'Redouble' if student['decision'] == 'Redoublant' else student['decision']}*", align="L")
+                    self.set_text_color(0)
+                else:
+                    row.cell(f"{'Redouble' if student['decision'] == 'Redoublant' else student['decision']}", align="L")
+                self.set_font("inter", '', 8)
+            if divergents:
+                self.data['taux'] = formated_float((self.data['nbr'] / self.data['effectif']) * 100)
+                self.data['pcf'] = formated_float((self.data['nbfr'] / self.data['filles']) * 100)
+                self.data['pcg'] = formated_float((self.data['nbgr'] / self.data['garcons']) * 100)
+            table.render()
+        else:
+            w = 198
+            students = self.data['students_data']
+            for i, student in enumerate(students):
+                row = table.row()
+                row.cell(f"{i + 1}")
+                row.cell(f"{student['student']['matricule']}")
+                row.cell(student['student']['nom'], align='L')
+                row.cell(student['student']['sexe'])
+                row.cell(student['student']['statut'])
                 row.cell(f"{student['moyenne']}" if student['moyenne'] else "/")
                 row.cell(student['rang'])
                 row.cell(student['cote'])
                 row.cell(student['appr'], align='L')
-            else:
-                row.cell(f"{student['moy1']}" if student['moy1'] else "/")
-                row.cell(f"{student['moy2']}" if student['moy2'] else "/")
-                row.cell(f"{student['moy3']}" if student['moy3'] else "/")
-                row.cell(f"{student['moyenne']}" if student['moyenne'] else "/")
-                row.cell(student['rang'])
-                decision = (("ADM", "RED")[student['moyenne'] < self.data['seuil']], "/")[student['moyenne'] == 0]
-                row.cell(decision)
-        table.render()
+            table.render()
         self.ln(2)
-        self.cell(150, 5, f"Nombre d'élèves évalués : **{self.data['nbe']} / {self.data['effectif']}**", markdown=True)
-        self.cell(0, 5, f"Moyenne générale : **{self.data['moyenne_generale']}**", markdown=True)
+        self.cell(w / 2, 5, f"Taux de participation : **{self.data['ppt']}% ({self.data['nbe']} / {self.data['effectif']})**", markdown=True)
+        self.cell(w / 4, 5, f"Filles : **{self.data['ppf']}% ({self.data['nbfe']} / {self.data['filles']})**", markdown=True)
+        self.cell(w / 4, 5, f"Garcons : **{self.data['ppg']}% ({self.data['nbge']} / {self.data['garcons']})**", markdown=True)
         self.ln()
-        self.cell(150, 5, f"Nombre de moyennes >= {self.data['seuil']} : **{self.data['nbr']} / {self.data['nbe']}**", markdown=True)
-        self.cell(0, 5, f"Taux de réussite : **{self.data['taux']}**", markdown=True)
+        self.cell(w / 2, 5, f"Taux de réussite : **{self.data['taux']} ({self.data['nbr']} / {self.data['nbe']})**", markdown=True)
+        self.cell(w / 4, 5, f"Filles : **{self.data['pcf']}% ({self.data['nbfr']} / {self.data['nbfe']})**", markdown=True)
+        self.cell(w / 4, 5, f"Garçons : **{self.data['pcg']}% ({self.data['nbgr']} / {self.data['nbge']})**", markdown=True)
         self.ln()
         self.cell(0, 5, f"[Min - Max] : **{self.data['min_max']}**", markdown=True)
+        self.ln(10)
+        self.cell(w - 15, 5, f"Fait à {self.school.localite}, le _________________________", align="R")
+        self.ln()
+        self.cell(w - 30, 5, "**Signature**", align="R", markdown=True)
 
     def footer(self):
+        if not self.data['annual']:
+            LINE = (6, 291, 204, 291)
+            w = 99
+        else:
+            w = 142.5
+            LINE = (6, 204, 291, 204)
         self.set_y(-6)
-        self.line(6, 291, 204, 291)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY_FOOTER)
+        self.set_line_width(0.2)
+        self.line(*LINE)
         self.set_font('inter', 'I', 7)
-        self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
-        self.cell(99, 6, f"PROCÈS VERBAL {self.data['trimestre'].title()} • {self.data['label']} • Page "
+        self.cell(w, 6, f"Document généré par Oméga School Manager", align='L')
+        self.cell(w, 6, f"PROCÈS VERBAL {self.data['trimestre'].title()} • {self.data['label']} • Page "
                           f"{self.page_no()}/{{nb}}", align='R')
 
 
@@ -1362,6 +1420,9 @@ class TMarksReport(FPDF):
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY_FOOTER)
+        self.set_line_width(0.2)
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
@@ -1425,6 +1486,9 @@ class ReportCard(FPDF):
     #TODO
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY_FOOTER)
+        self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(100, 6, f"Document généré par OSM le {self.now}", align='L')
@@ -1854,10 +1918,10 @@ class ReportCard(FPDF):
         current_font, current_style, current_size = self.font_family, self.font_style, 8
         self.set_font("ZapfDingbats", '', current_size)
         if condition:
-            self.set_text_color(0, 0, 255)
+            self.set_text_color(10, 61, 98)
             tr.cell(chr(52), align=align, **kwargs)
         else:
-            self.set_text_color(255, 0, 0)
+            self.set_text_color(210, 31, 60)
             tr.cell(chr(54), align=align, **kwargs)
         self.set_font(current_font, current_style, current_size)
         self.set_text_color(0)
@@ -1866,8 +1930,8 @@ class ReportCard(FPDF):
         condition = kwargs.pop('condition') if 'condition' in kwargs.keys() else False
         if moy != "/":
             if moy < 10 or condition:
-                self.set_text_color(255, 0, 0)
+                self.set_text_color(210, 31, 60)
             else:
-                self.set_text_color(0, 0, 255)
+                self.set_text_color(10, 61, 98)
         tr.cell(f"**{moy}**", **kwargs)
         self.set_text_color(0)

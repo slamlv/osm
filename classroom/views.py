@@ -1683,10 +1683,10 @@ class Statistiques(FPDF):
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE, num_heading_rows=2)
 
         th = table.row()
-        self.set_fill_color(220)
+        self.set_fill_color(242, 240, 236)
         cls_or_mat = "CLASSE" if self.data['label'] == "Global" else "MATIÈRE"
         ens_or_tit = "\nTITULAIRE" if self.data['label'] == "Global" else "\nENSEIGNANT"
-        th.cell(f"**{cls_or_mat}**__{ens_or_tit}__", rowspan=2, padding=(0.5, 0), align="L")
+        th.cell(f"**{cls_or_mat}**{ens_or_tit}", rowspan=2, padding=(0.5, 0), align="L")
         th.cell("**TAUX DE RÉUSSITE**", colspan=3, padding=(0.5, 0))
         th.cell("**[MIN - MAX]**", rowspan=2, padding=(0.5, 0))
         th.cell("**MOY GEN**", rowspan=2, padding=(0.5, 0))
@@ -1719,12 +1719,12 @@ class Statistiques(FPDF):
         self.colored_cell(tr, value=self.data['ppt'],
                           text=f"{self.data['ppt']}%\n{self.data['nbe']} / {self.data['effectif']}", percent=True)
 
-        self.set_fill_color(230, 238, 245)
+        self.set_fill_color(232, 236, 242)
         stats = self.data['classrooms_data'] if self.data['label'] == "Global" else self.data['matieres_data']
 
         for stat in stats:
             tr = table.row()
-            tr.cell(f"**{stat['label']}**\n__{stat['titulaire'] if self.data['label'] == 'Global' else stat['enseignant']}__", align="L")
+            tr.cell(f"**{stat['label']}**\n{stat['titulaire'] if self.data['label'] == 'Global' else stat['enseignant']}", align="L")
             self.colored_cell(tr, value=stat['pcf'],
                               text=f"**{stat['pcf']}%**\n{stat['nbfr']} / {stat['nbfe']}", percent=True)
             self.colored_cell(tr, value=stat['pcg'],
@@ -1751,12 +1751,15 @@ class Statistiques(FPDF):
     def colored_cell(self, tr, value, text, percent, **kwargs):
         if type(value) in [int, float]:
             if (percent and value < 50) or (not percent and value < 10):
-                self.set_text_color(255, 0, 0)
+                self.set_text_color(210, 31, 60)
         tr.cell(text, **kwargs)
         self.set_text_color(0)
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
@@ -1829,6 +1832,9 @@ class PDFMarksSheet(FPDF):
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
@@ -1940,6 +1946,9 @@ class ClassroomList(FPDF):
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
         self.cell(100, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
@@ -2025,6 +2034,9 @@ class ClassroomTimeTable(FPDF):
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
         self.line(6, 204, 294, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le"
@@ -2164,6 +2176,9 @@ class StaffMemberTimeTable(FPDF):
 
     def footer(self):
         self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
         self.line(6, 204, 294, 204)
         self.set_font('inter', 'I', 7)
         self.cell(142.5, 6, f"Document généré par Oméga School Manager le"

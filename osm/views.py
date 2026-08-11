@@ -35,6 +35,8 @@ def offline_index(request):
 @login_required(login_url="signin")
 @with_users_school_schema
 def index(request):
+    from archives.services import missing_marks
+    from archives.models import YearClosure
     activities = []
     exists = False
     if Activities.objects.exists():
@@ -43,7 +45,15 @@ def index(request):
             activities.append(activity)
             if len(activities) == 3:
                 break
-    context = {'activities': activities, 'exists': exists,
+    remind = False
+    if not missing_marks():
+        year = request.user.school.establishment_year
+        closure = YearClosure.objects.filter(school_year=year).first()
+        if not closure:
+            remind = f"Le remplissage des notes est déjà complet, veuillez clôturer l'année scolaire {year}."
+        else:
+            remind = f"Veuillez poursuivre la clôture de l'année scolaire {year}."
+    context = {'activities': activities, 'exists': exists, 'remind': remind,
                'greet': f"{greet()} {request.user.staff_member.short_firstname}",
                'nb_classes': ClassRoom.objects.count(),
                'nb_staff': Personnel.objects.count(),

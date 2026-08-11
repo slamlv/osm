@@ -44,7 +44,7 @@
   <p class="text-white-50 small mb-3">Les documents archivés au fil de l'année sont réutilisés tels quels :
     seuls les documents <strong>manquants</strong> ou <strong>périmés</strong> (notes modifiées depuis
     l'archivage, effectif ou seuil d'admission différent) sont régénérés ici.</p>
-
+{% if not closed %}
   {# ---------- cohérence des années ---------- #}
   {% if not coherence.aligned %}
   <div class="alert alert-warning py-2 small rounded-3">
@@ -303,6 +303,12 @@
     </form>
   </div>
   {% endif %}
+{% else %}
+  <div class="alert alert-info py-2 small rounded-3">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    L'année <strong>{{ year }}</strong> est déjà close, vous pouvez consulter les archives <a href="{% url 'archives_index' %}" class="fw-bold">Archives</a>
+  </div>
+{% endif %}
 </div>
 
 <script>

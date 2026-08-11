@@ -44,7 +44,7 @@ def touch_notes_bulk(classrooms, term_index=None, sequence=None):
 # ===========================================================================
 #  ▸ AJOUT — EMPREINTE DES PARAMÈTRES DE GÉNÉRATION
 # ===========================================================================
-def current_params(doc_type, classroom=None):
+def current_params(doc_type, classroom=None, term_index=None, year=None):
     """Paramètres qui déterminent aujourd'hui le contenu d'un document.
 
     Comparés à ceux enregistrés sur l'archive (champ `params`) pour décider
@@ -55,13 +55,20 @@ def current_params(doc_type, classroom=None):
     l'écriture de l'archive comme à la vérification. Toute divergence de format
     entre les deux ferait apparaître les archives comme perpétuellement
     périmées. D'où les conversions explicites en float et l'arrondi.
+    ▸ Paramètre term_index, nécessaire pour distinguer le PV annuel (qui dépend
+    des décisions) des PV trimestriels.
     """
     if doc_type not in PARAM_SENSITIVE:
         return {}
 
     # --- document rattaché à une classe : son seuil ---
     if classroom is not None:
-        return {"seuil": round(float(classroom.moyenne_min_admission or 10), 2)}
+        params =  {"seuil": round(float(classroom.moyenne_min_admission or 10), 2)}
+        # --- Le PV ANNUEL dépend aussi des décisions du conseil ---
+        if doc_type == DocType.PV and term_index == 0:
+            from note.deliberation import decisions_fingerprint  # ADAPTE
+            params["decisions"] = decisions_fingerprint(classroom, year or school_year())
+        return params
 
     # --- document d'établissement : signature de tous les seuils en vigueur.
     #     Si UNE classe change de seuil, le taux d'ensemble change aussi,
@@ -120,7 +127,7 @@ def cached_or_generate(school, doc_type, classroom=None, term_index=None, *, yea
     doc.title = unit_title(doc_type, classroom, term_index)
     doc.classroom_label = classroom.code if classroom else doc.classroom_label
     doc.store(filename or default_filename(doc_type, term_index), data, page_map=page_map, page_count=page_count,
-              user=user, params=current_params(doc_type, classroom))
+              user=user, params=current_params(doc_type, classroom, term_index, year))
     return data, doc, False
 
 
@@ -250,7 +257,7 @@ def _placeholder(year, dtype, classroom, term, title):
         return
     ArchivedDocument.objects.create(
         school_year=year, doc_type=dtype, classroom=classroom, classroom_label=classroom.code if classroom else "",
-        term_index=term, title=title, size_bytes=0, params=current_params(dtype, classroom))
+        term_index=term, title=title, size_bytes=0, params=current_params(dtype, classroom, term, year))
 
 
 def verify_archives(school, closure):
@@ -471,6 +478,19 @@ def cleanup_year(school, closure, keys=None):
         ClassRoom.objects.update(notes_updated_t1=None, notes_updated_t2=None, notes_updated_t3=None)
     except Exception:
         pass
+    try:
+        from classroom.models import Enseignements
+        Enseignements.objects.update(nlpt1=None, nlpt2=None, nlpt3=None, nlpp1=None, nlpp2=None, nlpp3=None,
+                                     nlft1=None, nlft2=None, nlft3=None, nlfp1=None, nlfp2=None, nlfp3=None)
+        deleted["Progressions nettoyées"] = "OK"
+    except Exception:
+        pass
+    try:
+        from classroom.models import Programmation
+        Programmation.objects.all().delete()
+        deleted["Programmations des cours nettoyées"] = "OK"
+    except Exception:
+        pass
     return deleted
 
 
@@ -507,6 +527,8 @@ def promote_year(school, closure):
             left += 1
         else:
             student.classe = None
+            StudentEnrollment.objects.get_or_create(
+                student=student, school_year=new_year, defaults={"classroom": None})
             student.save(update_fields=["classe"])
             pending += 1
 

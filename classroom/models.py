@@ -497,7 +497,8 @@ class ClassRoom(models.Model):
         except Exception:
             pass
 
-    def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False):
+    def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False, annual=False,
+                          mentions=True, year=None):
         from note.models import Note
         from osm.utils import formated_float
 
@@ -511,7 +512,7 @@ class ClassRoom(models.Model):
         students_data = [
             student.student_marks_report_data(evals=evals, notes=notes.filter(eleve_id=student.id),
                                               total_coef=self.total_coef, for_stats=for_stats,
-                                              pv=pv) for student in students
+                                              pv=pv, annual=annual, mentions=mentions, year=year) for student in students
         ]
         if not pv and not for_global_stats:
             classroom_matieres = self.matieres.order_by_domain_and_coef(serie=self.classe.serie)
@@ -582,17 +583,16 @@ class ClassRoom(models.Model):
             'redoublants': self.students.filter(statut="Redoublant").count()
         }
         if for_stats or pv:
-            if for_stats:
-                moyenne_generale, taux, min_max, nb, nb_admis, result['nbfe'], result['nbfr'], result['nbge'],\
-                    result['nbgr'], result['pcf'], result['pcg'], result['min_std'], result['max_std'], result['min'],\
-                    result['max'] = self.set_rang(students_data, for_stats=True)
-                result['ppf'], result['ppg'], result['ppt'], result['titulaire'] = (
-                    formated_float((result['nbfe'] / result['filles']) * 100) if result['filles'] else 0,
-                    formated_float((result['nbge'] / result['garcons']) * 100) if result['garcons'] else 0,
-                    formated_float((nb / result['effectif']) * 100) if result['effectif'] else 0,
-                    self.titulaire.short_name if self.titulaire else "/"
-                )
-            elif pv:
+            moyenne_generale, taux, min_max, nb, nb_admis, result['nbfe'], result['nbfr'], result['nbge'],\
+                result['nbgr'], result['pcf'], result['pcg'], result['min_std'], result['max_std'], result['min'],\
+                result['max'] = self.set_rang(students_data, for_stats=True)
+            result['ppf'], result['ppg'], result['ppt'], result['titulaire'] = (
+                formated_float((result['nbfe'] / result['filles']) * 100) if result['filles'] else 0,
+                formated_float((result['nbge'] / result['garcons']) * 100) if result['garcons'] else 0,
+                formated_float((nb / result['effectif']) * 100) if result['effectif'] else 0,
+                self.titulaire.short_name if self.titulaire else "/"
+            )
+            if pv:
                 if pv_ordered:
                     students_data, moyenne_generale, taux, min_max, nb, nb_admis = self.set_rang(students_data,
                                                                                                  pv_orderd=True)
@@ -617,7 +617,7 @@ class ClassRoom(models.Model):
         if cle_moyenne == "moyenne":
             minim, maxim = float("inf"), float("-inf")
             if for_stats:
-                min_std = max_std = ordered_data[0]['nom']
+                min_std = max_std = ordered_data[0].get('nom')
             total_moyennes = 0
             nb = 0
             nb_admis = 0
@@ -652,13 +652,13 @@ class ClassRoom(models.Model):
                 if moy > maxim:
                     maxim = moy
                     if for_stats:
-                        max_std = ordered_data[i]['nom']
+                        max_std = ordered_data[i].get('nom')
                 if moy < minim:
                     minim = moy
                     if for_stats:
-                        min_std = ordered_data[i]['nom']
+                        min_std = ordered_data[i].get('nom')
             if for_stats:
-                if data['sexe'] == 'F':
+                if data.get('sexe') == 'F' or (data.get('student') and data.get('student').get('sexe')) == 'F':
                     nbfe += 1
                     if moy >= seuil:
                         nbfr += 1
@@ -770,11 +770,16 @@ class ClassRoom(models.Model):
         if term_index is None and sequence:
             term_index = (int(sequence) + 1) // 2
         if term_index not in (1, 2, 3):
-            return
-
-        field = f"notes_updated_t{term_index}"
-        setattr(self, field, timezone.now())
-        self.save(update_fields=[field])
+            now = timezone.now()
+            self.notes_updated_t1 = now
+            self.notes_updated_t2 = now
+            self.notes_updated_t3 = now
+            fields = ["notes_updated_t1", "notes_updated_t2", "notes_updated_t3"]
+        else:
+            field = f"notes_updated_t{term_index}"
+            fields = [field, ]
+            setattr(self, field, timezone.now())
+        self.save(update_fields=fields)
 
         # ▸ Préchauffage en tâche de fond, déclenché seulement après que CETTE transaction
         #   soit validée (jamais avant, jamais si elle est annulée).
@@ -831,7 +836,7 @@ def freeze_enrollment_results(evals, students_data, year):
         if evals != (1, 2, 3, 4, 5, 6):
             moy, rang, dst = wanted[enr.student_id]
             f_moy, f_rang, f_dst = fields
-            if dst['excl_def']:
+            if not enr.decided_by and dst['excl_def']:
                 enr.decision = EnrollmentStatus.EXCLU
                 enr.save(update_fields=["decision"])
             if getattr(enr, f_moy) != moy or getattr(enr, f_rang) != rang or getattr(enr, f_dst) != dst:
@@ -842,16 +847,18 @@ def freeze_enrollment_results(evals, students_data, year):
         else:
             moy1, rang1, moy2, rang2, moy3, rang3, moy, rang, dst1, dst2, dst3, dst = wanted[enr.student_id]
             f_moy1, f_rang1, f_moy2, f_rang2, f_moy3, f_rang3, f_moy, f_rang, f_dst1, f_dst2, f_dst3, f_dst = fields
-            if dst1['excl_def'] or dst2['excl_def'] or dst3['excl_def'] or dst['excl_def']:
-                enr.decision = EnrollmentStatus.EXCLU
-                enr.save(update_fields=["decision"])
-            elif moy >= 10:
-                school = School.objects.filter(schema_name=connection.schema_name).first()
-                if ((school.type_ets in (School.Type.GSS, School.Type.GBSS, School.Type.GTSS) and enr.classroom.classe.niveau in ("Troisième", "4ème Année", "From Four"))
-                    or (school.type_ets in (School.Type.GHS, School.Type.GBHS, School.Type.COL, School.Type.GTHS) and enr.classroom.classe.niveau in ("Terminale", "Upper Sixth"))):
-                    enr.decision = EnrollmentStatus.SORTI
+            if not enr.decided_by:
+                if dst1['excl_def'] or dst2['excl_def'] or dst3['excl_def'] or dst['excl_def']:
+                    enr.decision = EnrollmentStatus.EXCLU
+                elif moy >= 10:
+                    school = School.objects.filter(schema_name=connection.schema_name).first()
+                    if ((school.type_ets in (School.Type.GSS, School.Type.GBSS, School.Type.GTSS) and enr.classroom.classe.niveau in ("Troisième", "4ème Année", "From Four"))
+                        or (school.type_ets in (School.Type.GHS, School.Type.GBHS, School.Type.COL, School.Type.GTHS) and enr.classroom.classe.niveau in ("Terminale", "Upper Sixth"))):
+                        enr.decision = EnrollmentStatus.SORTI
+                    else:
+                        enr.decision = EnrollmentStatus.PROMU
                 else:
-                    enr.decision = EnrollmentStatus.PROMU
+                    enr.decision = EnrollmentStatus.REDOUBLE
                 enr.save(update_fields=["decision"])
             if (getattr(enr, f_moy1) != moy1 or getattr(enr, f_rang1) != rang1
                 or getattr(enr, f_moy2) != moy2 or getattr(enr, f_rang2) != rang2

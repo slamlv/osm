@@ -253,6 +253,34 @@
             text-align: center;
         }
     </style>
+    <style>
+      /* ============================================================
+         Zone flottante générée par le script — le fond dégradé + flou
+         qui garde le texte lisible par-dessus le contenu qui défile.
+         `position` par défaut ici ; le script bascule en absolute UNE
+         FOIS le pied de page en vue (voir docked/undocked plus bas).
+         ============================================================ */
+      .btn-flottant-zone {
+        position: fixed;
+        left: 0; right: 0;
+        z-index: 1035;                 /* au-dessus d'une nav sticky (1030),
+                                          sous les modales Bootstrap (1045+) */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(180deg, rgba(23,46,69,0) 0%,
+                   rgba(23,46,69,0.94) 45%, rgba(23,46,69,0.99) 100%);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        pointer-events: none;          /* le fond dégradé ne bloque aucun clic */
+      }
+      /* seuls les contrôles qu'elle contient redeviennent cliquables */
+      .btn-flottant-zone > * { pointer-events: auto; }
+      .btn-flottant-zone .btn { box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    </style>
 </head>
 <body>
 
@@ -413,6 +441,21 @@
               </ul>
             </li>
 
+            <!-- Établissement -->
+            {% if user.is_min_admin %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle me-2 d-xxl-none"></i>Établissement
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-info"></i>Informations</a></li>
+                <li><a class="dropdown-item" href="{% url 'school_infos_edit' %}"><i class="bi bi-pencil me-2 text-warning"></i>Modifier Infos</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'closure_wizard' %}"><i class="bi bi-lock me-2 text-warning"></i>Clôture</a></li>
+                <li><a class="dropdown-item" href="{% url 'archives_index' %}"><i class="bi bi-archive me-2 text-info"></i>Archives</a></li>
+              </ul>
+            </li>
+            {% endif %}
             <!-- Mon espace -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -422,10 +465,6 @@
                 <li><a class="dropdown-item" href="{% url 'user-details' %}"><i class="bi bi-person-vcard me-2 text-info"></i>Mes informations</a></li>
                 <li><a class="dropdown-item" href="{% url 'user-timetable' %}"><i class="bi bi-calendar-week me-2 text-info"></i>Mon emploi du temps</a></li>
                 <li><a class="dropdown-item" href="{% url 'progression' id=user.staff_member.id %}"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ma progression</a></li>
-                {% if user.is_min_admin %}
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-warning"></i>Informations Établissement</a></li>
-                {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'user_guide' %}" target="_blank"><i class="bi bi-book me-2 text-warning"></i>Guide d'utilisation</a></li>
               </ul>
@@ -1055,6 +1094,87 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   document.addEventListener("DOMContentLoaded", function () { initSeuils(); });
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Adapte ce sélecteur si le pied de page du gabarit porte un autre nom. */
+  var footer = document.querySelector('footer, .site-footer, #footer');
+  var docked = false;              // true dès que le pied de page est en vue
+
+  function zones() {
+    return Array.prototype.slice.call(document.querySelectorAll('.btn-flottant-zone'));
+  }
+
+  /* Repositionne TOUTES les zones :
+     - mode normal  : empilées, collées au bas de l'ÉCRAN (fixed + bottom)
+     - mode "docké" : empilées, collées juste AU-DESSUS du pied de page,
+       ancrées dans la PAGE (absolute + top) -> elles défilent avec le
+       contenu et ne peuvent plus jamais dépasser le pied de page. */
+  function applyPositions() {
+    var stack = 0;
+    var footerTop = docked && footer
+      ? footer.getBoundingClientRect().top + window.scrollY
+      : 0;
+
+    zones().forEach(function (zone) {
+      var h = zone.offsetHeight;
+      if (docked && footer) {
+        zone.style.position = 'absolute';
+        zone.style.top = (footerTop - h - stack) + 'px';
+        zone.style.bottom = '';
+      } else {
+        zone.style.position = 'fixed';
+        zone.style.bottom = stack + 'px';
+        zone.style.top = '';
+      }
+      stack += h;
+    });
+    document.body.style.paddingBottom = stack ? (stack + 12) + 'px' : '';
+  }
+
+  function floatify() {
+    var found = document.querySelectorAll('.btn-flottant:not([data-floated])');
+    if (!found.length) return;
+
+    found.forEach(function (el) {
+      el.dataset.floated = '1';
+      // La zone est insérée comme VOISINE de l'élément, À SA PLACE D'ORIGINE
+      // dans le DOM (même parent) : si l'élément est un bouton de formulaire,
+      // son association au <form> reste intacte quelle que soit sa position
+      // CSS (fixed/absolute ne change jamais la hiérarchie DOM).
+      var zone = document.createElement('div');
+      zone.className = 'btn-flottant-zone';
+      el.parentNode.insertBefore(zone, el);
+      zone.appendChild(el);
+    });
+    applyPositions();
+  }
+
+  document.addEventListener('DOMContentLoaded', floatify);
+  // fragments chargés dynamiquement (HTMX) : chaque swap peut amener de
+  // nouveaux boutons flottants, ou en retirer (la zone précédente part avec
+  // le fragment remplacé, aucun résidu ne s'accumule).
+  document.body.addEventListener('htmx:afterSettle', floatify);
+
+  // Bascule fixed <-> docked exactement au moment où le pied de page entre
+  // ou sort du viewport. Aucun scroll-listener continu : IntersectionObserver
+  // ne se déclenche qu'à la transition, donc coût quasi nul.
+  if (footer && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      docked = entries[0].isIntersecting;
+      applyPositions();
+    }).observe(footer);
+  }
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyPositions, 120);
+  });
 })();
 </script>
 

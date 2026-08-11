@@ -224,7 +224,9 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}" if self.prenom else f"{self.nom}"
 
-    def student_marks_report_data(self, evals: tuple, notes, total_coef=0, for_stats=False, pv=False):
+    def student_marks_report_data(self, evals: tuple, notes, total_coef=0, for_stats=False, pv=False, annual=False,
+                                  mentions=True, year=None):
+        from note.deliberation import student_decision, conduct_mention, merit_mention
         from osm.utils import formated_float, cote_and_appr
         from collections import defaultdict
 
@@ -343,6 +345,15 @@ class Student(models.Model):
                 'cote': cote,
                 'appr': appr
             }
+            if annual:
+                decision, divergente = student_decision(self, year, moyenne, self.classe.moyenne_min_admission)
+                result["decision"] = decision
+                result["divergente"] = divergente  # marquée sur le PV
+                if mentions:
+                    result["conduite"] = conduct_mention(self.discipline_to_dict(4))
+                    result["merite"] = merit_mention(moyenne)
+                else:
+                    result["mention"] = ""  # colonne à remplir
             if len(evals) == 6:
                 result['moy1'] = formated_float(moyenne1)
                 result['moy2'] = formated_float(moyenne2)

@@ -238,7 +238,7 @@ class ArchivedDocument(models.Model):
             # 3) les paramètres de génération ont-ils changé ?
             if self.doc_type in PARAM_SENSITIVE:
                 from .services import current_params        # import local : anti-cycle
-                return (self.params or {}) != current_params(self.doc_type, self.classroom)
+                return (self.params or {}) != current_params(self.doc_type, self.classroom, self.term_index, self.school_year)
         return False
 
     @property
@@ -258,10 +258,14 @@ class ArchivedDocument(models.Model):
             if self.doc_type in NOTE_DEPENDENT:
                 ref = self.notes_reference_date
                 if ref and self.archived_at and ref > self.archived_at:
-                    return "Données disciplinaires ou Notes modifiées"
+                    return "Données disciplinaires, d'élèves ou Notes modifiées"
             if self.doc_type in PARAM_SENSITIVE:
                 from .services import current_params
-                if (self.params or {}) != current_params(self.doc_type, self.classroom):
+                currents = current_params(self.doc_type, self.classroom, self.term_index, self.school_year)
+                if (self.params or {}) != currents:
+                    if self.doc_type == DocType.PV and self.term_index == 0:
+                        if self.params['decisions'] != currents['decisions']:
+                            return "Décisions de fin d'année modifiées"
                     return "Moyenne minimale d'admission modifiée"
         return ""
 
@@ -463,6 +467,8 @@ class ArchiveRef:
     # ------------------------------------------------------------------
     def cached_bytes(self):
         """Contenu de l'archive si elle existe ET n'est pas périmée, sinon None."""
+        import requests
+
         if not self.enabled:
             return None
         from .services import find_archive
@@ -471,10 +477,16 @@ class ArchiveRef:
         if doc is None or doc.is_stale or not doc.file:
             return None
         try:
-            doc.file.open("rb")
-            data = doc.file.read()
-            doc.file.close()
-            return data or None
+            # Offline
+            if hasattr(doc.file.storage, 'path'):
+                doc.file.open("rb")
+                data = doc.file.read()
+                doc.file.close()
+                return data or None
+            # En prod (Cloudinary)
+            reponse = requests.get(doc.file.url, timeout=10)
+            if reponse.status_code == 200:
+                return reponse.content
         except Exception:
             return None          # fichier illisible : on régénérera
 
@@ -505,7 +517,8 @@ class ArchiveRef:
                 doc.title = unit_title(self.doc_type, self.classroom, self.term_index)
                 doc.classroom_label = self.classroom.code if self.classroom else doc.classroom_label
                 doc.store(default_filename(self.doc_type, self.term_index), data, page_map=self.page_map,
-                          page_count=page_count, user=self.user, params=current_params(self.doc_type, self.classroom))
+                          page_count=page_count, user=self.user, params=current_params(self.doc_type, self.classroom,
+                                                                                       self.term_index, self.year))
             self._doc = doc
             return doc
         except Exception:
