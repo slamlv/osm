@@ -326,8 +326,8 @@ class ArchivedDocument(models.Model):
         if old_name and old_name != self.file.name:
             try:
                 self.file.storage.delete(old_name)
-            except Exception as e:
-                print(e)  # orphelin toléré : jamais au prix de l'archive
+            except Exception:
+                pass  # orphelin toléré : jamais au prix de l'archive
         return self
 
 
@@ -522,8 +522,10 @@ class ArchiveRef:
                                                                                    self.term_index, self.year))
             self._doc = doc
             return doc
-        except Exception:
-            return None
+        except Exception as e:
+            import logging
+            logging.error(f"ERREUR D'ARCHIVAGE BDD : {e}", exc_info=True)
+            raise e
 
 
 # ---------------------------------------------------------------------------
