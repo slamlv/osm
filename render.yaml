@@ -1,0 +1,79 @@
+services:
+  # ------------------------------------------------------------------
+  # 1. Service web Django (celui qui sert le site)
+  # ------------------------------------------------------------------
+  - type: web
+    name: osm-web
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn osm.wsgi:application"
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: osm-redis
+          property: connectionString
+      - fromGroup: osm-shared-env
+
+  # ------------------------------------------------------------------
+  # 2. Service worker Celery (exécute les tâches en arrière-plan)
+  # ------------------------------------------------------------------
+  - type: worker
+    name: osm-celery-worker
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "celery -A osm worker --loglevel=info"
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: osm-redis
+          property: connectionString
+      - fromGroup: osm-shared-env
+
+  # ------------------------------------------------------------------
+  # 3. Instance Redis (broker Celery)
+  # ------------------------------------------------------------------
+  - type: redis
+    name: osm-redis
+    plan: free
+    ipAllowList: []   # accès privé uniquement, réservé aux autres services de ce projet
+
+# ------------------------------------------------------------------
+# Groupe de variables partagées entre web et worker.
+# À remplir dans le dashboard Render (Environment Groups),
+# PAS ici en clair (secrets).
+# ------------------------------------------------------------------
+envVarGroups:
+  - name: osm-shared-env
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        sync: false
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"
