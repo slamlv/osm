@@ -1297,7 +1297,7 @@ class ExamRecord(FPDF):
         self.cell(w / 4, 5, f"Filles : **{self.data['ppf']}% ({self.data['nbfe']} / {self.data['filles']})**", markdown=True)
         self.cell(w / 4, 5, f"Garcons : **{self.data['ppg']}% ({self.data['nbge']} / {self.data['garcons']})**", markdown=True)
         self.ln()
-        self.cell(w / 2, 5, f"Taux de réussite : **{self.data['taux']} ({self.data['nbr']} / {self.data['nbe']})**", markdown=True)
+        self.cell(w / 2, 5, f"Taux de réussite : **{self.data['taux']}% ({self.data['nbr']} / {self.data['nbe']})**", markdown=True)
         self.cell(w / 4, 5, f"Filles : **{self.data['pcf']}% ({self.data['nbfr']} / {self.data['nbfe']})**", markdown=True)
         self.cell(w / 4, 5, f"Garçons : **{self.data['pcg']}% ({self.data['nbgr']} / {self.data['nbge']})**", markdown=True)
         self.ln()

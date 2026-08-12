@@ -77,7 +77,7 @@ def merit_mention(moyenne):
     for seuil, label in MERIT_THRESHOLDS:
         if m >= seuil:
             return label
-    return "Avertissement travail" if m < WORK_WARNING_BELOW else ""
+    return "Avertissement travail" if 0 < m < WORK_WARNING_BELOW else ""
 
 
 def conduct_mention(discipline):
