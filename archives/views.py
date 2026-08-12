@@ -206,7 +206,6 @@ def closure_promote(request):
 @logged_admin_view
 def archives_index(request):
     rows = []
-    print(ArchivedDocument.objects.all().delete())
     for y in ArchivedDocument.objects.values_list("school_year", flat=True).distinct().order_by("-school_year"):
         docs = ArchivedDocument.objects.filter(school_year=y, size_bytes__gt=0)
         rows.append({"year": y, "count": docs.count(), "size": sum(docs.values_list("size_bytes", flat=True))})

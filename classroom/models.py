@@ -716,7 +716,7 @@ class ClassRoom(models.Model):
             data_matiere = {
                 'id': matiere.id,
                 'label': matiere_label,
-                'enseignant': note.enseignement.enseignant.short_name if note.enseignement.enseignant else "/",
+                'enseignant': note.enseignement.enseignant.short_name if (note and note.enseignement.enseignant) else "/",
                 'min-max': f"[{min(notes_moyennes)} - {max(notes_moyennes)}]",
                 'coef': matiere.coeff,
             }

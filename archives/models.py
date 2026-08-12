@@ -68,8 +68,11 @@ TERM_LABELS = dict(TERMS)
 
 
 def archive_upload_path(instance, filename):
-    """archives/2025-2026/BULLETIN/6eme-a/bulletins-trimestre-1.pdf"""
-    parts = ["archives", slugify(instance.school_year), instance.doc_type]
+    from django.db import connection
+    from authentification.models import School
+    school = School.objects.filter(schema_name=connection.schema_name).first()
+    """archives/code/2025-2026/BULLETIN/6eme-a/bulletins-trimestre-1.pdf"""
+    parts = ["archives", school.code if school else "", slugify(instance.school_year), instance.doc_type]
     if instance.classroom_label:
         parts.append(slugify(instance.classroom_label))
     return "/".join(parts + [filename])
@@ -132,6 +135,8 @@ class ArchivedDocument(models.Model):
     created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     #: nombre de régénérations (indicateur d'activité, utile au diagnostic)
     versions    = models.PositiveSmallIntegerField(default=1)
+    # Anciennes archives, d'années précédentes à l'adoption de OSM
+    old_archive = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ArchivedDocument"
@@ -217,7 +222,7 @@ class ArchivedDocument(models.Model):
         ▸ Trois causes possibles — effectif différent, les notes ont bougé,
         ou les paramètres de génération ont changé (seuil d'admission).
         """
-        if not self.is_year_closed:
+        if not self.is_year_closed and not self.old_archive:
             if not self.file and self.title != "Sans objet":
                 return True
             # 1) l'effectif a-t-il changé après l'archivage ?
@@ -244,7 +249,7 @@ class ArchivedDocument(models.Model):
     @property
     def stale_reason(self):
         """Motif lisible, affiché dans l'assistant de clôture."""
-        if not self.is_year_closed:
+        if not self.is_year_closed and not self.old_archive:
             if not self.file and self.title != "Sans objet":
                 return "Jamais généré"
             if self.doc_type in EFFECTIF_DEPENDENT:
@@ -272,7 +277,7 @@ class ArchivedDocument(models.Model):
     @property
     def is_deletable(self):
         """Les bulletins sont les seuls documents non supprimables."""
-        return self.doc_type not in MANDATORY_TYPES
+        return (self.doc_type not in MANDATORY_TYPES) or self.old_archive
 
     # ---- (ré)écriture du fichier --------------------------------------
     def store(self, filename, data, page_map=None, page_count=0, user=None, params=None):
