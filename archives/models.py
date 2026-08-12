@@ -92,9 +92,14 @@ def build_unit_key(school_year, doc_type, classroom_id=None, term_index=None):
         2025-2026|STATS_REUSSITE|-|0   stats de réussite, établissement, annuel
         2025-2026|STATS_AGE_SEXE|-|-   stats âge/sexe, établissement
     """
+    from django.db import connection
+    from authentification.models import School
+
+    school = School.objects.filter(schema_name=connection.schema_name).first()
+    code = "-" if school is None else school.code
     cls = classroom_id if classroom_id else "-"
     trm = "-" if term_index is None else term_index
-    return f"{school_year}|{doc_type}|{cls}|{trm}"
+    return f"{code}|{school_year}|{doc_type}|{cls}|{trm}"
 # -----------------------------------------------------------------------------
 
 
@@ -321,8 +326,8 @@ class ArchivedDocument(models.Model):
         if old_name and old_name != self.file.name:
             try:
                 self.file.storage.delete(old_name)
-            except Exception:
-                pass  # orphelin toléré : jamais au prix de l'archive
+            except Exception as e:
+                print(e)  # orphelin toléré : jamais au prix de l'archive
         return self
 
 
@@ -510,12 +515,11 @@ class ArchiveRef:
             if doc is None:
                 doc = ArchivedDocument(
                     school_year=self.year, doc_type=self.doc_type, classroom=self.classroom, term_index=self.term_index)
-            if doc.is_stale:
-                doc.title = unit_title(self.doc_type, self.classroom, self.term_index)
-                doc.classroom_label = self.classroom.code if self.classroom else doc.classroom_label
-                doc.store(default_filename(self.doc_type, self.term_index), data, page_map=self.page_map,
-                          page_count=page_count, user=self.user, params=current_params(self.doc_type, self.classroom,
-                                                                                       self.term_index, self.year))
+            doc.title = unit_title(self.doc_type, self.classroom, self.term_index)
+            doc.classroom_label = self.classroom.code if self.classroom else doc.classroom_label
+            doc.store(default_filename(self.doc_type, self.term_index), data, page_map=self.page_map,
+                      page_count=page_count, user=self.user, params=current_params(self.doc_type, self.classroom,
+                                                                                   self.term_index, self.year))
             self._doc = doc
             return doc
         except Exception:
