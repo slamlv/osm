@@ -70,9 +70,10 @@ TERM_LABELS = dict(TERMS)
 def archive_upload_path(instance, filename):
     from django.db import connection
     from authentification.models import School
+
     school = School.objects.filter(schema_name=connection.schema_name).first()
     """archives/code/2025-2026/BULLETIN/6eme-a/bulletins-trimestre-1.pdf"""
-    parts = ["archives", school.code if school else "", slugify(instance.school_year), instance.doc_type]
+    parts = ["archives", school.code if school else "-", slugify(instance.school_year), instance.doc_type]
     if instance.classroom_label:
         parts.append(slugify(instance.classroom_label))
     return "/".join(parts + [filename])
@@ -120,7 +121,7 @@ class ArchivedDocument(models.Model):
     # ▸ clé d'unicité calculée (voir build_unit_key ci-dessus)
     unit_key    = models.CharField(max_length=120, unique=True, editable=False, default="")
     title       = models.CharField(max_length=160)
-    file        = models.FileField(upload_to=archive_upload_path, null=True, blank=True)
+    file        = models.FileField(upload_to=archive_upload_path, null=True, blank=True, max_length=500)
     size_bytes  = models.PositiveIntegerField(default=0)
     page_count  = models.PositiveSmallIntegerField(default=0)
 
@@ -522,10 +523,8 @@ class ArchiveRef:
                                                                                    self.term_index, self.year))
             self._doc = doc
             return doc
-        except Exception as e:
-            import logging
-            logging.error(f"ERREUR D'ARCHIVAGE BDD : {e}", exc_info=True)
-            raise e
+        except Exception:
+            return None
 
 
 # ---------------------------------------------------------------------------
