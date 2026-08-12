@@ -318,7 +318,6 @@ class ArchivedDocument(models.Model):
                 self.file.storage.delete(old_name)
             except Exception:
                 pass  # orphelin toléré : jamais au prix de l'archive
-        print("Done")
         return self
 
 
