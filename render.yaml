@@ -19,26 +19,6 @@ services:
       - fromGroup: osm-shared-env
 
   # ------------------------------------------------------------------
-  # 2. Service worker Celery (exécute les tâches en arrière-plan)
-  # ------------------------------------------------------------------
-  - type: worker
-    name: osm-celery-worker
-    runtime: python
-    plan: free
-    region: oregon
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "celery -A osm worker --loglevel=info"
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.8"
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: osm-redis
-          property: connectionString
-      - fromGroup: osm-shared-env
-
-  # ------------------------------------------------------------------
   # 3. Instance Redis (broker Celery)
   # ------------------------------------------------------------------
   - type: redis
