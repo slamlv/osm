@@ -1,13 +1,15 @@
 services:
   # ------------------------------------------------------------------
-  # 1. Service web Django (celui qui sert le site)
+  # 1. Service web Django (celui qui sert le site) — reprend ton service
+  #    existant "osm" (School Manager / Production / osm)
   # ------------------------------------------------------------------
   - type: web
     name: osm
     runtime: python
-    plan: free
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "gunicorn osm.wsgi:application"
+    plan: starter
+    region: oregon
+    buildCommand: "pip install -r requirements.txt && python manage.py migrate_schemas && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn osm.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: REDIS_URL
         fromService:
@@ -23,9 +25,12 @@ services:
     name: osm-celery-worker
     runtime: python
     plan: free
+    region: oregon
     buildCommand: "pip install -r requirements.txt"
     startCommand: "celery -A osm worker --loglevel=info"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: REDIS_URL
         fromService:
           type: redis
@@ -39,12 +44,13 @@ services:
   - type: redis
     name: osm-redis
     plan: free
-    ipAllowList: []   # accès privé uniquement, réservé aux autres services de ce projet
+    region: oregon
+    ipAllowList: []   # accès privé uniquement, réservé aux services de ce projet
 
 # ------------------------------------------------------------------
 # Groupe de variables partagées entre web et worker.
-# À remplir dans le dashboard Render (Environment Groups),
-# PAS ici en clair (secrets).
+# Les valeurs "sync: false" sont à remplir dans le dashboard Render
+# (Environment Groups), jamais en clair ici.
 # ------------------------------------------------------------------
 envVarGroups:
   - name: osm-shared-env
