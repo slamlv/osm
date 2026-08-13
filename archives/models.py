@@ -523,8 +523,10 @@ class ArchiveRef:
                                                                                    self.term_index, self.year))
             self._doc = doc
             return doc
-        except Exception:
-            return None
+        except Exception as e:
+            import logging
+            logging.error(f"ERREUR DARCHIVAGE BDD : {e}", exc_info=True)
+            raise e
 
 
 # ---------------------------------------------------------------------------
