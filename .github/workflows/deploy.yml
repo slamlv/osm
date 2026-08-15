@@ -1,0 +1,46 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "==> Pull latest code"
+            git pull origin main
+
+            echo "==> Install dependencies"
+            /home/osmadmin/.local/bin/uv pip install --python .venv/bin/python -r requirements.txt
+
+            echo "==> Run django-tenants migrations"
+            .venv/bin/python manage.py migrate_schemas
+
+            echo "==> Collect static files"
+            .venv/bin/python manage.py collectstatic --noinput
+
+            echo "==> Restart Gunicorn"
+            sudo -n systemctl restart osm-gunicorn
+
+            echo "==> Restart Celery"
+            sudo -n systemctl restart osm-celery
+
+            echo "==> Verify services"
+            systemctl is-active --quiet osm-gunicorn
+            systemctl is-active --quiet osm-celery
+
+            echo "==> Deployment completed successfully"
