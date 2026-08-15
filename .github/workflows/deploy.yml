@@ -40,7 +40,7 @@ jobs:
             sudo -n systemctl restart osm-celery
 
             echo "==> Verify services"
-            sudo -n systemctl is-active --quiet osm-gunicorn
-            sudo -n systemctl is-active --quiet osm-celery
+            systemctl is-active --quiet osm-gunicorn
+            systemctl is-active --quiet osm-celery
 
             echo "==> Deployment completed successfully"
