@@ -24,17 +24,14 @@ jobs:
             echo "==> Pull latest code"
             git pull origin main
 
-            echo "==> Activate virtual environment"
-            source .venv/bin/activate
-
             echo "==> Install dependencies"
-            pip install -r requirements.txt
+            /home/osmadmin/.local/bin/uv pip install --python .venv/bin/python -r requirements.txt
 
             echo "==> Run django-tenants migrations"
-            python manage.py migrate_schemas
+            .venv/bin/python manage.py migrate_schemas
 
             echo "==> Collect static files"
-            python manage.py collectstatic --noinput
+            .venv/bin/python manage.py collectstatic --noinput
 
             echo "==> Restart Gunicorn"
             sudo -n systemctl restart osm-gunicorn
