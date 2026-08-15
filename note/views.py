@@ -1744,7 +1744,7 @@ class ReportCard(FPDF):
                     matiere_data = matieres_data[i]
                 else:
                     break
-            moyenneg = formated_float(total_notesg / total_coefg)
+            moyenneg = formated_float(total_notesg / total_coefg) if total_coefg else 0
             trg = table.row()
             self.set_fill_color(*GREY1)
             trg.cell(f"**{groupe}**", colspan=6, align='R')
@@ -1814,7 +1814,7 @@ class ReportCard(FPDF):
                     matiere_data = matieres_data[i]
                 else:
                     break
-            moyenneg = formated_float(total_notesg / total_coefg)
+            moyenneg = formated_float(total_notesg / total_coefg) if total_coefg else 0
             trg = table.row()
             self.set_fill_color(*GREY1)
             trg.cell(f"**{groupe}**", colspan=5, align='R')

@@ -24,9 +24,9 @@ def _get_linked_user(staff):
 
 
 @receiver(post_save, sender=User, dispatch_uid="sync_user_to_staff")
-def sync_user_to_staff(sender, instance, **kwargs):
+def sync_user_to_staff(sender, instance, created, **kwargs):
     """User.is_active -> Personnel.en_poste (si différent)."""
-    if instance.is_superuser:
+    if instance.is_superuser or created:
         return
     with schema_context(instance.school.schema_name):
         staff = _get_linked_staff(instance)
@@ -43,10 +43,10 @@ def sync_user_to_staff(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Personnel, dispatch_uid="sync_staff_to_user")
-def sync_staff_to_user(sender, instance, **kwargs):
+def sync_staff_to_user(sender, instance, created, **kwargs):
     """Personnel.en_poste -> User.is_active (si différent)."""
     user = _get_linked_user(instance)
-    if user is None:
+    if user is None or created:
         return
 
     if instance.en_poste and not user.is_active:

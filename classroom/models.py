@@ -559,14 +559,14 @@ class ClassRoom(models.Model):
                     data_matiere['nbge'], data_matiere['nbgr'], data_matiere['pcg'] = nbge, nbgr,\
                         formated_float((nbgr / nbge) * 100) if nbge else 0
                     data_matiere['nbte'], data_matiere['nbtr'], data_matiere['pct'] = len(notes_moyennes), nbtr,\
-                        formated_float((nbtr / len(notes_moyennes)) * 100)
+                        formated_float((nbtr / len(notes_moyennes)) * 100) if notes_moyennes else 0
                     data_matiere['ppf'], data_matiere['ppg'], data_matiere['ppt'] = (
                         formated_float((data_matiere['nbfe'] / self.nb_filles) * 100) if self.nb_filles else 0,
                         formated_float((data_matiere['nbge'] / self.nb_garcons) * 100) if self.nb_garcons else 0,
-                        formated_float((data_matiere['nbte'] / self.effectif) * 100 if self.effectif else 0,)
+                        formated_float((data_matiere['nbte'] / self.effectif) * 100 if self.effectif else 0)
                     )
                     data_matiere['min_max'] = f"[{min(notes_moyennes)} - {max(notes_moyennes)}]"
-                    data_matiere['moyenne'] = formated_float(sum(notes_moyennes) / len(notes_moyennes))
+                    data_matiere['moyenne'] = formated_float(sum(notes_moyennes) / len(notes_moyennes)) if notes_moyennes else 0
                 else:
                     nb_words = len(matiere_label.split())
                     for word in matiere_label.split():

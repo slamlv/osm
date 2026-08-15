@@ -145,5 +145,41 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input.pwd-input').forEach(function (input) {
+      // 1. Dégager de l'espace à droite de l'input pour que le texte ne passe pas sous l'œil
+      input.classList.add('pe-5');
+
+      // 2. Englober l'input dans un conteneur relatif
+      const wrapper = document.createElement('div');
+      wrapper.className = 'position-relative w-100';
+      input.parentNode.insertBefore(wrapper, input);
+      wrapper.appendChild(input);
+
+      // 3. Créer le bouton transparent positionné dans l'input
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn position-absolute top-50 end-0 translate-middle-y text-white-50 border-0 bg-transparent pe-3';
+      btn.style.zIndex = '5';
+      btn.innerHTML = '<i class="bi bi-eye"></i>';
+
+      wrapper.appendChild(btn);
+
+      // 4. Logique de basculement
+      btn.addEventListener('click', function () {
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.className = 'bi bi-eye-slash';
+        } else {
+          input.type = 'password';
+          icon.className = 'bi bi-eye';
+        }
+      });
+    });
+  });
+</script>
+
 </body>
 </html>

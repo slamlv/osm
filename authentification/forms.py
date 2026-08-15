@@ -164,7 +164,7 @@ class LoginForm(forms.Form):
         'placeholder': "Entrez votre nom d'utilisateur", 'class': "form-control fw-bold", 'id': "username"
     }))
     mdp = forms.CharField(required=True, max_length=15, widget=forms.PasswordInput(attrs={
-        "placeholder": "Entrez votre mot de passe", 'class': "form-control fw-bold", 'id': "mdp"
+        "placeholder": "Entrez votre mot de passe", 'class': "form-control fw-bold pwd-input", 'id': "mdp"
     }))
 
     def clean(self):
@@ -202,6 +202,7 @@ class ResetForm(DynamicFormMixin, forms.Form):
         "placeholder": "Entrez votre adresse électronique", 'class': "form-control fw-bold", 'id': "email"}))
 
     def clean(self):
+        user = None
         username = self.cleaned_data.get("username")
 
         # Validation du nom d'utilisateur
@@ -219,10 +220,12 @@ class ResetForm(DynamicFormMixin, forms.Form):
         # Validation de l'email
         email = self.cleaned_data['email']
         email = valid_email(email, self.context['request'])
-        if email:
-            if not Personnel.objects_all.filter(email=email).exists():
-                message(self.context['request'], "Adresse électronique (email) introuvable.", msg_type="warning")
-                raise forms.ValidationError("")
+        if email and user:
+            from django_tenants.utils import schema_context
+            with schema_context(user.school.schema_name):
+                if not Personnel.objects_all.filter(email=email).exists():
+                    message(self.context['request'], "Adresse électronique (email) introuvable.", msg_type="warning")
+                    raise forms.ValidationError("")
 
 
 class PasswordForm(DynamicFormMixin, forms.Form):
@@ -230,10 +233,10 @@ class PasswordForm(DynamicFormMixin, forms.Form):
         "placeholder": "Mot de passe actuel", 'class': "form-control fw-bold", 'id': "old_mdp"
     }), include=lambda form: form.context['is_auth'])
     mdp = forms.CharField(required=True, max_length=15, widget=forms.PasswordInput(attrs={
-        "placeholder": "Choisissez un nouveau mot de passe", 'class': "form-control fw-bold", 'id': "mdp"
+        "placeholder": "Choisissez un nouveau mot de passe", 'class': "form-control fw-bold pwd-input", 'id': "mdp"
     }))
     mdp_confirm = forms.CharField(required=True, max_length=15, widget=forms.PasswordInput(attrs={
-        "placeholder": "Répétez le mot de passe", 'class': "form-control fw-bold", 'id': "mdp_confirm"
+        "placeholder": "Répétez le mot de passe", 'class': "form-control fw-bold pwd-input", 'id': "mdp_confirm"
     }))
 
     def clean(self):
