@@ -445,10 +445,10 @@
             {% if user.is_min_admin %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle me-2 d-xxl-none"></i>Établissement
+                <i class="bi bi-house-door me-2 d-xxl-none"></i>Établissement
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-house-door me-2 text-info"></i>Informations</a></li>
+                <li><a class="dropdown-item" href="{% url 'school_details' %}"><i class="bi bi-info-circle me-2 text-info"></i>Informations</a></li>
                 <li><a class="dropdown-item" href="{% url 'school_infos_edit' %}"><i class="bi bi-pencil me-2 text-warning"></i>Modifier Infos</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'closure_wizard' %}"><i class="bi bi-lock me-2 text-warning"></i>Clôture</a></li>
