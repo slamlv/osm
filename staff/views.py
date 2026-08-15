@@ -687,7 +687,7 @@ def service_documents(request):
     rows = []
     staff_members = _staff_queryset()
     if not request.user.is_min_admin:
-        staff_members = staff_members.filter(pk=request.user.id)
+        staff_members = staff_members.filter(pk=request.user.staff_member.id)
     for p in staff_members:
         rows.append({
             "p": p,
