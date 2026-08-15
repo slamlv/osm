@@ -605,7 +605,7 @@ def _year_choices(current):
     return [f"{y}-{y + 1}" for y in range(start, start - YEARS_BACK, -1)]
 
 
-def _staff_queryset(only_user=False):
+def _staff_queryset():
     """Colonnes strictement nécessaires à l'affichage et au pré-remplissage.
     `only` évite de charger photos, salaires et le reste de la fiche."""
     fields = ["id", "nom", "prenom", "civilite", "poste", "grade", "matricule", "provenance", "note_service_number",
@@ -685,7 +685,10 @@ def service_documents(request):
 
     # ---------- GET : formulaire ----------
     rows = []
-    for p in _staff_queryset(only_user=not request.user.is_admin or not request.user.is_super_admin or not request.user.is_principal):
+    staff_members = _staff_queryset()
+    if not request.user.is_min_admin:
+        staff_members = staff_members.filter(pk=request.user.id)
+    for p in staff_members:
         rows.append({
             "p": p,
             "matricule":   getattr(p, "matricule", "") or "",
