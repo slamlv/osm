@@ -50,7 +50,7 @@ def index(request):
         year = request.user.school.establishment_year
         closure = YearClosure.objects.filter(school_year=year).first()
         if not closure:
-            remind = f"Le remplissage des notes est déjà complet, veuillez clôturer l'année scolaire {year}."
+            remind = f"Le remplissage des notes est déjà complet, vous pouvez clôturer l'année scolaire {year}."
         else:
             remind = f"Veuillez poursuivre la clôture de l'année scolaire {year}."
     context = {'activities': activities, 'exists': exists, 'remind': remind,

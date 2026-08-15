@@ -1273,9 +1273,9 @@ class ExamRecord(FPDF):
                     row.cell(f"{'Redouble' if student['decision'] == 'Redoublant' else student['decision']}", align="L")
                 self.set_font("inter", '', 8)
             if divergents:
-                self.data['taux'] = formated_float((self.data['nbr'] / self.data['effectif']) * 100)
-                self.data['pcf'] = formated_float((self.data['nbfr'] / self.data['filles']) * 100)
-                self.data['pcg'] = formated_float((self.data['nbgr'] / self.data['garcons']) * 100)
+                self.data['taux'] = formated_float((self.data['nbr'] / self.data['effectif']) * 100) if self.data['effectif'] else 0
+                self.data['pcf'] = formated_float((self.data['nbfr'] / self.data['filles']) * 100) if self.data['filles'] else 0
+                self.data['pcg'] = formated_float((self.data['nbgr'] / self.data['garcons']) * 100) if self.data['garcons'] else 0
             table.render()
         else:
             w = 198
@@ -1294,12 +1294,12 @@ class ExamRecord(FPDF):
             table.render()
         self.ln(2)
         self.cell(w / 2, 5, f"Taux de participation : **{self.data['ppt']}% ({self.data['nbe']} / {self.data['effectif']})**", markdown=True)
-        self.cell(w / 4, 5, f"Filles : **{self.data['ppf']}% ({self.data['nbfe']} / {self.data['filles']})**", markdown=True)
-        self.cell(w / 4, 5, f"Garcons : **{self.data['ppg']}% ({self.data['nbge']} / {self.data['garcons']})**", markdown=True)
+        self.cell(w / 4, 5, f"Filles : **{self.data['ppf']}% ({self.data['nbfe']} / {self.data['filles']})**" if self.data['ppf'] else "/", markdown=True)
+        self.cell(w / 4, 5, f"Garcons : **{self.data['ppg']}% ({self.data['nbge']} / {self.data['garcons']})**"  if self.data['ppg'] else "/", markdown=True)
         self.ln()
-        self.cell(w / 2, 5, f"Taux de réussite : **{self.data['taux']}% ({self.data['nbr']} / {self.data['nbe']})**", markdown=True)
-        self.cell(w / 4, 5, f"Filles : **{self.data['pcf']}% ({self.data['nbfr']} / {self.data['nbfe']})**", markdown=True)
-        self.cell(w / 4, 5, f"Garçons : **{self.data['pcg']}% ({self.data['nbgr']} / {self.data['nbge']})**", markdown=True)
+        self.cell(w / 2, 5, f"Taux de réussite : **{self.data['taux']}% ({self.data['nbr']} / {self.data['nbe']})**" if self.data['taux'] else "/", markdown=True)
+        self.cell(w / 4, 5, f"Filles : **{self.data['pcf']}% ({self.data['nbfr']} / {self.data['nbfe']})**" if self.data['pcf'] else "/", markdown=True)
+        self.cell(w / 4, 5, f"Garçons : **{self.data['pcg']}% ({self.data['nbgr']} / {self.data['nbge']})**" if self.data['pcg'] else "/", markdown=True)
         self.ln()
         self.cell(0, 5, f"[Min - Max] : **{self.data['min_max']}**", markdown=True)
         self.ln(10)

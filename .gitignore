@@ -1,3 +1,18 @@
 .env
-.ebv.*
+.env.*
 !.env.example
+
+# Python
+**/__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+.venv/
+
+# Django
+staticfiles/
+media/
+
+# Local development
+*.log
