@@ -69,11 +69,16 @@ class Poste(models.TextChoices):
     CH = "Chef d'Établissement", "Chef d'Établissement"
     CE = "Censeur", "Censeur"
     SG = "Surveillant-Général", "Surveillant-Général"
+    CO = "Conseiller d'orientation", "Conseiller d'orientation"
     SS = "Surveillant de secteur", "Surveillant de secteur"
-    GD = "Gardien", "Gardien"
+    VJ = "Vigile de jour", "Vigile de jour"
+    VN = "Vigile de nuit", "Vigile de nuit"
     IN = "Intendant", "Intendant"
     EC = "Économe", "Économe"
-    CO = "Conseiller d'orientation", "Conseiller d'orientation"
+    SE = "Secrétaire", "Secrétaire"
+    BI = "Bibliothécaire", "Bibliothécaire"
+    IF = "Infirmière", "Infirmière"
+    TS = "Technicien de surface", "Technicien de surface"
 
 
 class Civilite(models.TextChoices):
