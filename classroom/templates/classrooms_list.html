@@ -17,7 +17,7 @@
 
   <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
     <span>{{ info }}</span>
-    {% if search %}<a class="btn btn-secondary btn-sm" href="{% url 'classrooms' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    {% if search %}<a class="btn btn-secondary btn-sm btn-back" href="{% url 'index' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
     {% elif programmations %}
     <form method="post" enctype="multipart/form-data" id="download-form" action="{% url 'time_table' %}"
           class="d-inline-flex align-items-center m-0">

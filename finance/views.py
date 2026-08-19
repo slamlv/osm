@@ -103,16 +103,15 @@ def fee_grid(request):
         "fees_json": fees_json,
         "previous_year": _previous_year(year),
         'title': "Grille Tarifaire",
-        "has_previous": SchoolFee.objects.filter(
-            school_year=_previous_year(year)).exists(),
+        "has_previous": SchoolFee.objects.filter(school_year=_previous_year(year)).exists(),
     })
 
 
 def _previous_year(year):
-    """'2025-2026' -> '2024-2025'."""
+    """'2025/2026' -> '2024/2025'."""
     try:
-        a, b = year.split("-")
-        return f"{int(a)-1}-{int(b)-1}"
+        a, b = year.split("/")
+        return f"{int(a)-1}/{int(b)-1}"
     except Exception:
         return ""
 
@@ -903,7 +902,8 @@ class FicheEmargement(_FinReport):        # hérite du socle commun
             row = table.row()
             row.cell(str(i))
             row.cell(str(p) if p else "—", align="L")
-            row.cell((p.poste if p.poste != "Autre" else "—") if p else "—")
+            poste = self._fit((p.poste_display() if p.poste != "Autre" else "—") if p else "—", 32, 8.5, False)
+            row.cell(poste)
             # heures RÉELLES du mois (renseignées seulement pour l'horaire)
             row.cell(f"{t.hours:g}" if t.hours else "—")
             row.cell((p.contact or "—") if p else "—")
@@ -911,6 +911,17 @@ class FicheEmargement(_FinReport):        # hérite du socle commun
             row.cell("")                  # N° pièce d'identité : à la main
             row.cell("")                  # Signature / empreinte : à la main
         table.render()
+
+    def _fit(self, text, max_w, size, bold=False):
+        if not text:
+            return ""
+        self.set_font('inter', 'B' if bold else '', size)
+        if self.get_string_width(text) <= max_w:
+            return text
+        ell = "…"
+        while text and self.get_string_width(text + ell) > max_w:
+            text = text[:-1]
+        return text + ell
 
     def _totals_and_signatures(self):
         y = self.get_y()

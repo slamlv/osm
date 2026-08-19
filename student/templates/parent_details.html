@@ -67,7 +67,7 @@
         {% if user != m_user %}
         <a class="btn btn-outline-danger" href="{% url 'parent-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
         {% endif %}
-        <a class="btn btn-outline-secondary" href="{% url 'parents' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
+        <a class="btn btn-outline-secondary btn-back" href="{% url 'index' %}"><i class="bi bi-arrow-left me-2"></i>Retour</a>
       </div>
     </div>
   </div>

@@ -195,7 +195,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
                         initial=lambda form: form.initial_code())
 
     def staff(self):
-        return Personnel.objects.filter(poste__in=['Enseignant', 'Surveillant-Général']).order_by('nom', 'prenom')
+        return Personnel.objects.filter(poste__in=['Enseignant', 'Surveillant Général']).order_by('nom', 'prenom')
 
     def initial_titulaire(self):
         if self.instance:

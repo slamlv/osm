@@ -4,7 +4,7 @@ from datetime import datetime
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from osm.utils import one_escape, greet, message, wraps
+from osm.utils import one_escape, greet, message, wraps, logged_user_view
 from .models import User, School
 from staff.models import Personnel
 from .forms import UserForm, LoginForm, PasswordForm, ResetForm, CodeForm
@@ -164,7 +164,7 @@ def reset_password(request, uidb64, token):
     return render(request, "404.html")
 
 
-@login_required(login_url="signin")
+@logged_user_view
 def change_password(request):
     form = PasswordForm(context={'is_auth': True})
     user = request.user

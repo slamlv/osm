@@ -1178,5 +1178,25 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 
+<script>
+  document.addEventListener('click', function (event) {
+    const backBtn = event.target.closest('.btn-back');
+    if (!backBtn) return;
+
+    event.preventDefault();
+
+    // Retourne en arrière si un historique existe dans cet onglet
+    if (window.history.length > 1 && document.referrer) {
+      window.history.back();
+    } else {
+      // Repli si l'onglet vient d'être ouvert : prend le href du lien ou va à l'accueil '/'
+      const fallback = (backBtn.getAttribute('href') && backBtn.getAttribute('href') !== '#')
+        ? backBtn.getAttribute('href')
+        : "{% url 'index' %}";
+      window.location.href = fallback;
+    }
+  });
+</script>
+
 </body>
 </html>

@@ -41,7 +41,7 @@
     {% comment %} Source d'options personnel - rendue UNE SEULE FOIS {% endcomment %}
     <select id="staff-src" class="d-none" aria-hidden="true" tabindex="-1">
       <option value="">— Aucun —</option>
-      {% for p in personnels %}<option value="{{ p.id }}">{{ p.short_name }}{% if p.poste != "Enseignant" %} ({{ p.poste }}){% endif %}</option>{% endfor %}
+      {% for p in personnels %}<option value="{{ p.id }}">{{ p.short_name }}{% if p.poste != "Enseignant" %} ({{ p.poste_display }}){% endif %}</option>{% endfor %}
     </select>
 
     <form method="post" action="">

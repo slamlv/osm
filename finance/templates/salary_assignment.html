@@ -52,7 +52,7 @@
             {% for p in staff %}
             <tr data-row>
               <td class="fw-semibold">{{ p }}</td>
-              <td class="text-white-50">{{ p.poste|default:"—" }}</td>
+              <td class="text-white-50">{{ p.poste_display|default:"—" }}</td>
               <td>
                 <select name="mode_{{ p.id }}" class="form-select form-select-sm mode-sel" onchange="applyMode(this)">
                   <option value="" {% if not p.salary_mode %}selected{% endif %}>Non rémunéré</option>

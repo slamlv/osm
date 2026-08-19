@@ -5,6 +5,18 @@ from authentification.models import User, Civilite, Poste
 from django.db.models import When, Case, Value, IntegerField, F, UniqueConstraint, Q
 
 
+Poste_Fem = {
+    'Censeur': "Censeure",
+    'Surveillant Général': "Surveillante Générale",
+    'Conseiller d\'orientation': "Conseillère d'orientation",
+    'Surveillant de secteur': "Surveillante de secteur",
+    'Intendant': "Intendante",
+    'Infirmier': "Infirmière",
+    'Enseignant': "Enseignante",
+    'Technicien de surface': "Technicienne de surface",
+}
+
+
 class Activities(models.Model):
     start = models.DateField()
     end = models.DateField()
@@ -96,7 +108,7 @@ class StaffQuerySet(models.QuerySet):
         order = {
             'Chef d\'Établissement': 1,
             'Censeur': 2,
-            'Surveillant-Général': 3,
+            'Surveillant Général': 3,
             'Intendant': 4,
             'Économe': 5,
             'Conseiller d\'orientation': 6,
@@ -292,6 +304,11 @@ class Personnel(models.Model):
         result.append(total)
         return result
 
+    def poste_display(self):
+        if self.civilite == Civilite.MME:
+            return Poste_Fem.get(self.poste, self.poste)
+        return self.poste
+
     def timetable(self, mp, school_id, download=False, empty=False):
 
         def color(classrooms, classes):
@@ -481,6 +498,8 @@ class Personnel(models.Model):
             from django.db import connection
             from authentification.models import School
             return School.objects.get(schema_name=connection.schema_name).chef
+        if self.civilite == Civilite.MME:
+            return Poste_Fem.get(self.poste, self.poste)
         return self.poste
 
     @property

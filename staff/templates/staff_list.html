@@ -33,13 +33,13 @@
           <i class="bi bi-trash me-1"></i><span>Vider la corbeille ({{ archive_count }})</span>
         </a>
         {% endif %}
-        <a class="btn btn-secondary btn-sm fw-semibold" href="{% url 'staff' %}">
+        <a class="btn btn-secondary btn-sm fw-semibold btn-back" href="{% url 'index' %}">
           <i class="bi bi-arrow-left me-1"></i>Retour
         </a>
       {% endif %}
 
       {% if search %}
-      <a class="btn btn-secondary btn-sm" href="{% url 'staff' %}">
+      <a class="btn btn-secondary btn-sm btn-back" href="{% url 'index' %}">
         <i class="bi bi-arrow-left me-1"></i>Retour
       </a>
       {% elif programmations %}

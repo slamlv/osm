@@ -223,7 +223,7 @@ class MemberForm(DynamicFormMixin, forms.ModelForm):
             members = members.exclude(pk=self.member_id)
         # Contrainte pour les chefs d'établissement
         poste = self.cleaned_data.get("poste")
-        if poste in "Chef d'Établissement":
+        if poste == "Chef d'Établissement":
             if members.filter(poste="Chef d'Établissement").exists():
                 message(request, "Un chef d'établissement a déjà été enregistré pour cet établissement.",
                         msg_type="warning")

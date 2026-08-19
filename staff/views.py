@@ -699,7 +699,7 @@ def service_documents(request):
             "discipline":  getattr(p, "discipline_formation", "") or "",
             "qualite":     default_qualite(p),
             # le formulaire n'affiche la discipline QUE pour un enseignant, et propose sinon le poste comme « En qualité de »
-            "poste":       getattr(p, "poste", "") or "",
+            "poste":       p.poste_display() or "",
             "teacher":     "1" if is_teacher(p) else "",
             "fem":         "1" if str(getattr(p, "civilite", "")) == "Madame" else "",
         })

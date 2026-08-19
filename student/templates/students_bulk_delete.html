@@ -28,7 +28,7 @@
         <form method="post" action="">
           {% csrf_token %}
           <div class="d-flex justify-content-between gap-2">
-            <a href="{% url back %}" class="btn btn-secondary fw-semibold">
+            <a href="{% url 'index' %}" class="btn btn-secondary fw-semibold btn-back">
               <i class="bi bi-arrow-left me-1"></i>Annuler
             </a>
             <button type="submit" class="btn btn-danger fw-semibold" data-with-spinner>
@@ -40,7 +40,7 @@
         <div class="alert alert-info py-2 small rounded-3 mb-3">
           Aucun élève concerné pour le moment.
         </div>
-        <a href="{% url back %}" class="btn btn-secondary fw-semibold">
+        <a href="{% url 'index' %}" class="btn btn-secondary fw-semibold btn-back">
           <i class="bi bi-arrow-left me-1"></i>Retour
         </a>
       {% endif %}

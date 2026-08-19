@@ -491,7 +491,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
         })
 
     def get_context(self, classroom, bulk_form):
-        current_year = SchoolYear.current()
+        current_year = SchoolYear.objects.get(libelle=self.request.user.school.establishment_year)
 
         # Élèves de la classe, ordonnés.
         students = classroom.students.all().order_by("nom", "prenom")

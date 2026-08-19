@@ -72,7 +72,7 @@
                                  class="pay-box" data-amount="{{ r.amount }}" onchange="updatePayTotal()">{% endif %}
               </td>
               <td class="fw-semibold">{{ r.p }}
-                <div class="text-white-50" style="font-size:0.74rem;">{{ r.p.poste|default:"" }}</div></td>
+                <div class="text-white-50" style="font-size:0.74rem;">{{ r.p.poste_display|default:"" }}</div></td>
               <td><span class="badge-mode">{% if r.p.salary_mode == HORAIRE %}À l'heure{% else %}Fixe{% endif %}</span></td>
               <td class="text-center">
                 {% if r.paid %}

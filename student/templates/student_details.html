@@ -92,7 +92,7 @@
         <a class="btn btn-info fw-semibold" href="{% url 'student_journey' id=object.id %}"><i class="bi bi-signpost-2 me-1"></i>Parcours</a>
         <a class="btn btn-primary" href="{% url 'enrollment_certificate' id=object.id %}" title="Certificat de scolarité" data-bs-toggle="tooltip">
             <i class="bi bi-file-earmark-pdf me-1"></i>Certificat</a>
-        <a class="btn btn-outline-secondary" href="{% url 'students' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+        <a class="btn btn-outline-secondary btn-back" href="{% url 'index' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
       </div>
     </div>
   </div>

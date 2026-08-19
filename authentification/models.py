@@ -68,7 +68,7 @@ class Poste(models.TextChoices):
     EN = "Enseignant", "Enseignant"
     CH = "Chef d'Établissement", "Chef d'Établissement"
     CE = "Censeur", "Censeur"
-    SG = "Surveillant-Général", "Surveillant-Général"
+    SG = "Surveillant Général", "Surveillant Général"
     CO = "Conseiller d'orientation", "Conseiller d'orientation"
     SS = "Surveillant de secteur", "Surveillant de secteur"
     VJ = "Vigile de jour", "Vigile de jour"
@@ -77,13 +77,32 @@ class Poste(models.TextChoices):
     EC = "Économe", "Économe"
     SE = "Secrétaire", "Secrétaire"
     BI = "Bibliothécaire", "Bibliothécaire"
-    IF = "Infirmière", "Infirmière"
+    IF = "Infirmier", "Infirmier"
     TS = "Technicien de surface", "Technicien de surface"
+
+
+Poste_Fem = {
+    'Censeur': "Censeure",
+    'Surveillant Général': "Surveillante Générale",
+    'Conseiller d\'orientation': "Conseillère d'orientation",
+    'Surveillant de secteur': "Surveillante de secteur",
+    'Intendant': "Intendante",
+    'Infirmier': "Infirmière",
+    'Enseignant': "Enseignante",
+    'Technicien de surface': "Technicienne de surface",
+}
 
 
 class Civilite(models.TextChoices):
     MR = "Monsieur", "Monsieur"
     MME = "Madame", "Madame"
+
+
+def get_current_school_year():
+    current = SchoolYear.current()
+    if current:
+        return current.pk
+    return SchoolYear.objects.first().pk
 
 
 class School(TenantMixin):
@@ -132,7 +151,7 @@ class School(TenantMixin):
     # Année scolaire où l'établissement se trouve RÉELLEMENT. La table globale des années dit ce qui EXISTE ; ce champ
     # dit où EN EST cet établissement. C'est la clôture qui le fait avancer -> aucun décalage silencieux quand l'année
     # courante globale change avant que l'établissement ait clôturé.
-    school_year = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, default=1, null=True, blank=True, related_name="school_started")
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, default=get_current_school_year, null=True, blank=True, related_name="school_started")
 
     # pour ne retraiter QUE si le fichier a changé
     __original_cachet = None
@@ -284,6 +303,8 @@ class User(AbstractUser):
     def post(self):
         if self.poste == "Chef d'Établissement":
             return self.school.chef
+        if self.civilite == Civilite.MME:
+            return Poste_Fem.get(self.poste, self.poste)
         return self.poste
 
     @property

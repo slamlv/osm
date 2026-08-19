@@ -69,6 +69,21 @@
   .info-line .k { color:rgba(255,255,255,0.45); }
   .info-line .v { color:#fff; font-weight:600; text-align:right; }
 
+  /* ---- Discipline : une ligne par période, chips colorées par gravité.
+     Seules les valeurs non nulles / vraies sont affichées (surcharge JS) ---- */
+  .disc-row { display:flex; gap:10px; align-items:flex-start; padding:6px 0;
+    border-bottom:1px solid rgba(255,255,255,0.06); }
+  .disc-row:last-child { border-bottom:0; }
+  .disc-period { flex:0 0 74px; font-size:0.76rem; color:rgba(255,255,255,0.45);
+    font-weight:600; padding-top:3px; }
+  .disc-chips { display:flex; flex-wrap:wrap; gap:6px; flex:1 1 auto; }
+  .disc-chip { display:inline-flex; align-items:center; font-size:0.73rem;
+    font-weight:700; padding:3px 9px; border-radius:8px; white-space:nowrap; }
+  .disc-info   { background:rgba(142,197,255,0.16); color:#8ec5ff; }  /* absences justifiées : neutre */
+  .disc-warn   { background:rgba(255,176,102,0.18); color:#ffb066; }  /* retards, consignes, avertissement */
+  .disc-danger { background:rgba(255,138,149,0.18); color:#ff8a95; }  /* non justifiées, exclusion temp., blâme */
+  .disc-severe { background:rgba(220,53,69,0.3); color:#ff6b7a; font-weight:800; } /* exclusion définitive */
+
   @media (max-width: 767.98px) {
     .osm-table-outer table { min-width:0; }
     .osm-table-outer thead th { padding:8px 8px; font-size:0.66rem; }
@@ -99,7 +114,7 @@
           </div>
         </div>
       </div>
-      <a class="btn btn-secondary btn-sm" href="{% url 'student-details' id=student.id %}">
+      <a class="btn btn-secondary btn-sm btn-back" href="{% url 'index' %}">
         <i class="bi bi-arrow-left me-1"></i>Retour
       </a>
     </div>
@@ -138,27 +153,62 @@
             data-decision="{{ enr.decision|default:'' }}"
             data-next="{{ enr.next_classroom.code|default:'' }}"
             data-by="{{ enr.decided_by|default:'' }}"
-            data-at="{% if enr.decided_at %}{{ enr.decided_at|date:'d/m/Y' }}{% endif %}">
+            data-at="{% if enr.decided_at %}{{ enr.decided_at|date:'d/m/Y' }}{% endif %}"
+            {# Discipline par période : un attribut par clé du JSONField.
+               Seules les valeurs présentes/vraies seront affichées (filtrage
+               fait en JS, à l'ouverture de la modale). #}
+            data-t1-absnj="{{ enr.discipline_t1.absnj|default_if_none:'' }}"
+            data-t1-absj="{{ enr.discipline_t1.absj|default_if_none:'' }}"
+            data-t1-retards="{{ enr.discipline_t1.retards|default_if_none:'' }}"
+            data-t1-excl="{{ enr.discipline_t1.excl|default_if_none:'' }}"
+            data-t1-consignes="{{ enr.discipline_t1.consignes|default_if_none:'' }}"
+            data-t1-avert="{% if enr.discipline_t1.avert %}1{% endif %}"
+            data-t1-excl_def="{% if enr.discipline_t1.excl_def %}1{% endif %}"
+            data-t1-blame="{% if enr.discipline_t1.blame %}1{% endif %}"
+            data-t2-absnj="{{ enr.discipline_t2.absnj|default_if_none:'' }}"
+            data-t2-absj="{{ enr.discipline_t2.absj|default_if_none:'' }}"
+            data-t2-retards="{{ enr.discipline_t2.retards|default_if_none:'' }}"
+            data-t2-excl="{{ enr.discipline_t2.excl|default_if_none:'' }}"
+            data-t2-consignes="{{ enr.discipline_t2.consignes|default_if_none:'' }}"
+            data-t2-avert="{% if enr.discipline_t2.avert %}1{% endif %}"
+            data-t2-excl_def="{% if enr.discipline_t2.excl_def %}1{% endif %}"
+            data-t2-blame="{% if enr.discipline_t2.blame %}1{% endif %}"
+            data-t3-absnj="{{ enr.discipline_t3.absnj|default_if_none:'' }}"
+            data-t3-absj="{{ enr.discipline_t3.absj|default_if_none:'' }}"
+            data-t3-retards="{{ enr.discipline_t3.retards|default_if_none:'' }}"
+            data-t3-excl="{{ enr.discipline_t3.excl|default_if_none:'' }}"
+            data-t3-consignes="{{ enr.discipline_t3.consignes|default_if_none:'' }}"
+            data-t3-avert="{% if enr.discipline_t3.avert %}1{% endif %}"
+            data-t3-excl_def="{% if enr.discipline_t3.excl_def %}1{% endif %}"
+            data-t3-blame="{% if enr.discipline_t3.blame %}1{% endif %}"
+            data-an-absnj="{{ enr.discipline.absnj|default_if_none:'' }}"
+            data-an-absj="{{ enr.discipline.absj|default_if_none:'' }}"
+            data-an-retards="{{ enr.discipline.retards|default_if_none:'' }}"
+            data-an-excl="{{ enr.discipline.excl|default_if_none:'' }}"
+            data-an-consignes="{{ enr.discipline.consignes|default_if_none:'' }}"
+            data-an-avert="{% if enr.discipline.avert %}1{% endif %}"
+            data-an-excl_def="{% if enr.discipline.excl_def %}1{% endif %}"
+            data-an-blame="{% if enr.discipline.blame %}1{% endif %}">
           <td class="fw-semibold">{{ enr.school_year.libelle }}</td>
           <td>{{ enr.classroom.code|default:"—" }}</td>
 
           {# Trimestres : moyenne + rang (—  si non renseigné) #}
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t1 is not None %}{{ enr.moyenne_t1 }}{% if enr.rang_t1 %} <span class="rang">{{ enr.rang_t1 }}</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t1 %}{{ enr.moyenne_t1 }}{% if enr.rang_t1 %} <span class="rang">{{ enr.rang_t1 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t2 is not None %}{{ enr.moyenne_t2 }}{% if enr.rang_t2 %} <span class="rang">{{ enr.rang_t2 }}</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t2 %}{{ enr.moyenne_t2 }}{% if enr.rang_t2 %} <span class="rang">{{ enr.rang_t2 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
           <td class="d-none d-lg-table-cell text-center">
-            {% if enr.moyenne_t3 is not None %}{{ enr.moyenne_t3 }}{% if enr.rang_t3 %} <span class="rang">{{ enr.rang_t3 }}</span>{% endif %}{% else %}—{% endif %}
+            {% if enr.moyenne_t3 %}{{ enr.moyenne_t3 }}{% if enr.rang_t3 %} <span class="rang">{{ enr.rang_t3 }}</span>{% endif %}{% else %}—{% endif %}
           </td>
 
           {# Moyenne annuelle (mise en avant) #}
           <td class="text-center fw-semibold">
-            {% if enr.moyenne_annuelle is not None %}{{ enr.moyenne_annuelle }}{% else %}—{% endif %}
+            {% if enr.moyenne_annuelle %}{{ enr.moyenne_annuelle }}{% else %}—{% endif %}
           </td>
           <td class="d-none d-sm-table-cell text-center">
-            {% if enr.rang_annuel %}{{ enr.rang_annuel }}{% else %}—{% endif %}
+            {% if enr.rang_annuel and enr.rang_annuel != '/' %}{{ enr.rang_annuel }}{% else %}—{% endif %}
           </td>
 
           {# Décision de fin d'année (badge coloré + traçabilité en tooltip) #}
@@ -166,17 +216,17 @@
             {% if enr.decision == "Promu" %}
               <span class="badge text-bg-success"
                 {% if enr.decided_by %}data-bs-toggle="tooltip" title="Décidé par {{ enr.decided_by }}{% if enr.decided_at %} le {{ enr.decided_at|date:'d/m/Y' }}{% endif %}"{% endif %}>
-                Promu{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
+                Promu{% if student.sexe == 'Fille' %}e{% endif %}{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
             {% elif enr.decision == "Redoublant" %}
               <span class="badge text-bg-warning"
                 {% if enr.decided_by %}data-bs-toggle="tooltip" title="Décidé par {{ enr.decided_by }}{% if enr.decided_at %} le {{ enr.decided_at|date:'d/m/Y' }}{% endif %}"{% endif %}>
-                Redoublant{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
+                Redouble{% if enr.next_classroom %} → {{ enr.next_classroom.code }}{% endif %}</span>
             {% elif enr.decision == "Transféré" %}
-              <span class="badge text-bg-info">Transféré</span>
+              <span class="badge text-bg-info">Transféré{% if student.sexe == 'Fille' %}e{% endif %}</span>
             {% elif enr.decision == "Exclu" %}
-              <span class="badge text-bg-danger">Exclu</span>
+              <span class="badge text-bg-danger">Exclu{% if student.sexe == 'Fille' %}e{% endif %}</span>
             {% elif enr.decision == "Sorti" %}
-              <span class="badge text-bg-secondary">Sorti</span>
+              <span class="badge text-bg-secondary">Sorti{% if student.sexe == 'Fille' %}e{% endif %}</span>
             {% elif enr.decision == "Non statué" %}
                 <span class="badge text-bg-secondary">Décision non saisie</span>
             {% else %}
@@ -218,6 +268,13 @@
         <p class="pj-meta mb-2" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">
           Résultats par période</p>
         <div class="term-grid mb-3" id="enr-terms"></div>
+
+        <div id="enr-discipline-wrap" class="mb-3" style="display:none;">
+          <p class="pj-meta mb-2" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">
+            Discipline</p>
+          <div id="enr-discipline"></div>
+        </div>
+
         <p class="pj-meta mb-2" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">
           Fin d'année</p>
         <div id="enr-info"></div>
@@ -232,8 +289,10 @@
   if (!el) return;
 
   // Couleur selon la moyenne : rouge sous 10, ambre jusqu'à 12, vert au-delà.
-  function tone(m) {
-    if (m === null) return 'rgba(255,255,255,0.15)';
+  function tone(m, isZero) {
+    // Un "0" affiché comme "/" ne signifie pas "note éliminatoire" mais
+    // "rien à interpréter" : il partage donc la teinte neutre du "—".
+    if (m === null || isZero) return 'rgba(255,255,255,0.15)';
     if (m < 10) return '#ff8a95';
     if (m < 12) return '#ffb066';
     if (m < 14) return '#5dd48e';
@@ -241,16 +300,64 @@
   }
 
   function card(label, moy, rang, big) {
-    var m = moy ? parseFloat(String(moy).replace(',', '.')) : null;
-    var c = tone(m);
+    var m = (moy !== undefined && moy !== '') ? parseFloat(String(moy).replace(',', '.')) : null;
+    var isZero = (m !== null && m === 0);
+    var c = tone(m, isZero);
     var pct = m === null ? 0 : Math.max(0, Math.min(100, m * 5));
-    return '<div class="term-card' + (m === null ? ' empty' : '') +
+    var display = m === null ? '—' : (isZero ? '/' : m.toFixed(2));
+    return '<div class="term-card' + (m === null || isZero ? ' empty' : '') +
              '" style="--tc:' + c + ';' + (big ? 'grid-column:1/-1;' : '') + '">' +
              '<div class="lbl">' + label + '</div>' +
-             '<div class="moy">' + (m === null ? '—' : m.toFixed(2)) + '</div>' +
+             '<div class="moy">' + display + '</div>' +
              '<div class="rk">' + (rang ? rang : '&nbsp;') + '</div>' +
              '<div class="gauge"><span style="width:' + pct + '%"></span></div>' +
            '</div>';
+  }
+
+  // ---- Discipline : chips filtrées (seules les valeurs non nulles / vraies
+  //      sont affichées), groupées par gravité --------------------------
+  var DISC_FIELDS = [
+    // clé JSON,   libellé,             classe CSS
+    ['absnj',      'h non just.',       'disc-danger'],
+    ['absj',       'h justifiées',      'disc-info'],
+    ['retards',    'retard(s)',         'disc-warn'],
+    ['consignes',  'h consigne(s)',     'disc-warn'],
+    ['excl',       'j exclusion',       'disc-danger']
+  ];
+  var DISC_FLAGS = [
+    ['avert',      'Avertissement',            'disc-warn'],
+    ['blame',      'Blâme de conduite',        'disc-danger'],
+    ['excl_def',   'Exclusion définitive',     'disc-severe']
+  ];
+
+  function chip(text, cls) {
+    return '<span class="disc-chip ' + cls + '">' + text + '</span>';
+  }
+
+  function fmtNum(n) {
+    return (n % 1 === 0) ? n.toFixed(0) : n.toFixed(1);
+  }
+
+  function disciplineChips(prefix, ds) {
+    var chips = [];
+    DISC_FIELDS.forEach(function (f) {
+      var raw = ds[prefix + f[0][0].toUpperCase() + f[0].slice(1)];
+      var n = raw ? parseFloat(raw) : 0;
+      if (n > 0) chips.push(chip(fmtNum(n) + ' ' + f[1], f[2]));
+    });
+    DISC_FLAGS.forEach(function (f) {
+      if (ds[prefix + f[0][0].toUpperCase() + f[0].slice(1)] === '1') {
+        chips.push(chip(f[1], f[2]));
+      }
+    });
+    return chips;
+  }
+
+  function disciplineBlock(label, prefix, ds) {
+    var chips = disciplineChips(prefix, ds);
+    if (!chips.length) return '';
+    return '<div class="disc-row"><span class="disc-period">' + label + '</span>' +
+           '<span class="disc-chips">' + chips.join('') + '</span></div>';
   }
 
   function line(k, v) {
@@ -272,6 +379,18 @@
       card('Trimestre 2', d.m2, d.r2) +
       card('Trimestre 3', d.m3, d.r3) +
       card('Moyenne annuelle', d.ma, d.ra, true);
+
+    var discRows = disciplineBlock('Trim. 1', 't1', d) +
+                   disciplineBlock('Trim. 2', 't2', d) +
+                   disciplineBlock('Trim. 3', 't3', d) +
+                   disciplineBlock('Année', 'an', d);
+    var discWrap = document.getElementById('enr-discipline-wrap');
+    if (discRows) {
+      document.getElementById('enr-discipline').innerHTML = discRows;
+      discWrap.style.display = '';
+    } else {
+      discWrap.style.display = 'none';       // rien à signaler sur l'année
+    }
 
     var dec = d.decision || 'Non statuée';
     if (d.next) dec += ' → ' + d.next;
