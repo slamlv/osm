@@ -1225,7 +1225,7 @@ class ExamRecord(FPDF):
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
         if self.data['annual']:
-            col_widths = (9, 20, 70, 10, 10, 13, 13, 13, 13, 14, 34, 34, 22)
+            col_widths = (9, 18, 70, 10, 10, 12, 12, 12, 12, 14, 32, 34, 30)
             header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
                       "Mérite", "Conduite", "Décision"]
 
@@ -1258,19 +1258,21 @@ class ExamRecord(FPDF):
                 row.cell(student['merite'], align="L")
                 row.cell(student['conduite'], align="L")
                 self.set_font("inter", 'B', 8)
+                decision = student['decision']
+                plus = f" • {student['next'].code}" if student['next'] and decision in ("Promu", "Redouble") else ""
                 if student['divergente']:
                     divergents += 1
-                    plus = 1 if student['decision'] == "Promu" else -1
+                    plus = 1 if decision == "Promu" else -1
                     self.data['nbr'] += plus
                     if sexe == 'F':
                         self.data['nbfr'] += plus
                     else:
                         self.data['nbgr'] += plus
                     self.set_text_color(10, 61, 98)
-                    row.cell(f"{'Redouble' if student['decision'] == 'Redouble' else student['decision']}*", align="L")
+                    row.cell(f"{decision}{plus}*", align="L")
                     self.set_text_color(0)
                 else:
-                    row.cell(f"{'Redouble' if student['decision'] == 'Redouble' else student['decision']}", align="L")
+                    row.cell(f"{decision}{plus}", align="L")
                 self.set_font("inter", '', 8)
             if divergents:
                 self.data['taux'] = formated_float((self.data['nbr'] / self.data['effectif']) * 100) if self.data['effectif'] else 0

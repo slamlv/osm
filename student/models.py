@@ -352,7 +352,7 @@ class Student(models.Model):
                 'appr': appr
             }
             if annual:
-                result["decision"], result["divergente"] = student_decision(self, year, moyenne, self.classe.moyenne_min_admission)
+                result["decision"], result['next'], result["divergente"] = student_decision(self, year, moyenne, self.classe.moyenne_min_admission)
                 if mentions:
                     result["conduite"] = conduct_mention(self.discipline_to_dict(4))
                     result["merite"] = merit_mention(moyenne)

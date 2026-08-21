@@ -598,8 +598,6 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
 
             enr = existing.get(student.id)
             if enr:
-                if enr.decision != decision and not update_decisions:
-                    update_decisions = True
                 changed = (
                     enr.decision != decision
                     or (enr.next_classroom_id or None) != next_pk
@@ -613,8 +611,6 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
                     nb += 1
             else:
                 # Cas rare : élève sans enrollment courant.
-                if not update_decisions:
-                    update_decisions = True
                 to_create.append(StudentEnrollment(
                     student=student,
                     school_year=current_year,
@@ -635,6 +631,8 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
             StudentEnrollment.objects.bulk_create(to_create)
 
         if nb:
+            if not update_decisions:
+                update_decisions = True
             message(self.request,
                     f"Décisions de fin d'année enregistrées pour {nb} élève(s) en {classroom.code}.")
         else:

@@ -43,7 +43,7 @@ def student_decision(student, year, moyenne=None, seuil=10):
         decision += "e"
     elif decision == "Redoublant":
         decision = "Redouble"
-    return decision, divergente
+    return decision, enr.next_classroom, divergente
 
 
 def decisions_fingerprint(classroom, year):
