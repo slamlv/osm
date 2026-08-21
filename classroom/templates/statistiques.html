@@ -80,25 +80,25 @@
       <tbody>
         <tr class="row-global">
           <td class="col-left">Global</td>
-          <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{{ data.pcf }}%<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
-          <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{{ data.pcg }}%<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
+          <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{% if data.nbfe %}{{ data.pcf }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
+          <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{% if data.nbge %}{{ data.pcg }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
           <td class="{% if data.taux < 50 %}stat-fail{% endif %}">{{ data.taux }}%<span class="stat-sub">{{ data.nbr }} / {{ data.nbe }}</span></td>
           <td>{{ data.min_max }}</td>
           <td class="{% if data.moyenne_generale < 10 %}stat-fail{% endif %} fw-bold">{{ data.moyenne_generale }}</td>
-          <td class="{% if data.ppf < 50 %}stat-fail{% endif %}">{{ data.ppf }}%<span class="stat-sub">{{ data.nbfe }} / {{ data.filles }}</span></td>
-          <td class="{% if data.ppg < 50 %}stat-fail{% endif %}">{{ data.ppg }}%<span class="stat-sub">{{ data.nbge }} / {{ data.garcons }}</span></td>
+          <td class="{% if data.ppf < 50 %}stat-fail{% endif %}">{% if data.filles %}{{ data.ppf }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbfe }} / {{ data.filles }}</span></td>
+          <td class="{% if data.ppg < 50 %}stat-fail{% endif %}">{% if data.garcons %}{{ data.ppg }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbge }} / {{ data.garcons }}</span></td>
           <td class="{% if data.ppt < 50 %}stat-fail{% endif %}">{{ data.ppt }}%<span class="stat-sub">{{ data.nbe }} / {{ data.effectif }}</span></td>
         </tr>
         {% for stat in data.classrooms_data %}
         <tr>
           <td class="col-left">{{ stat.label }}<span class="stat-sub text-warning">{{ stat.titulaire }}</span></td>
-          <td class="{% if stat.pcf < 50 %}stat-fail{% endif %}">{{ stat.pcf }}%<span class="stat-sub">{{ stat.nbfr }} / {{ stat.nbfe }}</span></td>
-          <td class="{% if stat.pcg < 50 %}stat-fail{% endif %}">{{ stat.pcg }}%<span class="stat-sub">{{ stat.nbgr }} / {{ stat.nbge }}</span></td>
+          <td class="{% if stat.pcf < 50 %}stat-fail{% endif %}">{% if stat.nbfe %}{{ stat.pcf }}%{% else %}/{% endif %}<span class="stat-sub">{{ stat.nbfr }} / {{ stat.nbfe }}</span></td>
+          <td class="{% if stat.pcg < 50 %}stat-fail{% endif %}">{% if stat.nbge %}{{ stat.pcg }}%{% else %}/{% endif %}<span class="stat-sub">{{ stat.nbgr }} / {{ stat.nbge }}</span></td>
           <td class="{% if stat.taux < 50 %}stat-fail{% endif %}">{{ stat.taux }}%<span class="stat-sub">{{ stat.nbr }} / {{ stat.nbe }}</span></td>
           <td>{{ stat.min_max }}</td>
           <td class="{% if stat.moyenne_generale < 10 %}stat-fail{% endif %} fw-bold">{{ stat.moyenne_generale }}</td>
-          <td class="{% if stat.ppf < 50 %}stat-fail{% endif %}">{{ stat.ppf }}%<span class="stat-sub">{{ stat.nbfe }} / {{ stat.filles }}</span></td>
-          <td class="{% if stat.ppg < 50 %}stat-fail{% endif %}">{{ stat.ppg }}%<span class="stat-sub">{{ stat.nbge }} / {{ stat.garcons }}</span></td>
+          <td class="{% if stat.ppf < 50 %}stat-fail{% endif %}">{% if stat.filles %}{{ stat.ppf }}%{% else %}/{% endif %}<span class="stat-sub">{{ stat.nbfe }} / {{ stat.filles }}</span></td>
+          <td class="{% if stat.ppg < 50 %}stat-fail{% endif %}">{% if stat.garcons %}{{ stat.ppg }}%{% else %}/{% endif %}<span class="stat-sub">{{ stat.nbge }} / {{ stat.garcons }}</span></td>
           <td class="{% if stat.ppt < 50 %}stat-fail{% endif %}">{{ stat.ppt }}%<span class="stat-sub">{{ stat.nbe }} / {{ stat.effectif }}</span></td>
         </tr>
         {% endfor %}
@@ -133,25 +133,25 @@
       <tbody>
         <tr class="row-global">
           <td class="col-left">Global</td>
-          <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{{ data.pcf }}%<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
-          <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{{ data.pcg }}%<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
+          <td class="{% if data.pcf < 50 %}stat-fail{% endif %}">{% if data.nbfe %}{{ data.pcf }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbfr }} / {{ data.nbfe }}</span></td>
+          <td class="{% if data.pcg < 50 %}stat-fail{% endif %}">{% if data.nbge %}{{ data.pcg }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbgr }} / {{ data.nbge }}</span></td>
           <td class="{% if data.taux < 50 %}stat-fail{% endif %}">{{ data.taux }}%<span class="stat-sub">{{ data.nbr }} / {{ data.nbe }}</span></td>
           <td>{{ data.min_max }}</td>
           <td class="{% if data.moyenne_generale < 10 %}stat-fail{% endif %} fw-bold">{{ data.moyenne_generale }}</td>
-          <td class="{% if data.ppf < 50 %}stat-fail{% endif %}">{{ data.ppf }}%<span class="stat-sub">{{ data.nbfe }} / {{ data.filles }}</span></td>
-          <td class="{% if data.ppg < 50 %}stat-fail{% endif %}">{{ data.ppg }}%<span class="stat-sub">{{ data.nbge }} / {{ data.garcons }}</span></td>
+          <td class="{% if data.ppf < 50 %}stat-fail{% endif %}">{% if data.filles %}{{ data.ppf }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbfe }} / {{ data.filles }}</span></td>
+          <td class="{% if data.ppg < 50 %}stat-fail{% endif %}">{% if data.garcons %}{{ data.ppg }}%{% else %}/{% endif %}<span class="stat-sub">{{ data.nbge }} / {{ data.garcons }}</span></td>
           <td class="{% if data.ppt < 50 %}stat-fail{% endif %}">{{ data.ppt }}%<span class="stat-sub">{{ data.nbe }} / {{ data.effectif }}</span></td>
         </tr>
         {% for matiere in data.matieres_data %}
         <tr>
           <td class="col-left">{{ matiere.label }}<span class="stat-sub text-warning">{{ matiere.enseignant }}</span></td>
-          <td class="{% if matiere.pcf < 50 %}stat-fail{% endif %}">{{ matiere.pcf }}%<span class="stat-sub">{{ matiere.nbfr }} / {{ matiere.nbfe }}</span></td>
-          <td class="{% if matiere.pcg < 50 %}stat-fail{% endif %}">{{ matiere.pcg }}%<span class="stat-sub">{{ matiere.nbgr }} / {{ matiere.nbge }}</span></td>
+          <td class="{% if matiere.pcf < 50 %}stat-fail{% endif %}">{% if matiere.nbfe %}{{ matiere.pcf }}%{% else %}/{% endif %}<span class="stat-sub">{{ matiere.nbfr }} / {{ matiere.nbfe }}</span></td>
+          <td class="{% if matiere.pcg < 50 %}stat-fail{% endif %}">{% if matiere.nbge %}{{ matiere.pcg }}%{% else %}/{% endif %}<span class="stat-sub">{{ matiere.nbgr }} / {{ matiere.nbge }}</span></td>
           <td class="{% if matiere.pct < 50 %}stat-fail{% endif %}">{{ matiere.pct }}%<span class="stat-sub">{{ matiere.nbtr }} / {{ matiere.nbte }}</span></td>
           <td>{{ matiere.min_max }}</td>
           <td class="{% if matiere.moyenne < 10 %}stat-fail{% endif %} fw-bold">{{ matiere.moyenne }}</td>
-          <td class="{% if matiere.ppf < 50 %}stat-fail{% endif %}">{{ matiere.ppf }}%<span class="stat-sub">{{ matiere.nbfe }} / {{ data.filles }}</span></td>
-          <td class="{% if matiere.ppg < 50 %}stat-fail{% endif %}">{{ matiere.ppg }}%<span class="stat-sub">{{ matiere.nbge }} / {{ data.garcons }}</span></td>
+          <td class="{% if matiere.ppf < 50 %}stat-fail{% endif %}">{% if data.filles %}{{ matiere.ppf }}%{% else %}/{% endif %}<span class="stat-sub">{{ matiere.nbfe }} / {{ data.filles }}</span></td>
+          <td class="{% if matiere.ppg < 50 %}stat-fail{% endif %}">{% if data.garcons %}{{ matiere.ppg }}%{% else %}/{% endif %}<span class="stat-sub">{{ matiere.nbge }} / {{ data.garcons }}</span></td>
           <td class="{% if matiere.ppt < 50 %}stat-fail{% endif %}">{{ matiere.ppt }}%<span class="stat-sub">{{ matiere.nbte }} / {{ data.effectif }}</span></td>
         </tr>
         {% endfor %}
