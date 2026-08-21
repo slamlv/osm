@@ -78,8 +78,10 @@
             <i class="bi bi-copy me-1"></i>Dupliquer {{ previous_year }}</button>
         </form>
         {% endif %}
+        {% if year == current %}
         <button type="button" class="btn btn-success btn-sm fw-semibold" data-fee-open="">
           <i class="bi bi-plus-circle me-1"></i>Nouvelle ligne</button>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -116,6 +118,7 @@
               {% empty %}—{% endfor %}
             </td>
             <td class="text-end" style="white-space:nowrap;">
+              {% if year == current %}
               <button type="button" class="btn btn-sm btn-outline-secondary" data-fee-open="{{ f.id }}" title="Modifier" data-bs-toggle="tooltip">
                 <i class="bi bi-pencil"></i></button>
               <form method="post" action="{% url 'fee_delete' f.id %}" class="d-inline"
@@ -123,6 +126,10 @@
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Supprimer"><i class="bi bi-trash"></i></button>
               </form>
+              {% else %}
+              <button type="button" class="btn btn-secondary" title="Année scolaire close : modification et suppresion impossible"
+                      data-bs-toggle="tooltip" disabled><i class="bi bi-lock-fill"></i></button>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

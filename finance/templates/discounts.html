@@ -34,12 +34,17 @@
 
   {# ============ RECHERCHE D'UN ÉLÈVE ============ #}
   <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#0d6efd;">
-    <p class="fin-title mb-2"><i class="bi bi-percent me-1"></i>Remises & exonérations — {{ year }}</p>
+    <p class="fin-title mb-2"><i class="bi bi-percent me-1"></i>Remises & exonérations</p>
     <p class="text-white-50 small mb-2">Recherchez un élève pour lui accorder (ou modifier) une remise :
       bourse, enfant d'enseignant, cas social... Le dû net est recalculé immédiatement partout.</p>
     <form method="get" class="d-flex gap-2">
       <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
              placeholder="Nom, prénom ou matricule...">
+      <select name="school_year" class="form-select form-select-sm" style="max-width:200px;">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == s_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+      </select>
       <button class="btn btn-info fw-semibold"><i class="bi bi-search"></i></button>
     </form>
 
@@ -48,13 +53,13 @@
       <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr><th>Matricule</th><th>Élève</th><th>Classe</th><th></th></tr></thead>
         <tbody>
-          {% for st in results %}
+          {% for enr in results %}
           <tr>
-            <td class="text-white-50">{{ st.unique_id|default:"—" }}</td>
-            <td class="fw-semibold">{{ st }}</td>
-            <td>{{ st.classe.code|default:"—" }}</td>
+            <td class="text-white-50">{{ enr.student.unique_id|default:"—" }}</td>
+            <td class="fw-semibold">{{ enr.student }}</td>
+            <td>{{ enr.classroom.code|default:"—" }}</td>
             <td class="text-end">
-              <a class="btn btn-sm btn-outline-info" href="?student={{ st.pk }}">
+              <a class="btn btn-sm btn-outline-info" href="?enrollment={{ enr.pk }}&school_year={{ s_year }}">
                 <i class="bi bi-percent me-1"></i>Accorder une remise</a>
             </td>
           </tr>
@@ -62,7 +67,7 @@
         </tbody>
       </table>
     </div>
-    {% elif q %}<p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} ».</p>{% endif %}
+    {% elif q %}<p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} » pour l'année« {{ s_year }} ».</p>{% endif %}
   </div>
 
   {# ============ ATTRIBUTION (élève sélectionné) ============ #}
@@ -72,6 +77,7 @@
       <span class="text-white-50">({{ student.classe.code|default:"Sans classe" }})</span></p>
     <form method="post" action="{% url 'discount_save' %}">
       {% csrf_token %}
+      <input type="hidden" name="school_year" value="{{ s_year }}">
       <input type="hidden" name="student" value="{{ student.pk }}">
       <div class="row g-3 align-items-end">
         <div class="col-sm-5">
@@ -108,7 +114,7 @@
   {# ============ REMISES DE L'ANNÉE ============ #}
   <div class="fin-card p-3 p-sm-4" style="--ac:#f0c75e;">
     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-      <p class="fin-title mb-0"><i class="bi bi-list-check me-1"></i>Remises accordées — {{ year }}</p>
+      <p class="fin-title mb-0"><i class="bi bi-list-check me-1"></i>Remises accordées — {{ s_year }}</p>
       <span class="text-white-50 small">Total : <span class="amount">{{ total }}</span> FCFA</span>
     </div>
     <div class="osm-table-outer">
@@ -120,16 +126,16 @@
         <tbody>
           {% for d in discounts %}
           <tr>
-            <td class="fw-semibold">{{ d.student }}</td>
-            <td class="text-white-50">{{ d.student.classe.code|default:"—" }}</td>
-            <td>{{ d.fee_type }}</td>
-            <td class="text-end amount">{{ d.amount }}</td>
-            <td class="text-white-50">{{ d.reason }}</td>
-            <td class="text-white-50">{{ d.granted_by.staff_member.short_name|default:"—" }} <span style="font-size:0.75rem;">({{ d.created|date:"d/m/Y" }})</span></td>
+            <td class="fw-semibold">{{ d.0.student }}</td>
+            <td class="text-white-50">{{ d.1|default:"—" }}</td>
+            <td>{{ d.0.fee_type }}</td>
+            <td class="text-end amount">{{ d.0.amount }}</td>
+            <td class="text-white-50">{{ d.0.reason }}</td>
+            <td class="text-white-50">{% if d.0.granted_by == user %}Vous{% else %}{{ d.0.granted_by.staff_member.short_name|default:"—" }}{% endif %}<span style="font-size:0.75rem;"> ({{ d.0.created|date:"d/m/Y" }})</span></td>
             <td class="text-end" style="white-space:nowrap;">
-              <a class="btn btn-sm btn-outline-warning" href="?student={{ d.student_id }}" title="Modifier" data-bs-toggle="tooltip">
+              <a class="btn btn-sm btn-outline-warning" href="?enrollment={{ d.2 }}&school_year={{ s_year }}" title="Modifier" data-bs-toggle="tooltip">
                 <i class="bi bi-pencil"></i></a>
-              <form method="post" action="{% url 'discount_delete' d.pk %}" class="d-inline"
+              <form method="post" action="{% url 'discount_delete' d.0.pk %}" class="d-inline"
                     onsubmit="return confirm('Retirer cette remise ? Le dû de l\'élève sera recalculé.');">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Retirer"><i class="bi bi-trash"></i></button>

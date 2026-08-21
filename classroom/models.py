@@ -215,15 +215,19 @@ class ClassRoom(models.Model):
           on_installments=True -> retard sur les tranches échues seulement
                                   (sinon : reste à payer global)
         Renvoie [(student, [lignes en défaut]), ...] trié par nom."""
+        from student.models import StudentEnrollment
+
         result = []
-        for student in self.students.all().order_by("nom", "prenom"):
-            rows = student.student_fee_status(school_year)
+        enrollments = (StudentEnrollment.objects.filter(school_year__libelle=school_year, classroom_id=self.pk).
+                       select_related('student').order_by('student__nom', 'student__prenom'))
+        for enr in enrollments:
+            rows = enr.student.student_fee_status(school_year, classroom=self)
             if fee_type:
                 rows = [r for r in rows if r["fee_type"].id == fee_type.id]
             key = "retard" if on_installments else "reste"
             bad = [r for r in rows if r[key] > 0]
             if bad:
-                result.append((student, bad))
+                result.append((enr.student, bad))
         return result
 
     @property

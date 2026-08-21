@@ -97,7 +97,7 @@
       <div class="fin-card p-3 p-sm-4 h-100" style="--ac:#14b8a6;">
         <p class="fin-title mb-1"><i class="bi bi-graph-up-arrow me-1"></i>Recouvrement par classe</p>
         <p class="fin-desc mb-3">Attendu / encaissé / taux, classe par classe, avec total établissement.</p>
-        <form method="get" target="_blank" action="{% url 'recovery_pdf' %}">
+        <form method="get" action="{% url 'recovery_pdf' %}">
           <div class="row g-2">
             <input type="hidden" name="year" value="{{ year }}" class="year-field">
             <div class="col-8"><label>Frais (optionnel)</label>

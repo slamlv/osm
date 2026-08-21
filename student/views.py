@@ -514,6 +514,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
                 "enrollment": enr,
                 "decision": enr.decision if enr else EnrollmentStatus.EN_COURS,
                 "moyenne": enr.moyenne_annuelle if enr.moyenne_annuelle else "/",
+                'style': ("color: rgb(255,220,70)!important;" if enr.moyenne_annuelle >= 10 else "color: rgb(255,82,82)!important;") if enr.moyenne_annuelle else "",
                 "next_classroom_id": enr.next_classroom_id if enr else None,
             })
 

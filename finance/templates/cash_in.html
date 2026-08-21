@@ -54,6 +54,11 @@
     <form method="get" class="d-flex gap-2">
       <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
              placeholder="Nom, prénom ou matricule..." autofocus>
+      <select name="school_year" class="form-select form-select-sm" style="max-width:200px;">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == s_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+      </select>
       <button class="btn btn-success"><i class="bi bi-search"></i></button>
     </form>
 
@@ -62,13 +67,13 @@
       <table class="table table-hover table-sm align-middle mb-0">
         <thead><tr><th>Matricule</th><th>Élève</th><th>Classe</th><th></th></tr></thead>
         <tbody>
-          {% for st in results %}
+          {% for enr in results %}
           <tr>
-            <td class="text-white-50">{{ st.unique_id|default:"—" }}</td>
-            <td class="fw-semibold">{{ st }}</td>
-            <td>{{ st.classe.code|default:"—" }}</td>
+            <td class="text-white-50">{{ enr.student.unique_id|default:"—" }}</td>
+            <td class="fw-semibold">{{ enr.student }}</td>
+            <td>{{ enr.classroom.code|default:"—" }}</td>
             <td class="text-end">
-              <a class="btn btn-sm btn-outline-info" href="?student={{ st.pk }}">
+              <a class="btn btn-sm btn-outline-info" href="?enrollment={{ enr.pk }}&school_year={{ s_year }}">
                 <i class="bi bi-arrow-right-circle me-1"></i>Situation</a>
             </td>
           </tr>
@@ -77,17 +82,17 @@
       </table>
     </div>
     {% elif q %}
-      <p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} ».</p>
+      <p class="text-white-50 small mt-3 mb-0">Aucun élève trouvé pour « {{ q }} » pour l'année « {{ s_year }} ».</p>
     {% endif %}
   </div>
 
-  {% if student %}
+  {% if enrollment %}
   {# ================= SITUATION FINANCIÈRE ================= #}
   <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:#f0c75e;">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
       <div>
-        <h6 class="text-white fw-bold mb-0">{{ student }}</h6>
-        <span class="text-white-50 small">{{ student.unique_id }} • {{ student.classe.code|default:"Sans classe" }} • {{ year }}</span>
+        <h6 class="text-white fw-bold mb-0">{{ enrollment.student }}</h6>
+        <span class="text-white-50 small">{{ enrollment.student.unique_id }} • {{ enrollment.classroom.code|default:"Sans classe" }} • {{ s_year }}</span>
       </div>
       {% if new_receipt %}
       <a class="btn btn-warning btn-sm fw-semibold" target="_blank"
@@ -127,7 +132,8 @@
     <p class="fin-title mb-3"><i class="bi bi-plus-circle me-1"></i>Nouveau paiement</p>
     <form method="post">
       {% csrf_token %}
-      <input type="hidden" name="student" value="{{ student.pk }}">
+      <input type="hidden" name="enrollment" value="{{ enrollment.pk }}">
+      <input type="hidden" name="school_year" value="{{ s_year }}">
       <div class="row g-3">
         <div class="col-sm-4"><label class="text-white small mb-1">Type de frais</label>{{ form.fee_type }}</div>
         <div class="col-sm-3"><label class="text-white small mb-1">Montant (FCFA)</label>{{ form.amount }}</div>
@@ -160,7 +166,8 @@
             <td>{{ p.method }}</td>
             <td class="text-end">
               {% if p.cancelled %}
-                <span class="status-pill pill-late" data-bs-toggle="tooltip" title="{{ p.cancel_reason }}">Annulé</span>
+                <span class="status-pill pill-late" data-bs-toggle="tooltip"
+                      title="{% if p.cancelled_by %}Par: {% if p.cancelled_by == user %}Vous{% else %}{{ p.cancelled_by.full_name }}{% endif %}. {% endif %}{% if p.cancelled_at %}Le: {{ p.cancelled_at }}. {% endif %}Raison: {{ p.cancel_reason }}">Annulé</span>
               {% else %}
                 {% if p.fee_type.affects_cashbox %}
                 <a class="btn btn-sm btn-outline-warning" target="_blank"
@@ -188,4 +195,5 @@
   </div>
   {% endif %}
 </div>
+
 {% endblock %}

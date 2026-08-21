@@ -180,8 +180,9 @@ class StudentPayment(models.Model):
     """Encaissement d'un élève : montant LIBRE (avances possibles), imputé au
     cumul de (élève, type de frais, année). Reçu numéroté. Jamais supprimé :
     annulation tracée."""
-    student = models.ForeignKey(Student, on_delete=models.PROTECT,
-                                related_name="payments")
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, related_name="payments")
+    student_name = models.CharField(null=True, blank=True)
+    amount = models.PositiveIntegerField()
     fee_type = models.ForeignKey(FeeType, on_delete=models.PROTECT)
     school_year = models.CharField(max_length=9, db_index=True)
     amount = models.PositiveIntegerField()
@@ -296,14 +297,15 @@ class CashBox(models.Model):
                         date__range=(date_from, date_to))
                 .select_related("student", "fee_type")):
             entries.append({"date": p.date, "sens": +1, "montant": p.amount,
-                            "libelle": f"{p.fee_type} - {p.student.short_name}",
+                            "libelle": f"{p.fee_type} {p.school_year} - {p.student.short_name if p.student else p.student_name}",
                             "methode": p.method, "ref": p.receipt_number,
                             "type": "payment", "pk": p.pk})
         for t in (Transaction.objects
                 .filter(cancelled=False, date__range=(date_from, date_to))
                 .select_related("category", "beneficiary")):
             sens = +1 if t.kind == TransactionCategory.Kind.INCOME else -1
-            lib = t.description + (f" - {t.beneficiary.short_name}" if t.beneficiary else "")
+            lib = t.description + (
+                f" - {(t.beneficiary.short_name if t.beneficiary else "") or t.beneficiary_name}" if t.beneficiary or t.beneficiary_name else "")
             entries.append({"date": t.date, "sens": sens, "montant": t.amount,
                             "libelle": lib, "methode": t.method,
                             "ref": t.reference, "type": "transaction", "pk": t.pk})
@@ -366,6 +368,7 @@ class Transaction(models.Model):
     beneficiary = models.ForeignKey(Personnel, on_delete=models.SET_NULL,
                                     null=True, blank=True,
                                     help_text="Pour les salaires : l'enseignant payé")
+    beneficiary_name = models.CharField(null=True, blank=True)
     method = models.CharField(max_length=20, choices=PaymentMethod.choices,
                               default=PaymentMethod.CASH)
     reference = models.CharField(max_length=60, blank=True, default="",

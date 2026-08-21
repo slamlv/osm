@@ -1,4 +1,6 @@
 # Create your models here.
+import inspect
+
 import django.db.models
 from django.db import models
 from django.db.models import UniqueConstraint, Sum, Q, When, Case, Value, IntegerField
@@ -106,6 +108,10 @@ class Student(models.Model):
     # ------------------------------------------------------------------
     def delete(self, *args, **kwargs):
         from osm.utils import delete_image
+        from finance.models import StudentPayment
+        if StudentPayment.objects.filter(student=self).exists():
+            nom = self.short_name
+            StudentPayment.objects.filter(student=self).update(student_name=nom)
         if self.photo:
             delete_image(self.photo)
         return super().delete(*args, **kwargs)
@@ -513,22 +519,22 @@ class Student(models.Model):
 
         return results
 
-    @property
-    def student_level(self):
+    def student_level(self, classroom=None):
         """(niveau, serie) de l'élève, ex. ("Terminale", "C") — serie peut être
         None/'' — ou (None, None) si l'élève est sans classe."""
-        if not self.classe:
+        classe = classroom or self.classe
+        if not classe:
             return None, None
-        cls = self.classe.classe  # ClassRoom -> Class
+        cls = classe.classe  # ClassRoom -> Class
         return cls.niveau, (cls.serie or None)
 
-    def applicable_fees(self, school_year, fee_type_id=None):
+    def applicable_fees(self, school_year, fee_type_id=None, classroom=None):
         from finance.models import SchoolFee
         """Lignes de grille applicables à l'élève pour l'année.
         CASCADE DE SPÉCIFICITÉ par type de frais : (niveau+série) > (niveau) >
         (tous niveaux). Ex. frais de labo : ligne "Terminale"+"C" -> ne touche
         que les Tle C ; un élève de Tle A4 n'a AUCUNE ligne labo -> pas concerné."""
-        niveau, serie = self.student_level
+        niveau, serie = self.student_level(classroom=classroom)
         qs = (SchoolFee.objects
               .filter(school_year=school_year, fee_type__is_active=True)
               .filter(Q(level__isnull=True)
@@ -545,7 +551,7 @@ class Student(models.Model):
                 by_type[fee.fee_type_id] = fee
         return list(by_type.values())
 
-    def student_fee_status(self, school_year, today=None, fee_type_id=None):
+    def student_fee_status(self, school_year, today=None, fee_type_id=None, classroom=None):
         from datetime import date as _date
         from finance.models import StudentPayment, FeeDiscount
         """Situation complète de l'élève : une entrée par type de frais applicable.
@@ -580,7 +586,7 @@ class Student(models.Model):
             .values_list("fee_type").annotate(total=Sum("amount")))
 
         rows = []
-        for fee in self.applicable_fees(school_year, fee_type_id=fee_type_id):
+        for fee in self.applicable_fees(school_year, fee_type_id=fee_type_id, classroom=classroom):
             du_brut = fee.amount
             remise = discounts.get(fee.fee_type_id, 0)
             du_net = max(0, du_brut - remise)

@@ -308,7 +308,8 @@ class DeleteView(LoggedAdminView):
         if self.model == Activities:
             info = "cette activité"
         nb = ""
-        back = reverse(self.success_url) if 'cid' not in self.kwargs.keys() else self.success_url
+        success_url = reverse(self.success_url) if 'cid' not in self.kwargs.keys() else self.success_url
+        back = self.request.META.get('HTTP_REFERER', success_url)
         context = {"info": info, "title": self.title, "alerte": self.alerte, 'back': back}
         if nb:
             context['nb'] = nb
@@ -321,7 +322,7 @@ class DeleteView(LoggedAdminView):
             message(self.request, instance.delete_message)
             return redirect("class-subjects", id=self.kwargs['cid'])
         message(self.request, self.message)
-        return redirect(self.success_url)
+        return redirect(self.request.POST.get("back"))
 
     def get_object(self):
         if self.model == Personnel:

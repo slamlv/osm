@@ -1225,7 +1225,7 @@ class ExamRecord(FPDF):
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
         if self.data['annual']:
-            col_widths = (9, 20, 70, 10, 10, 13, 13, 13, 13, 11, 36, 36, 21)
+            col_widths = (9, 20, 70, 10, 10, 13, 13, 13, 13, 13, 35, 35, 21)
             header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
                       "Mérite", "Conduite", "Décision"]
 

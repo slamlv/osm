@@ -136,7 +136,7 @@
               <td class="d-none d-md-table-cell" style="color:rgba(255,255,255,0.5)!important;font-size:0.82rem;">{% if not row.student.unique_id %}—{% else %}{{ row.student.unique_id }}{% endif %}</td>
               <td class="fw-semibold">{{ row.student }}</td>
               <td class="d-none d-md-table-cell">{{ row.student.genre }}</td>
-              <td class="fw-semibold text-warning">{% if row.moyenne %} {{ row.moyenne }} {% else %} / {% endif %}</td>
+              <td class="fw-semibold text-warning" style="{{ row.style }}">{% if row.moyenne %} {{ row.moyenne }} {% else %} / {% endif %}</td>
 
               {# Decision (pre-selectionnee sur la valeur deja saisie) #}
               <td>
@@ -168,7 +168,7 @@
       </div>
 
       <div class="d-flex justify-content-center mt-3">
-        <button type="submit" class="btn btn-success btn-flottant fw-semibold px-4" hx-post="{% url 'end_year_assignment_form' %}"
+        <button type="submit" class="btn btn-success fw-semibold px-4" hx-post="{% url 'end_year_assignment_form' %}"
                 hx-include="select" hx-target="#marks_form" data-with-spinner>
           <i class="bi bi-save me-2"></i>Enregistrer les décisions
         </button>

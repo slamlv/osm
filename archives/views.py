@@ -308,7 +308,7 @@ def archives_search(request):
     q = (request.GET.get("q") or "").strip()
     results = []
     if q:
-        for st in Student.objects.filter(Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(unique_id__icontains=q))[:10]:
+        for st in Student.objects_all.filter(Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(unique_id__icontains=q))[:10]:
             docs = (ArchivedDocument.objects
                     .filter(doc_type__in=[DocType.BULLETIN, DocType.BULLETIN_WITH_COMPETENCES], page_map__has_key=str(st.id))
                     .order_by("-school_year", "term_index"))
@@ -324,7 +324,7 @@ def student_bulletin(request, doc_id, student_id):
     doc = get_object_or_404(ArchivedDocument, pk=doc_id)
     pages = (doc.page_map or {}).get(str(student_id))
     if not pages or not doc.file:
-        raise Http404("Bulletin introuvable dans cette archive.")
+        raise Http404("Bulletin introuvable.")
     from io import BytesIO
     from pypdf import PdfReader, PdfWriter
     doc.file.open("rb")
@@ -337,7 +337,7 @@ def student_bulletin(request, doc_id, student_id):
     doc.file.close()
     buf.seek(0)
 
-    student = Student.objects.get(id=student_id)
+    student = Student.objects_all.get(id=student_id)
     trim = ((("Trimestre 1", "Trimestre 2")[doc.term_index == 2], "Trimestre 3")[doc.term_index == 3], "Annuel")[doc.term_index == 0]
     filename = f"Bulletin {trim} {doc.school_year} {student.short_name}.pdf"
     filename_ascii = filename.encode('ascii', 'ignore').decode('ascii')

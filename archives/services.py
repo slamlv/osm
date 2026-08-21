@@ -7,7 +7,7 @@ from osm.utils import school_year
 from .models import ArchivedDocument, YearClosure, DocType, TERMS, PER_CLASSROOM, PER_TERM, TERM_LABELS, ALSO_GLOBAL,\
     PARAM_SENSITIVE, NOTE_DEPENDENT, EFFECTIF_DEPENDENT, build_unit_key
 from classroom.models import ClassRoom
-from student.models import StudentEnrollment, Student
+from student.models import StudentEnrollment, Student, EnrollmentStatus
 
 """
 =============================================================================
@@ -517,7 +517,7 @@ def promote_year(school, closure):
         if enr.decision in ("Promu", "Redoublant") and enr.next_classroom_id:
             student.classe = enr.next_classroom
             student.save(update_fields=["classe"])
-            StudentEnrollment.objects.get_or_create(
+            StudentEnrollment.objects.update_or_create(
                 student=student, school_year=new_year, defaults={"classroom": enr.next_classroom})
             moved += 1
         elif enr.decision in ("Transféré", "Sorti", "Exclu"):
@@ -526,6 +526,8 @@ def promote_year(school, closure):
             student.save(update_fields=["classe", "is_active"])
             left += 1
         else:
+            enr.decision = EnrollmentStatus.NON_STATUE
+            enr.save(update_fields=["decision"])
             student.classe = None
             StudentEnrollment.objects.get_or_create(
                 student=student, school_year=new_year, defaults={"classroom": None})

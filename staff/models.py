@@ -474,6 +474,10 @@ class Personnel(models.Model):
 
     def delete(self, *args, **kwargs):
         from osm.utils import delete_image
+        from finance.models import Transaction
+        if Transaction.objects.filter(beneficiary=self).exists():
+            nom = self.short_name
+            Transaction.objects.filter(beneficiary=self).update(beneficiary_name=nom)
         if self.photo:
             delete_image(self.photo)
         return super().delete(*args, **kwargs)

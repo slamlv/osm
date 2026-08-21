@@ -6,10 +6,11 @@ from django.utils.http import urlencode
 from django.urls import reverse
 
 from authentification.models import SchoolYear
+from student.views import enrollment_certificate
 from .models import SchoolFee, FeeInstallment, FeeType, StudentPayment, PaymentMethod, FeeDiscount, Transaction,\
     TransactionCategory, CashBox
 from .forms import StudentPaymentForm
-from student.models import Student
+from student.models import Student, StudentEnrollment
 from staff.models import Personnel
 from osm.utils import school_year, message, logged_financial_user_view, stamp_bytes, paste_stamp, resize_image, \
     base_header, number_to_words_fr, safe_redirect_back, pdf_response, base_infos, formated_float, filigrane, add_fonts,\
@@ -97,7 +98,7 @@ def fee_grid(request):
     }
 
     return render(request, "fee_grid.html", {
-        "year": year, "years": years, "groups": groups,
+        "year": year, "years": years, "groups": groups, 'current': school_year(),
         "fee_types": FeeType.objects.order_by("nom"),
         "niveaux": sorted(niveaux), "series": sorted(series),
         "fees_json": fees_json,
@@ -124,6 +125,9 @@ def fee_save(request):
     if request.method != "POST":
         return redirect("fee_grid")
     year = request.POST.get("year") or school_year()
+    if year != school_year():
+        message(request, "Vous ne pouvez pas ajouter de frais à une année déjà close")
+        return safe_redirect_back(request)
 
     fee_id = request.POST.get("fee_id") or None
     fee_type = get_object_or_404(FeeType, pk=request.POST.get("fee_type"))
@@ -200,6 +204,9 @@ def fee_delete(request, pk):
     if request.method == "POST":
         fee = get_object_or_404(SchoolFee, pk=pk)
         year = fee.school_year
+        if year != school_year():
+            message(request, "Vous ne pouvez pas supprimer les frais d'une année déjà close")
+            return safe_redirect_back(request)
         fee.delete()                       # les paiements ne pointent PAS ici
         message(request, "Ligne de grille supprimée.")
         url = reverse("fee_grid")
@@ -266,42 +273,48 @@ def cash_in(request):
     """?q= : recherche d'élèves ; ?student= : situation + formulaire.
     POST : enregistre le paiement puis propose le reçu."""
     year = school_year()
-    context = {'year': year, 'methods': PaymentMethod.choices, 'title': "Encaissements"}
+    annee_debut = year.split("/")[0]
+    context = {'methods': PaymentMethod.choices, 'title': "Encaissements",
+               'years': [s.libelle for s in SchoolYear.objects.filter(annee_debut__lte=annee_debut)]}
 
     # --- recherche -----------------------------------------------------------
     q = (request.GET.get("q") or "").strip()
+    s_year = context['s_year'] = request.GET.get('school_year') or year
     if q:
         context["q"] = q
-        context["results"] = (Student.objects
-                              .filter(Q(nom__icontains=q) | Q(prenom__icontains=q)
-                                      | Q(unique_id__icontains=q))
-                              .select_related("classe")
-                              .order_by("nom", "prenom")[:25])
-
+        context["results"] = (StudentEnrollment.objects
+                              .filter(Q(student__nom__icontains=q) | Q(student__prenom__icontains=q)
+                                      | Q(student__unique_id__icontains=q), school_year__libelle=s_year,
+                                      classroom__isnull=False)
+                              .select_related("student__classe")
+                              .order_by("student__nom", "student__prenom")[:25])
     # --- élève sélectionné ----------------------------------------------------
-    student_id = request.GET.get("student") or request.POST.get("student")
-    if student_id:
-        student = get_object_or_404(Student, pk=student_id)
-        context["student"] = student
+    enrollment_id = request.GET.get("enrollment") or request.POST.get("enrollment")
+    if enrollment_id:
+        enrollment = get_object_or_404(StudentEnrollment.objects.select_related('student'), pk=enrollment_id)
+        context["enrollment"] = enrollment
         # situation par type de frais (méthode déplacée sur Student)
-        context["status"] = student.student_fee_status(year)
+        context["status"] = enrollment.student.student_fee_status(s_year, classroom=enrollment.classroom)
         # historique des paiements de l'année (reçus réimprimables)
-        context["history"] = (student.payments
-                              .filter(school_year=year)
+        context["history"] = (enrollment.student.payments
+                              .filter(school_year=s_year)
                               .select_related("fee_type")
                               .order_by("-date", "-id"))
 
         if request.method == "POST":
-            form = StudentPaymentForm(request.POST, student=student, year=year)
+            s_year = context['s_year'] = request.POST.get('school_year') or year
+            form = StudentPaymentForm(
+                request.POST, student=enrollment.student, year=s_year, classroom=enrollment.classroom)
             if form.is_valid():
                 payment = form.save(commit=False)
-                if payment.amount > student.student_fee_status(year, fee_type_id=payment.fee_type.id)[0]['reste']:
+                if payment.amount > enrollment.student.student_fee_status(
+                        s_year, fee_type_id=payment.fee_type.id, classroom=enrollment.classroom)[0]['reste']:
                     message(request, "Le montant ne peut être supérieur au reste à payer.", msg_type="error")
                 elif payment.date > datetime.today().date():
                     message(request, "La date de payement ne peut être supérieure à celle d'aujourd'hui.", msg_type="error")
                 else:
-                    payment.student = student
-                    payment.school_year = year
+                    payment.student = enrollment.student
+                    payment.school_year = s_year
                     payment.received_by = request.user
                     payment.save()
                     message(request,
@@ -309,13 +322,13 @@ def cash_in(request):
                         f"(reçu {payment.receipt_number}).".replace(",", " "))
                     # PRG + ouverture directe du reçu possible côté template
                     if payment.fee_type.affects_cashbox:
-                        return redirect(f"{request.path}?student={student.pk}"
-                                        f"&receipt={payment.pk}")
+                        return redirect(f"{request.path}?enrollment={enrollment.pk}"
+                                        f"&receipt={payment.pk}&school_year={s_year}")
                     else:
-                        return HttpResponseRedirect(f"{request.path}?student={student.pk}")
+                        return HttpResponseRedirect(f"{request.path}?enrollment={enrollment.pk}&school_year={s_year}")
             context["form"] = form
         else:
-            context["form"] = StudentPaymentForm(student=student, year=year)
+            context["form"] = StudentPaymentForm(student=enrollment.student, year=s_year, classroom=enrollment.classroom)
             context["new_receipt"] = request.GET.get("receipt")
     return render(request, "cash_in.html", context)
 
@@ -360,40 +373,49 @@ def cancel_payment(request, pk):
 @logged_financial_user_view
 def discounts(request):
     year = school_year()
-    context = {"year": year}
+    annee_debut = year.split("/")[0]
+    context = {"year": year, 'years': [s.libelle for s in SchoolYear.objects.filter(annee_debut__lte=annee_debut)]}
+    s_year = context['s_year'] = request.GET.get('school_year') or year
 
     # ------- liste des remises de l'année (courte par nature) -------
-    dlist = (FeeDiscount.objects.filter(school_year=year)
-             .select_related("student", "student__classe", "fee_type",
+    dlist = (FeeDiscount.objects.filter(school_year=s_year)
+             .select_related("student", "fee_type",
                              "granted_by")
              .order_by("student__nom", "student__prenom"))
-    context["discounts"] = dlist
+    discounts_list = []
+    enrollments = (StudentEnrollment.objects.filter(school_year__libelle=s_year, classroom__isnull=False)
+                   .select_related("student__classe"))
+    for d in dlist:
+        enrollment = enrollments.get(student=d.student)
+        discounts_list.append((d, enrollment.classroom.code, enrollment.pk))
+    context["discounts"] = discounts_list
     context["total"] = dlist.aggregate(t=Sum("amount"))["t"] or 0
 
     # ------- recherche d'un élève à qui accorder -------
     q = (request.GET.get("q") or "").strip()
     if q:
         context["q"] = q
-        context["results"] = (Student.objects
-                              .filter(Q(nom__icontains=q)
-                                      | Q(prenom__icontains=q)
-                                      | Q(unique_id__icontains=q))
-                              .select_related("classe")
-                              .order_by("nom", "prenom")[:25])
+        context["results"] = (enrollments
+                              .filter(Q(student__nom__icontains=q) | Q(student__prenom__icontains=q)
+                                      | Q(student__unique_id__icontains=q))
+                              .order_by("student__nom", "student__prenom")[:25])
 
     # ------- élève sélectionné : formulaire d'attribution -------
-    student_id = request.GET.get("student")
-    if student_id:
-        student = get_object_or_404(Student, pk=student_id)
+    enr_id = request.GET.get("enrollment")
+    if enr_id:
+        enr = get_object_or_404(enrollments, pk=enr_id)
+        student = enr.student
         context["student"] = student
+        context["enr"] = enr
         # frais applicables à CET élève (cascade niveau/série) + dû brut,
         # et remise existante éventuelle (pré-remplissage = modification)
         existing = {d.fee_type_id: d for d in
-                    FeeDiscount.objects.filter(student=student, school_year=year)}
+                    FeeDiscount.objects.filter(student=student, school_year=s_year)}
         fees = []
-        for f in student.applicable_fees(year):
-            fees.append({"fee": f,
-                         "current": existing.get(f.fee_type_id)})
+        for f in student.applicable_fees(s_year, classroom=enr.classroom):
+            if f.fee_type.affects_cashbox:
+                fees.append({"fee": f,
+                             "current": existing.get(f.fee_type_id)})
         context["fees"] = fees
     context['title'] = "Remises et Exonérations"
     return render(request, "discounts.html", context)
@@ -403,8 +425,8 @@ def discounts(request):
 def discount_save(request):
     if request.method != "POST":
         return redirect("discounts")
-    year = school_year()
-    student = get_object_or_404(Student, pk=request.POST.get("student"))
+    year = request.POST.get("school_year")
+    student = get_object_or_404(Student.objects_all, pk=request.POST.get("student"))
     fee_type = get_object_or_404(FeeType, pk=request.POST.get("fee_type"))
     reason = (request.POST.get("reason") or "").strip()
     try:
@@ -422,22 +444,21 @@ def discount_save(request):
                                 f"dû ({du_brut:,} F).".replace(",", " "), msg_type="error")
         return safe_redirect_back(request)
 
-    _, created = FeeDiscount.objects.update_or_create(
+    FeeDiscount.objects.update_or_create(
         student=student, fee_type=fee_type, school_year=year,
-        defaults={"amount": amount, "reason": reason,
-                  "granted_by": request.user})
-    message(request, f"Remise {'accordée' if created else 'modifiée'} : {amount:,} FCFA sur {fee_type} pour {student}."
-                     .replace(",", " "))
-    return redirect("discounts")
+        defaults={"amount": amount, "reason": reason, "granted_by": request.user})
+    message(request, f"Remise : {amount:,} FCFA sur {fee_type} pour {student} pour {year}.".replace(",", " "))
+    return redirect(f"discounts?school_year={year}")
 
 
 @logged_financial_user_view
 def discount_delete(request, pk):
     if request.method == "POST":
         d = get_object_or_404(FeeDiscount, pk=pk)
-        message(request, f"Remise retirée pour {d.student}.")
+        year = d.school_year
+        message(request, f"Remise retirée pour {d.student} pour {year}.")
         d.delete()
-    return redirect("discounts")
+    return redirect(f"/discounts?school_year={year}")
 
 
 MONTHS_FR = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -1080,6 +1101,7 @@ class RecoveryReportPDF(_FinReport):
     DOC_NAME = "Recouvrement"
 
     def __init__(self, classrooms, year, school, fee_type=None):
+        from student.models import StudentEnrollment
         super().__init__(orientation="P", school=school)
         sub = f"Année {year}" + (f" • Frais : {fee_type}" if fee_type else " • Tous frais entrant en caisse")
         self.set_font("inter", "", 8)
@@ -1099,8 +1121,10 @@ class RecoveryReportPDF(_FinReport):
         g_att = g_enc = 0
         for classroom in classrooms:
             att = enc = 0
-            students = classroom.students.all()
-            for st in students:
+            enrollments = (StudentEnrollment.objects.filter(school_year__libelle=year, classroom_id=classroom.pk).
+                           select_related('student').order_by('student__nom', 'student__prenom'))
+            for enr in enrollments:
+                st = enr.student
                 for r in st.student_fee_status(year):
                     if fee_type and r["fee_type"].id != fee_type.id:
                         continue
@@ -1113,7 +1137,7 @@ class RecoveryReportPDF(_FinReport):
             taux = formated_float((enc / att) * 100) if att else '—'
             row = table.row()
             row.cell(classroom.code, align="L")
-            row.cell(str(students.count()))
+            row.cell(str(enrollments.count()))
             row.cell(fmt(att) + ' FCFA' if att else "—", align="R")
             row.cell(fmt(enc) + ' FCFA' if enc else "—", align="R")
             row.cell(fmt(att - enc) + ' FCFA' if att else "—", align="R")
@@ -1304,8 +1328,9 @@ class PaymentReceipt(FPDF):
             self.set_xy(x, yy + 3.7)
             self.cell(w, 5, str(value))
 
-        student = p.student
-        classe = student.classe.code if student.classe else "—"
+        enrollment = StudentEnrollment.objects.filter(student=p.student, school_year__libelle=p.school_year).select_related("student").first()
+        student = enrollment.student
+        classe = enrollment.classroom.code if enrollment.classroom else "—"
         field(L, y,      "Reçu de (élève)", f"{student}")
         field(L + 95, y, "Matricule", student.unique_id or "—", w=45)
         field(L + 145, y, "Classe", classe, w=45)
