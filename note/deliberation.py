@@ -39,7 +39,7 @@ def student_decision(student, year, moyenne=None, seuil=10):
     #: Un transfert ou une exclusion ne « diverge » pas, il relève d'autre chose.
     divergente = bool(proposal) and code in ("ADM", "RED") and code != proposal
     decision = decision if decision in DECISION_CODES else ""
-    if decision in ("Promu", "Sorti", "Transféré", "Exclu"):
+    if decision in ("Promu", "Sorti", "Transféré", "Exclu") and student.sexe == "Fille":
         decision += "e"
     elif decision == "Redoublant":
         decision = "Redouble"
