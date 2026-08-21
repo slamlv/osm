@@ -1640,7 +1640,7 @@ class Statistiques(FPDF):
         # (245, 235, 255) → lavande très pâle
         # (255, 243, 230) → pêche très doux
         # (235, 245, 255) → bleu ciel très pâle
-        BG_COLOR = (245, 235, 255)
+        BG_COLOR = (232, 236, 242)
 
         table = Table(self, line_height=3.7, col_widths=col_widths, text_align="LEFT", markdown=True)
 
@@ -1719,7 +1719,7 @@ class Statistiques(FPDF):
         self.colored_cell(tr, value=self.data['ppt'],
                           text=f"{self.data['ppt']}%\n{self.data['nbe']} / {self.data['effectif']}", percent=True)
 
-        self.set_fill_color(232, 236, 242)
+        self.set_fill_color(0)
         stats = self.data['classrooms_data'] if self.data['label'] == "Global" else self.data['matieres_data']
 
         for stat in stats:
@@ -1795,7 +1795,7 @@ class PDFMarksSheet(FPDF):
         table = Table(self, line_height=6, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
         th = table.row()
-        self.set_fill_color(220)
+        self.set_fill_color(242, 240, 236)
         for head in header:
             th.cell(f"**{head}**")
         self.set_fill_color(0)
@@ -1924,7 +1924,7 @@ class ClassroomList(FPDF):
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
         th = table.row()
-        self.set_fill_color(220)
+        self.set_fill_color(242, 240, 236)
         for head in header:
             th.cell(f"**{head}**")
         self.set_fill_color(0)
@@ -1986,7 +1986,7 @@ class ClassroomTimeTable(FPDF):
         if 'tranches_horaires' in self.data.keys():
             for tranche in self.data['tranches_horaires']:
                 row = table.row()
-                self.set_fill_color(220)
+                self.set_fill_color(242, 240, 236)
                 colspan = 1 if tranche.is_cours else 6
                 row.cell(f"**{'' if colspan == 1 else 'Pause : '}{tranche.start_end}**", colspan=colspan,
                          padding=padding if colspan == 1 else (1.5, 0, 1.5, 0))
@@ -2000,7 +2000,7 @@ class ClassroomTimeTable(FPDF):
         else:
             for elt in self.data['time_table']:
                 row = table.row()
-                self.set_fill_color(220)
+                self.set_fill_color(242, 240, 236)
                 colspan = 1 if elt[0].is_cours else 6
                 row.cell(f"**{'' if colspan == 1 else 'Pause : '}{elt[0].start_end}**", colspan=colspan,
                          padding=padding if colspan == 1 else (1.5, 0, 1.5, 0))
@@ -2068,7 +2068,7 @@ class StaffMemberTimeTable(FPDF):
         recap_table = Table(self, width=45, line_height=7, col_widths=(32, 13), text_align="CENTER", markdown=True,
                             align='L')
         th = recap_table.row()
-        self.set_fill_color(220)
+        self.set_fill_color(242, 240, 236)
         th.cell(f"**HEURES FAITES**", colspan=2)
         self.set_fill_color(0)
         i = 0
@@ -2105,7 +2105,7 @@ class StaffMemberTimeTable(FPDF):
         table = Table(self, width=238, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
                       align='R')
         th = table.row()
-        self.set_fill_color(220)
+        self.set_fill_color(242, 240, 236)
         padding = (2.5, 0, 2.5, 0)
         for head in header:
             th.cell(f"**{head}**", padding=(2, 0, 2, 0))
