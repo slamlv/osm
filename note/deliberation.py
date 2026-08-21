@@ -38,11 +38,12 @@ def student_decision(student, year, moyenne=None, seuil=10):
     #: divergence : seuls ADM et RED sont comparables à la proposition.
     #: Un transfert ou une exclusion ne « diverge » pas, il relève d'autre chose.
     divergente = bool(proposal) and code in ("ADM", "RED") and code != proposal
+    decision = decision if decision in DECISION_CODES else ""
     if decision in ("Promu", "Sorti", "Transféré", "Exclu"):
         decision += "e"
     elif decision == "Redoublant":
         decision = "Redouble"
-    return decision if decision in DECISION_CODES else "", divergente
+    return decision, divergente
 
 
 def decisions_fingerprint(classroom, year):
