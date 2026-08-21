@@ -1710,18 +1710,18 @@ class Statistiques(FPDF):
         self.set_fill_color(255, 248, 200)
         tr.cell("**Global**", align="L")
         self.colored_cell(tr, value=self.data['pcf'],
-                          text=f"**{self.data['pcf'] + '%' if self.data['nbfe'] else '/'}**\n{self.data['nbfr']} / {self.data['nbfe']}", percent=True)
+                          text=f"**{str(self.data['pcf']) + '%' if self.data['nbfe'] else '/'}**\n{self.data['nbfr']} / {self.data['nbfe']}", percent=True)
         self.colored_cell(tr, value=self.data['pcg'],
-                          text=f"**{self.data['pcg'] + '%' if self.data['nbge'] else '/'}**\n{self.data['nbgr']} / {self.data['nbge']}", percent=True)
+                          text=f"**{str(self.data['pcg']) + '%' if self.data['nbge'] else '/'}**\n{self.data['nbgr']} / {self.data['nbge']}", percent=True)
         self.colored_cell(tr, value=self.data['taux'],
                           text=f"**{self.data['taux']}%**\n{self.data['nbr']} / {self.data['nbe']}", percent=True)
         tr.cell(f"**{self.data['min_max']}**")
         self.colored_cell(tr, value=self.data['moyenne_generale'],
                           text=f"**{self.data['moyenne_generale']}**", percent=False)
         self.colored_cell(tr, value=self.data['ppf'],
-                          text=f"{self.data['ppf'] + '%' if self.data['filles'] else '/'}\n{self.data['nbfe']} / {self.data['filles']}", percent=True)
+                          text=f"{str(self.data['ppf']) + '%' if self.data['filles'] else '/'}\n{self.data['nbfe']} / {self.data['filles']}", percent=True)
         self.colored_cell(tr, value=self.data['ppg'],
-                          text=f"{self.data['ppg'] + '%' if self.data['garcons'] else '/'}\n{self.data['nbge']} / {self.data['garcons']}", percent=True)
+                          text=f"{str(self.data['ppg']) + '%' if self.data['garcons'] else '/'}\n{self.data['nbge']} / {self.data['garcons']}", percent=True)
         self.colored_cell(tr, value=self.data['ppt'],
                           text=f"{self.data['ppt']}%\n{self.data['nbe']} / {self.data['effectif']}", percent=True)
 
@@ -1732,9 +1732,9 @@ class Statistiques(FPDF):
             tr = table.row()
             tr.cell(f"**{stat['label']}**\n{stat['titulaire'] if self.data['label'] == 'Global' else stat['enseignant']}", align="L")
             self.colored_cell(tr, value=stat['pcf'],
-                              text=f"**{stat['pcf'] + '%' if stat['nbfe'] else '/'}**\n{stat['nbfr']} / {stat['nbfe']}", percent=True)
+                              text=f"**{str(stat['pcf']) + '%' if stat['nbfe'] else '/'}**\n{stat['nbfr']} / {stat['nbfe']}", percent=True)
             self.colored_cell(tr, value=stat['pcg'],
-                              text=f"**{stat['pcg'] + '%' if stat['nbge'] else '/'}**\n{stat['nbgr']} / {stat['nbge']}", percent=True)
+                              text=f"**{str(stat['pcg']) + '%' if stat['nbge'] else '/'}**\n{stat['nbgr']} / {stat['nbge']}", percent=True)
             taux = stat['taux'] if self.data['label'] == "Global" else stat['pct']
             nbe = stat['nbe'] if self.data['label'] == "Global" else stat['nbte']
             nbr = stat['nbr'] if self.data['label'] == "Global" else stat['nbtr']
@@ -1747,9 +1747,9 @@ class Statistiques(FPDF):
             garcons = self.data['garcons'] if self.data['label'] != "Global" else stat['garcons']
             effectif = self.data['effectif'] if self.data['label'] != "Global" else stat['effectif']
             self.colored_cell(tr, value=stat['ppf'],
-                              text=f"{stat['ppf'] + '%' if filles else '/'}\n{stat['nbfe']} / {filles}", percent=True)
+                              text=f"{str(stat['ppf']) + '%' if filles else '/'}\n{stat['nbfe']} / {filles}", percent=True)
             self.colored_cell(tr, value=stat['ppg'],
-                              text=f"{stat['ppg'] + '%' if garcons else '/'}\n{stat['nbge']} / {garcons}", percent=True)
+                              text=f"{str(stat['ppg']) + '%' if garcons else '/'}\n{stat['nbge']} / {garcons}", percent=True)
             self.colored_cell(tr, value=stat['ppt'],
                               text=f"{stat['ppt']}%\n{nbe} / {effectif}", percent=True)
         table.render()
