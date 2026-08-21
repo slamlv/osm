@@ -543,6 +543,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
+        update_decisions = False
         classroom = self.get_classroom(method="POST")
         current_year = SchoolYear.current()
 
@@ -597,6 +598,8 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
 
             enr = existing.get(student.id)
             if enr:
+                if enr.decision != decision and not update_decisions:
+                    update_decisions = True
                 changed = (
                     enr.decision != decision
                     or (enr.next_classroom_id or None) != next_pk
@@ -610,6 +613,8 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
                     nb += 1
             else:
                 # Cas rare : élève sans enrollment courant.
+                if not update_decisions:
+                    update_decisions = True
                 to_create.append(StudentEnrollment(
                     student=student,
                     school_year=current_year,
@@ -642,6 +647,9 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
                              self.build_bulk_form(classroom))
         )
         response['HX-Trigger'] = 'AJAXMessages'
+        if update_decisions:
+            classroom.decisions_updated = timezone.now()
+            classroom.save(update_fields=['decisions_updated'])
         return response
 
 

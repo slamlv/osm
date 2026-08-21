@@ -231,6 +231,10 @@ class ArchivedDocument(models.Model):
         if not self.is_year_closed and not self.old_archive:
             if not self.file and self.title != "Sans objet":
                 return True
+            # si les decisions de fin d'année ont changées (PV annuel)
+            if self.doc_type == DocType.PV and self.term_index == 0 and self.classroom_id:
+                if self.classroom.decisions_updated and self.classroom.decisions_updated > self.archived_at:
+                    return True
             # 1) l'effectif a-t-il changé après l'archivage ?
             if self.doc_type in EFFECTIF_DEPENDENT and not self.is_year_closed:
                 if self.classroom_id:
@@ -258,6 +262,10 @@ class ArchivedDocument(models.Model):
         if not self.is_year_closed and not self.old_archive:
             if not self.file and self.title != "Sans objet":
                 return "Jamais généré"
+            # si les decisions de fin d'année ont changées (PV annuel)
+            if self.doc_type == DocType.PV and self.term_index == 0 and self.classroom_id:
+                if self.classroom.decisions_updated and self.classroom.decisions_updated > self.archived_at:
+                    return "Décisions mises à jours"
             if self.doc_type in EFFECTIF_DEPENDENT:
                 if self.classroom_id:
                     effectif = self.classroom.effectif

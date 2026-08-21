@@ -189,6 +189,7 @@ class ClassRoom(models.Model):
     notes_updated_t1 = models.DateTimeField(null=True, blank=True)
     notes_updated_t2 = models.DateTimeField(null=True, blank=True)
     notes_updated_t3 = models.DateTimeField(null=True, blank=True)
+    decisions_updated = models.DateTimeField(null=True, blank=True)
 
     # Moyenne minimale d'admission : 10 par défaut, mais chaque établissement
     # peut l'ajuster. Source UNIQUE pour bulletins, PV et statistiques.

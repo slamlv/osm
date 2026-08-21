@@ -475,7 +475,7 @@ def cleanup_year(school, closure, keys=None):
     except Exception:
         pass
     try:
-        ClassRoom.objects.update(notes_updated_t1=None, notes_updated_t2=None, notes_updated_t3=None)
+        ClassRoom.objects.update(notes_updated_t1=None, notes_updated_t2=None, notes_updated_t3=None, decisions_updated=None)
     except Exception:
         pass
     try:
