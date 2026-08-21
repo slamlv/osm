@@ -531,6 +531,8 @@ class TimeTable(LoggedAdminView):
 
 def checks_notes(classrooms, evl_in):
     def check(classroom):
+        if not classroom.students.exists():
+            return f"Aucun élève en {classroom.code}"
         rapport = "Certaines notes de "
         checks = [(evl_in[i], MarksForm.cls_marks_check(classroom, evl_in[i])) for i in range(len(evl_in))]
         for status in checks:
@@ -918,7 +920,7 @@ class Stats(LoggedAdminView):
                 prefetch_related('students', 'matieres__sujet').
                 get(pk=classroom_id)
             )
-            if classroom.objects.exists():
+            if not classroom.students.exists():
                 status = False
                 rapport = f"Aucun élève en {classroom.code}."
             else:
