@@ -1779,7 +1779,7 @@ class PDFMarksSheet(FPDF):
         add_fonts(self)
         self.alias_nb_pages()
         self.set_margins(6, 6, 6)
-        self.set_auto_page_break(auto=True, margin=10)
+        self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
         self.annee = kwargs['annee']
         self.classroom = kwargs['classroom']
@@ -1811,17 +1811,13 @@ class PDFMarksSheet(FPDF):
             row.cell(f"{student.unique_id}")
             row.cell(f"{student.__str__()}", align="L")
             row.cell(f"{student.genre}", align="C")
-            row.cell()
-            row.cell()
-            row.cell()
-            row.cell()
-            row.cell()
-            row.cell()
+            for _ in range(6):
+                row.cell()
             i += 1
         j = 0
-        while j < 5 and self.get_y() < 290:
+        while j < 5 and not self.will_page_break(5):
             additional_row = table.row()
-            for i in range(10):
+            for _ in range(10):
                 additional_row.cell()
             j += 1
         table.render()
