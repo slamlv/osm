@@ -1818,6 +1818,12 @@ class PDFMarksSheet(FPDF):
             row.cell()
             row.cell()
             i += 1
+        j = 0
+        while j < 5 and self.get_y() < 291:
+            additional_row = table.row()
+            for i in range(10):
+                additional_row.cell()
+            j += 1
         table.render()
 
     def infos(self):
