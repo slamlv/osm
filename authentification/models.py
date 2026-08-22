@@ -69,6 +69,7 @@ class Poste(models.TextChoices):
     CH = "Chef d'Établissement", "Chef d'Établissement"
     CE = "Censeur", "Censeur"
     SG = "Surveillant Général", "Surveillant Général"
+    ET = "Chargé des études", "Chargé des études"
     CO = "Conseiller d'orientation", "Conseiller d'orientation"
     SS = "Surveillant de secteur", "Surveillant de secteur"
     VJ = "Vigile de jour", "Vigile de jour"
@@ -84,6 +85,7 @@ class Poste(models.TextChoices):
 Poste_Fem = {
     'Censeur': "Censeure",
     'Surveillant Général': "Surveillante Générale",
+    'Chargé des études': "Chargée des études",
     'Conseiller d\'orientation': "Conseillère d'orientation",
     'Surveillant de secteur': "Surveillante de secteur",
     'Intendant': "Intendante",

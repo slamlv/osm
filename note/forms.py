@@ -107,7 +107,7 @@ class SelectForm(DynamicFormMixin, forms.Form):
 
         if self.end_year_assignment:
             user = self.context['request'].user
-            if user.is_admin:
+            if user.is_min_admin:
                 classrooms =  ClassRoom.objects.all().order_by_niveau()
             else:
                 classrooms =  user.staff_member.titulaire.all()
@@ -122,7 +122,7 @@ class SelectForm(DynamicFormMixin, forms.Form):
             classrooms = ClassRoom.objects.select_related('classe').filter(pk__in=classes_id).order_by_niveau()
             return [(classroom.pk, classroom.code) for classroom in classrooms]
         if self.marks_sheet:
-            if self.context['request'].user.is_admin:
+            if self.context['request'].user.is_min_admin:
                 return [("__all__", "Toutes")] + [(classroom.pk, classroom.code) for classroom in ClassRoom.objects.order_by_niveau()]
         matiere = matiere()
         enseignements = self.context['enseignements']
@@ -343,8 +343,8 @@ class MarksForm(DynamicFormMixin, forms.Form):
         x = 0
         for mark_form in self.marks_form:
             x += mark_form.mark_save(compts)
-            if x:
-                self.classroom.touch_notes(term_index=term_index, sequence=sequence)
+        if x:
+            self.classroom.touch_notes(term_index=term_index, sequence=sequence)
         return x
 
     def isvalid(self):

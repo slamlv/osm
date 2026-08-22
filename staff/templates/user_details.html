@@ -57,7 +57,7 @@
               <td class="fw-semibold">{{ d.matiere }}</td>
               <td>
                 {% for classe in d.classes %}
-                {% if user.is_admin %}
+                {% if user.is_min_admin %}
                 <a href="{% url 'classroom-teachers' id=classe.id %}" class="text-info text-decoration-none me-1">{{ classe.code }}</a>
                 {% else %}
                 <span class="me-1">{{ classe.code }}</span>

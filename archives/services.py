@@ -277,6 +277,8 @@ def missing_marks():
     """Trous de saisie. Vide = clôture possible."""
     from note.models import Note
     holes = []
+    if not ClassRoom.objects.exists() or not Student.objects.exists():
+        return True
     for classroom in ClassRoom.objects.all().order_by_niveau():
         if not classroom.students.exists():
             continue

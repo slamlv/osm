@@ -616,18 +616,18 @@ class MarksEdit(LoggedUserView):
             start, end = period.start, period.end
             plus = "veuillez contacter l'administrateur."
             if not start:
-                if instance.request.user.is_admin:
+                if instance.request.user.is_min_admin:
                     return True, f"La période de remplissage pour {add} n'a pas encore été définie."
                 else:
                     return False, f"La période de remplissage pour {add} n'a pas encore été définie, {plus}"
             else:
                 if timezone.now() < start:
-                    if instance.request.user.is_admin:
+                    if instance.request.user.is_min_admin:
                         return True, f"La période de remplissage définie pour {add} n'a pas encore débutée."
                     else:
                         return False, f"La période de remplissage définie pour {add} n'a pas encore débutée, {plus}"
                 elif timezone.now() > end:
-                    if instance.request.user.is_admin:
+                    if instance.request.user.is_min_admin:
                         return True, f"La période de remplissage définie pour {add} est déjà close."
                     else:
                         return False, f"La période de remplissage définie pour {add} est déjà close, {plus}"
@@ -764,7 +764,7 @@ class MarksCopy(LoggedUserView):
                 context['marks_copy_form'] = MarksCopyForm(context=form_context)
         else:
             rapport = "Les plages de remplissages sont closes ou n'ont pas encore débutées."
-            if not self.request.user.is_admin:
+            if not self.request.user.is_min_admin:
                 rapport += " Veuillez contacter un administrateur."
             context['rapport'] = rapport
         return render(self.request, self.template_name, context)
@@ -790,7 +790,7 @@ class MarksCopy(LoggedUserView):
                         message(self.request, msg)
         else:
             rapport = "Les plages de remplissages sont closes ou n'ont pas encore débutées."
-            if not self.request.user.is_admin:
+            if not self.request.user.is_min_admin:
                 rapport += " Veuillez contacter un administrateur."
             context['rapport'] = rapport
         return render(self.request, self.template_name, context)
@@ -1225,7 +1225,7 @@ class ExamRecord(FPDF):
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
         if self.data['annual']:
-            col_widths = (9, 18, 70, 10, 10, 12, 12, 12, 12, 14, 32, 34, 30)
+            col_widths = (9, 18, 72, 9, 9, 12, 12, 12, 12, 14, 30, 33, 33)
             header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
                       "Mérite", "Conduite", "Décision"]
 
@@ -1259,7 +1259,7 @@ class ExamRecord(FPDF):
                 row.cell(student['conduite'], align="L")
                 self.set_font("inter", 'B', 8)
                 decision = student['decision']
-                plus = f" • {student['next'].code}" if student['next'] and decision in ("Promu", "Redouble") else ""
+                next_cls = (" → " if decision == "Promu" else " • ") + student['next'].code if student['next'] and decision in ("Promu", "Redouble") else ""
                 if student['divergente']:
                     divergents += 1
                     plus = 1 if decision == "Promu" else -1
@@ -1269,10 +1269,10 @@ class ExamRecord(FPDF):
                     else:
                         self.data['nbgr'] += plus
                     self.set_text_color(10, 61, 98)
-                    row.cell(f"{decision}{plus}*", align="L")
+                    row.cell(f"{decision}{next_cls}*", align="L")
                     self.set_text_color(0)
                 else:
-                    row.cell(f"{decision}{plus}", align="L")
+                    row.cell(f"{decision}{next_cls}", align="L")
                 self.set_font("inter", '', 8)
             if divergents:
                 self.data['taux'] = formated_float((self.data['nbr'] / self.data['effectif']) * 100) if self.data['effectif'] else 0

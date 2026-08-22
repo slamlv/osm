@@ -100,7 +100,7 @@ def signin(request):
             mdp = form.cleaned_data.get("mdp")
             user = authenticate(username=username, password=mdp)
             if datetime.today().date() > user.school.licence:
-                return render(request, "404_unauthenticated.html", {'license': True if user.is_admin else False})
+                return render(request, "404_unauthenticated.html", {'license': True if user.is_min_admin else False})
             if user:
                 login(request, user)
                 next_url = request.POST.get("next") or request.GET.get("next")

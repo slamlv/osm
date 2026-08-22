@@ -148,7 +148,7 @@ class Progression(LoggedUserView):
 
     def get(self, *args, **kwargs):
         i = kwargs.get("id")
-        if (not self.request.user.is_admin) and i != self.request.user.staff_member.pk:
+        if (not self.request.user.is_min_admin) and i != self.request.user.staff_member.pk:
             return render(self.request, "404.html")
         msg, staff_member = ProgressionSelectForm.check(self, i)
         if i == 0 or i == self.request.user.staff_member.pk:

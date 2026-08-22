@@ -8,6 +8,7 @@ from django.db.models import When, Case, Value, IntegerField, F, UniqueConstrain
 Poste_Fem = {
     'Censeur': "Censeure",
     'Surveillant Général': "Surveillante Générale",
+    'Chargé des études': "Chargée des études",
     'Conseiller d\'orientation': "Conseillère d'orientation",
     'Surveillant de secteur': "Surveillante de secteur",
     'Intendant': "Intendante",
@@ -106,8 +107,9 @@ class StaffQuerySet(models.QuerySet):
 
     def order_by_poste(self):
         order = {
-            'Chef d\'Établissement': 1,
-            'Censeur': 2,
+            'Chef d\'Établissement': 0,
+            'Censeur': 1,
+            'Chargé des études': 2,
             'Surveillant Général': 3,
             'Intendant': 4,
             'Économe': 5,

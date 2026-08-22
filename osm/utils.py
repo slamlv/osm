@@ -167,7 +167,7 @@ class AdminOrTitulaireRequired:
 
         with schema_context(request.user.school.schema_name):
             if not request.user.is_superuser:
-                if request.user.is_admin or request.user.is_titulaire:
+                if request.user.is_min_admin or request.user.is_titulaire:
                     return super().dispatch(request, *args, **kwargs)
 
         return render(request, "404.html")
@@ -364,11 +364,13 @@ class BaseStaffMemberTimetable(View):
         return staffmember, title, mp
 
     def get(self, *args, **kwargs):
+        from authentification.models import TrancheHoraire
         staffmember, title, mp = self.get_object()
+        plages = TrancheHoraire.objects.filter(school_id=self.request.user.school.pk).exists()
         timetable, staffmember_recap = staffmember.timetable(mp, self.request.user.school.pk)
         context = {'title': title if self.kwargs.get('id') else "Mon Emploi du temps", 'time_table': timetable,
                    'days': ("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"), 'recap': staffmember_recap[0],
-                   'total_heures': staffmember_recap[1], 'id': self.kwargs.get('id')}
+                   'total_heures': staffmember_recap[1], 'id': self.kwargs.get('id'), 'plages': plages}
         return render(self.request, "staff_member_timetable.html", context)
 
     def build_pdf_or_reason(self, staff_member, annee, school):

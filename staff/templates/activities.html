@@ -38,7 +38,7 @@
         <th>Dates</th>
         <th>Activité(s)</th>
         <th>Intervenants</th>
-        {% if user.is_admin %}<th>Actions</th>{% endif %}
+        {% if user.is_min_admin %}<th>Actions</th>{% endif %}
       </tr></thead>
       <tbody>
         {% for activity in datas %}
@@ -47,7 +47,7 @@
           <td style="font-size:0.82rem;">Du {{ activity.start }}<br>Au {{ activity.end }}</td>
           <td class="fw-semibold">{{ activity.label }}</td>
           <td style="color:rgba(255,255,255,0.6)!important;">{% if activity.responsables %}{{ activity.responsables }}{% else %}—{% endif %}</td>
-          {% if user.is_admin %}
+          {% if user.is_min_admin %}
           <td>
             <div class="d-flex gap-2">
               <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'activity-edit' id=activity.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
