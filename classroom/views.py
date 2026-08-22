@@ -1791,12 +1791,12 @@ class PDFMarksSheet(FPDF):
 
     def sheet(self):
         self.ln()
-        self.set_font_size(9)
-        col_widths = [10, 24, 70, 10, 14, 14, 14, 14, 14, 14]
+        self.set_font_size(8)
+        col_widths = [10, 22, 78, 10, 13, 13, 13, 13, 13, 13]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sex", "Eval1", "Eval2", "Eval3",
                   "Eval4", "Eval5", "Eval6"]
 
-        table = Table(self, line_height=6, col_widths=col_widths, text_align="CENTER", markdown=True,
+        table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
         th = table.row()
         self.set_fill_color(242, 240, 236)
@@ -1921,7 +1921,7 @@ class ClassroomList(FPDF):
 
     def list(self):
         self.ln()
-        col_widths = [10, 24, 75, 25, 41, 11.5, 11.5]
+        col_widths = [10, 20, 78, 22, 45, 11.5, 11.5]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Né(e) le", "A", "Sexe", "Red?"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
