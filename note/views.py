@@ -1225,7 +1225,7 @@ class ExamRecord(FPDF):
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
         header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
         if self.data['annual']:
-            col_widths = (9, 18, 72, 9, 9, 12, 12, 12, 12, 14, 30, 33, 33)
+            col_widths = (9, 18, 75, 9, 9, 11, 11, 11, 11, 14, 30, 32, 35)
             header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
                       "Mérite", "Conduite", "Décision"]
 
@@ -1339,7 +1339,6 @@ class TMarksReport(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.data = kwargs.pop('data')
         self.school = self.data['school_data']
         self.add_page()
@@ -1427,7 +1426,7 @@ class TMarksReport(FPDF):
         self.set_line_width(0.2)
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
-        self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
+        self.cell(142.5, 6, "Document généré par Oméga School Manager", align='L')
         self.cell(142.5, 6, f"RELEVÉ DE NOTES {self.data['trimestre'].title()} • {self.data['label']} • Page "
                              f"{self.page_no()}/{{nb}}", align='R')
 
@@ -1441,7 +1440,6 @@ class ReportCard(FPDF):
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
         self.bold = FontFace(emphasis='B')
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         data = kwargs.pop('data')
         self.set_title(data['filename'].removesuffix(".pdf"))
         school_data = data['school_data']
@@ -1493,7 +1491,7 @@ class ReportCard(FPDF):
         self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
-        self.cell(100, 6, f"Document généré par OSM le {self.now}", align='L')
+        self.cell(100, 6, "Document généré par Oméga School Manager", align='L')
         if self.nb_pages > 1:
             page = (self.nb_pages, self.page_no() % self.nb_pages)[self.page_no() % self.nb_pages != 0]
             if page != 1:

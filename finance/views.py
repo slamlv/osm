@@ -844,7 +844,6 @@ class _FinReport(FPDF):
         add_fonts(self)
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(True, margin=6)
-        self.now = datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.school = school
         self._land = orientation == "L"
 
@@ -871,8 +870,7 @@ class _FinReport(FPDF):
         self.line(*line_xy)
         self.set_font("inter", "I", 7)
         self.set_text_color(*GREY)
-        self.cell(w/2, 6, f"Document généré par Oméga School Manager le {self.now}",
-                  align="L")
+        self.cell(w/2, 6, "Document généré par Oméga School Manager", align="L")
         self.cell(w/2, 6, f"{self.DOC_NAME} • Page {self.page_no()}/{{nb}}",
                   align="R")
 

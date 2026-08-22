@@ -1599,7 +1599,6 @@ class Statistiques(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.data = kwargs.pop('data')
         self.school = self.data['school_data']
         self.add_page()
@@ -1768,7 +1767,7 @@ class Statistiques(FPDF):
         self.set_line_width(0.2)
         self.line(6, 204, 291, 204)
         self.set_font('inter', 'I', 7)
-        self.cell(142.5, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
+        self.cell(142.5, 6, "Document généré par Oméga School Manager", align='L')
         self.cell(142.5, 6, f"STATISTIQUES {self.data['trimestre'].title()} • {self.data['label']} • Page "
                              f"{self.page_no()}/{{nb}}", align='R')
 
@@ -1782,7 +1781,6 @@ class PDFMarksSheet(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=10)
         self.set_font('inter', '', 8)
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.annee = kwargs['annee']
         self.classroom = kwargs['classroom']
         self.school = kwargs['school']
@@ -1843,7 +1841,7 @@ class PDFMarksSheet(FPDF):
         self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
-        self.cell(99, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
+        self.cell(99, 6, "Document généré par Oméga School Manager", align='L')
         self.cell(99, 6, f"FICHE DE NOTES • {self.classroom.code} • Page {self.page_no()}/{{nb}}", align='R')
 
 
@@ -1907,7 +1905,6 @@ class ClassroomList(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(auto=True, margin=6)
         self.set_font('inter', '', 8)
-        self.now = datetime.datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.annee = kwargs['annee']
         self.classroom = kwargs['classroom']
         self.school = kwargs['school']
@@ -1957,7 +1954,7 @@ class ClassroomList(FPDF):
         self.set_line_width(0.2)
         self.line(6, 291, 204, 291)
         self.set_font('inter', 'I', 7)
-        self.cell(100, 6, f"Document généré par Oméga School Manager le {self.now}", align='L')
+        self.cell(100, 6, "Document généré par Oméga School Manager", align='L')
         self.cell(98, 6, f"LISTE DES ÉLÈVES • {self.classroom.code} • Page {self.page_no()}/{{nb}}", align='R')
 
 
@@ -2047,8 +2044,7 @@ class ClassroomTimeTable(FPDF):
         self.set_line_width(0.2)
         self.line(6, 204, 294, 204)
         self.set_font('inter', 'I', 7)
-        self.cell(142.5, 6, f"Document généré par Oméga School Manager le"
-                             f" {datetime.datetime.now().strftime('%d-%m-%Y à %H:%M')}", align='L')
+        self.cell(142.5, 6, "Document généré par Oméga School Manager", align='L')
         title = "EMPLOI DU TEMPS" + f" • {self.data['classroom']}" if 'classroom' in self.data.keys() else ""
         self.cell(142.5, 6, f"{title}", align='R')
 
@@ -2191,6 +2187,5 @@ class StaffMemberTimeTable(FPDF):
         self.set_line_width(0.2)
         self.line(6, 204, 294, 204)
         self.set_font('inter', 'I', 7)
-        self.cell(142.5, 6, f"Document généré par Oméga School Manager le"
-                             f" {datetime.datetime.now().strftime('%d-%m-%Y à %H:%M')}", align='L')
+        self.cell(142.5, 6, "Document généré par Oméga School Manager", align='L')
         self.cell(142.5, 6, f"{self.data['filename']}", align='R')

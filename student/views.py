@@ -1793,7 +1793,6 @@ class AgeSexTablePDF(FPDF):
         self.set_margins(6, 6, 6)
         self.set_auto_page_break(True, margin=6)
         self.data = data
-        self.now = datetime.now().strftime("%d-%m-%Y à %H:%M")
         self.school = school
         self.add_page()
         self.set_font("inter", "", 8)
@@ -1876,7 +1875,7 @@ class AgeSexTablePDF(FPDF):
         self.line(6, 204, 291, 204)
         self.set_font("inter", "I", 7)
         self.set_text_color(*GREY)
-        self.cell(145, 6, f"Document généré par Oméga School Manager le {self.now}", align="L")
+        self.cell(145, 6, "Document généré par Oméga School Manager", align="L")
         self.cell(140, 6, f"Répartition par âge et par sexe • Page {self.page_no()}/{{nb}}", align="R")
 
 
