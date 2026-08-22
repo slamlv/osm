@@ -894,7 +894,7 @@ class Bulletin(LoggedAdminView):
             data = classroom.reportcard_data(evl_in, with_competences, year=self.request.user.school.establishment_year)
             user = User.objects.select_related('school').get(id=self.request.user.id)
             data['school_data'] = user.school.school_to_dict()
-            data['trimestre'], data['annee'], data['filename'] = trimestre, school_year(), filename
+            data['trimestre'], data['annee'], data['filename'] = trimestre, self.request.user.school.establishment_year, filename
             pdf = ReportCard(data=data)
             students = list(classroom.students.all().order_by("nom", "prenom"))
             nb = pdf.nb_pages                   # pages PAR élève
@@ -927,7 +927,7 @@ class MarksReport(LoggedAdminView):
         evl_in = (((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3]
         trimestre = (("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")[evl == 3]
 
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         selected = self.request.POST.get("clsrm")
 
@@ -1016,7 +1016,7 @@ class ExamReport(LoggedAdminView):
         trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
                       "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUEL")[evl == 4]
 
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         selected = self.request.POST.get("clsrm")
 
@@ -1087,7 +1087,7 @@ class TableauHonneur(LoggedAdminView):
         trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2], "DU TROISIÈME TRIMESTRE")
                      [evl == 3], "ANNUELLE")[evl == 4]
 
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         selected = self.request.POST.get("clsrm")
 
@@ -1216,7 +1216,7 @@ class ExamRecord(FPDF):
         self.add_page()
         base_header(self, mode=orientation)
         base_infos(self, f"PROCÈS VERBAL {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
-                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode=orientation)
+                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode=orientation, year=self.data['annee'])
         self.students_results()
 
     def students_results(self):
@@ -1344,7 +1344,7 @@ class TMarksReport(FPDF):
         self.add_page()
         base_header(self, mode='Pa')
         base_infos(self, f"RELEVÉ DE NOTES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
-                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa')
+                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa', year=self.data['annee'])
         self.marks_table()
 
     def truncate_matiere_label(self, label_matiere, max_lines: int, max_width: int):

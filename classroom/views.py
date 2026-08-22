@@ -496,7 +496,7 @@ class TimeTable(LoggedAdminView):
                 ClassRoom.objects.select_related('classe').
                 prefetch_related('programmations')
             )
-            annee = school_year()
+            annee = self.request.user.school.establishment_year
 
             def build(clsrm):
                 return self.build_pdf_or_reason(clsrm, annee)
@@ -513,7 +513,7 @@ class TimeTable(LoggedAdminView):
         try:
             classroom_id = signing.loads(self.request.POST["signed"])
             empty_timetable = True if 'timetable_checkbox' in self.request.POST.keys() else False
-            data = {'filename': "Emploi du temps", 'annee': school_year()}
+            data = {'filename': "Emploi du temps", 'annee': self.request.user.school.establishment_year}
             if empty_timetable:
                 data['tranches_horaires'], data['school'] = self.get_time_table(classroom_id, empty=True)
             else:
@@ -842,7 +842,7 @@ class MarksSheet(LoggedUserView):
         return PDFMarksSheet(classroom=classroom, annee=annee, school=school)
 
     def post(self, *args, **kwargs):
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         selected = self.request.POST.get("classroom")
 
@@ -1057,7 +1057,7 @@ class Stats(LoggedAdminView):
         scope = self.request.POST.get('scope')  # 'pdf' ou 'zip'
         clsrm = self.request.POST.get('clsrm')  # '__all__' ou 'classroom.id'
         evl = int(self.request.POST['evl'])
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         trimestre = ((("DU PREMIER TRIMESTRE", "DU DEUXIÈME TRIMESTRE")[evl == 2],
                       "DU TROISIÈME TRIMESTRE")[evl == 3], "ANNUELLES")[evl == 4]
         evl_in = ((((1, 2), (3, 4))[evl == 2], (5, 6))[evl == 3], (1, 2, 3, 4, 5, 6))[evl == 4]
@@ -1144,7 +1144,7 @@ class ClassAlbum(LoggedAdminView):
                 'students')
             .select_related('titulaire')
         )
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         principal = Personnel.objects.filter(poste="Chef d'Établissement").first()
         school_data = {
@@ -1604,7 +1604,7 @@ class Statistiques(FPDF):
         self.add_page()
         base_header(self, mode='Pa')
         base_infos(self, f"STATISTIQUES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
-                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa')
+                   self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa', year=self.data['annee'])
         self.stats_table()
         self.stats_summary()
 
@@ -1826,7 +1826,7 @@ class PDFMarksSheet(FPDF):
         filles = students.filter(sexe="Fille").count()
         garcons = effectif - filles
         redoublants = students.filter(statut="Redoublant").count()
-        base_infos(self, 'FICHE DE NOTES', effectif, filles, garcons, redoublants, self.classroom.code)
+        base_infos(self, 'FICHE DE NOTES', effectif, filles, garcons, redoublants, self.classroom.code, year=self.data['annee'])
         self.ln()
         self.cell(82, 7, "Enseignant(e) : --                                                  --",
                   align='L', markdown=True)
@@ -1857,7 +1857,7 @@ class ClassroomsLists(LoggedAdminView):
         return cls_list
 
     def post(self, *args, **kwargs):
-        annee = school_year()
+        annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
         classrooms = ClassRoom.objects.select_related('classe').prefetch_related('students').order_by_niveau()
 
@@ -1883,7 +1883,7 @@ class ClassroomsLists(LoggedAdminView):
 @logged_admin_view
 def classroom_list(request, id):
     from archives.models import DocType, ArchiveRef
-    annee = school_year()
+    annee = self.request.user.school.establishment_year
     classroom = (
         ClassRoom.objects.prefetch_related('students').
         get(pk=id))
@@ -1916,7 +1916,7 @@ class ClassroomList(FPDF):
         filles = students.filter(sexe="Fille").count()
         garcons = effectif - filles
         redoublants = students.filter(statut="Redoublant").count()
-        base_infos(self, "LISTE DES ÉLÈVES", effectif, filles, garcons, redoublants, self.classroom.code)
+        base_infos(self, "LISTE DES ÉLÈVES", effectif, filles, garcons, redoublants, self.classroom.code, year=self.data['annee'])
         self.list()
 
     def list(self):

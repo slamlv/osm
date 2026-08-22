@@ -395,7 +395,7 @@ class BaseStaffMemberTimetable(View):
             staff_members = (
                 Personnel.objects.prefetch_related('programmations')
             )
-            annee = school_year()
+            annee = self.request.user.school.establishment_year
             school = User.objects.select_related('school').get(id=self.request.user.id).school
 
             def build(staff_member):
@@ -412,7 +412,7 @@ class BaseStaffMemberTimetable(View):
             )
         staffmember, title, mp = self.get_object()
         empty_timetable = True if 'timetable_checkbox' in self.request.POST.keys() else False
-        data = {'filename': title, 'annee': school_year()}
+        data = {'filename': title, 'annee': self.request.user.school.establishment_year}
         school_id = self.request.user.school.pk
         if empty_timetable:
             data['tranches_horaires'], data['school'] = staffmember.timetable(mp, school_id, empty=True)
@@ -1866,12 +1866,12 @@ def base_header(pdf, mode='P', y_img=0):
     table.render()
 
 
-def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode='P'):
+def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode='P', year=school_year()):
     pdf.set_font("inter", 'B', 12)
     pdf.cell(0, 7, nom, align='C')
     pdf.ln()
     pdf.set_font("inter", '', 7)
-    pdf.cell(0, 2, f"__**Année scolaire : {school_year()}**__", align='C', markdown=True)
+    pdf.cell(0, 2, f"__**Année scolaire : {year}**__", align='C', markdown=True)
     pdf.ln()
     pdf.set_font("inter", '', 7)
     w = 99 if mode == 'P' else 142.5

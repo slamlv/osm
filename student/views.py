@@ -1294,7 +1294,7 @@ def build_age_sex_table(year=None):
 # ---------------------------------------------------------------------------
 @logged_admin_view
 def age_sex_stats(request):
-    data = build_age_sex_table(school_year())
+    data = build_age_sex_table(request.user.school.establishment_year)
     data['title'] = "Répartition par âge et par sexe"
     return render(request, "age_sex.html", data)
 
@@ -1326,7 +1326,7 @@ def age_sex_stats_pdf(request):
 # ---------------------------------------------------------------------------
 @logged_admin_view
 def age_sex_stats_xlsx(request):
-    data = build_age_sex_table(school_year())
+    data = build_age_sex_table(request.user.school.establishment_year)
     ages, rows, total = data["ages"], data["rows"], data["total_row"]
 
     wb = Workbook()
@@ -1509,7 +1509,7 @@ def enrollment_certificate_blank(request):
 @logged_admin_view
 def enrollment_certificate(request, id):
     student = get_object_or_404(Student.objects.select_related('classe'), pk=id)
-    year = school_year()
+    year = request.user.school.establishment_year
     unpaid = unpaid_cashbox_fees(student, year)
     if unpaid:
         reste = sum(r["reste"] for r in unpaid)
