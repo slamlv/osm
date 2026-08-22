@@ -1826,7 +1826,7 @@ class PDFMarksSheet(FPDF):
         filles = students.filter(sexe="Fille").count()
         garcons = effectif - filles
         redoublants = students.filter(statut="Redoublant").count()
-        base_infos(self, 'FICHE DE NOTES', effectif, filles, garcons, redoublants, self.classroom.code, year=self.data['annee'])
+        base_infos(self, 'FICHE DE NOTES', effectif, filles, garcons, redoublants, self.classroom.code, year=self.annee)
         self.ln()
         self.cell(82, 7, "Enseignant(e) : --                                                  --",
                   align='L', markdown=True)
@@ -1883,7 +1883,7 @@ class ClassroomsLists(LoggedAdminView):
 @logged_admin_view
 def classroom_list(request, id):
     from archives.models import DocType, ArchiveRef
-    annee = self.request.user.school.establishment_year
+    annee = request.user.school.establishment_year
     classroom = (
         ClassRoom.objects.prefetch_related('students').
         get(pk=id))
@@ -1916,7 +1916,7 @@ class ClassroomList(FPDF):
         filles = students.filter(sexe="Fille").count()
         garcons = effectif - filles
         redoublants = students.filter(statut="Redoublant").count()
-        base_infos(self, "LISTE DES ÉLÈVES", effectif, filles, garcons, redoublants, self.classroom.code, year=self.data['annee'])
+        base_infos(self, "LISTE DES ÉLÈVES", effectif, filles, garcons, redoublants, self.classroom.code, year=self.annee)
         self.list()
 
     def list(self):
