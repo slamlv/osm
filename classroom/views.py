@@ -1793,7 +1793,7 @@ class PDFMarksSheet(FPDF):
         self.ln()
         self.set_font_size(8)
         col_widths = [10, 22, 78, 10, 13, 13, 13, 13, 13, 13]
-        header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sex", "Eval1", "Eval2", "Eval3",
+        header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Eval1", "Eval2", "Eval3",
                   "Eval4", "Eval5", "Eval6"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
