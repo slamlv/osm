@@ -44,7 +44,7 @@
         {% for activity in datas %}
         <tr class="{% if member.user == user %}row-me{% endif %}">
           <td style="color:rgba(255,255,255,0.3)!important;font-size:0.78rem;">{{ forloop.counter }}</td>
-          <td style="font-size:0.82rem;">Du {{ activity.start }}<br>Au {{ activity.end }}</td>
+          <td style="font-size:0.82rem;">{% if activity.start == activity.end %} Le {{activity.start }} {% else %}Du {{ activity.start }}<br>Au {{ activity.end }} {% endif %}</td>
           <td class="fw-semibold">{{ activity.label }}</td>
           <td style="color:rgba(255,255,255,0.6)!important;">{% if activity.responsables %}{{ activity.responsables }}{% else %}—{% endif %}</td>
           {% if user.is_min_admin %}

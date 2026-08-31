@@ -110,7 +110,7 @@ class ActivityForm(DynamicFormMixin, forms.ModelForm):
         'style': "min-height: 60px; max-height: 200px; resize: none;",
         'placeholder': "Entrez l'activité progrmmée..."
     }))
-    responsables = forms.CharField(max_length=30, required=False, widget=forms.Textarea(attrs={
+    responsables = forms.CharField(max_length=100, required=False, widget=forms.Textarea(attrs={
         "placeholder": "Entrez les intervenants", 'class': "form-control fw-bold overflow-hidden custom-textarea",
         'id': "responsables", 'rows': "1", 'style': "min-height: 60px; max-height: 200px; resize: none;",
     }))
