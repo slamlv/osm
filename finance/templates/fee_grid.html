@@ -183,14 +183,38 @@
               <label>Niveau</label>
               <select name="level" id="ff-level" class="form-select">
                 <option value="">Tous niveaux</option>
-                {% for n in niveaux %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+                {% if 'Enseignement ' in niveaux.0.0 %}
+                  {% for n in niveaux %}
+                  <optgroup label="{{ n.0 }}" class="bg-secondary text-white-50">
+                    {% for v in n.1 %}
+                    <option value="{{ v.0 }}">{{ v.0 }}</option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endfor %}
+                {% else %}
+                  {% for n in niveaux %}
+                  <option value="{{ n.0 }}">{{ n.0 }}</option>
+                  {% endfor %}
+                {% endif %}
               </select>
             </div>
             <div class="col-sm-3">
               <label>Série</label>
               <select name="serie" id="ff-serie" class="form-select">
                 <option value="">Toutes</option>
-                {% for s in series %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+                {% if 'Enseignement ' in series.0.0 %}
+                  {% for s in series %}
+                  <optgroup label="{{ s.0 }}" class="bg-secondary text-white-50">
+                    {% for v in s.1 %}
+                    <option value="{{ v.0 }}">{{ v.0 }}</option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endfor %}
+                {% else %}
+                  {% for s in series %}
+                  <option value="{{ s.0 }}">{{ s.0 }}</option>
+                  {% endfor %}
+                {% endif %}
               </select>
             </div>
             <div class="col-sm-4">

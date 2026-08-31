@@ -6,7 +6,6 @@ from django.utils.http import urlencode
 from django.urls import reverse
 
 from authentification.models import SchoolYear
-from student.views import enrollment_certificate
 from .models import SchoolFee, FeeInstallment, FeeType, StudentPayment, PaymentMethod, FeeDiscount, Transaction,\
     TransactionCategory, CashBox
 from .forms import StudentPaymentForm
@@ -43,41 +42,7 @@ def fee_grid(request):
     for f in fees:
         groups.setdefault(f.fee_type, []).append(f)
 
-    school = request.user.school
-    classes = Class.objects
-
-    niveaux_premier_cycle_esg_fr = ["Sixième", "Cinquième", "Quatrième", "Troisième"]
-    niveaux_premier_cycle_est_fr = ["1ère Année", "2ème Année", "3ème Année", "4ème Année"]
-    niveaux_premier_cycle_esg_en = ["From One", "From Two", "From Three", "From Four"]
-    niveaux_second_cycle_esg_fr = ["Seconde", "Première", "Terminale"]
-    niveaux_second_cycle_esg_en = ["From Five", "Lower Sixth", "Upper Sixth"]
-    series_premier_cycle_esg_fr = ["Bilingue", ]
-    series_premier_cycle_esg_en = ["Arts", "Sciences"]
-    series_second_cycle_esg_en = ["Commercial"]
-    series_second_cycle_esg_fr = ["A1", "A2", "A3", "A4", "A5", "ABI", "AC", "B", "C", "D", "E", "SH", "TI"]
-    series_premier_cycle_est_fr = ["MACO"]
-    series_second_cycle_est_fr = ["F4", "IH"]
-    if school.type_ets == "CES":
-        s_niveaux, s_series = niveaux_premier_cycle_esg_fr, series_premier_cycle_esg_fr
-    elif school.type_ets in ["Collège", "Lycée"]:
-        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr,
-                           series_premier_cycle_esg_fr + series_second_cycle_esg_fr)
-    elif school.type_ets == "CES Bilingue":
-        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_premier_cycle_esg_en,
-                           series_premier_cycle_esg_fr + series_premier_cycle_esg_en)
-    elif school.type_ets in ["Lycée Bilingue", "Collège Bilingue"]:
-        s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr + niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
-                           series_premier_cycle_esg_fr + series_second_cycle_esg_fr + series_premier_cycle_esg_en + series_second_cycle_esg_en)
-    elif school.type_ets == "CETIC":
-        s_niveaux, s_series = niveaux_premier_cycle_est_fr, series_premier_cycle_est_fr
-    elif school.type_ets == "Lycée Technique":
-        s_niveaux, s_series = (niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr,
-                           series_premier_cycle_est_fr + series_second_cycle_est_fr)
-    # niveaux/séries EXISTANTS dans cet établissement (selects dynamiques)
-    niveaux = list(classes.exclude(niveau__isnull=True).filter(niveau__in=s_niveaux)
-                   .values_list("niveau", flat=True).distinct())
-    series = [s for s in Class.objects.filter(serie__in=s_series).values_list("serie", flat=True)
-              .distinct() if s]
+    niveaux, series = request.user.school.levels()
 
     # années déjà paramétrées (sélecteur) + année courante
     years = list(SchoolFee.objects.values_list("school_year", flat=True)
@@ -96,11 +61,10 @@ def fee_grid(request):
                 for i in f.installments.all()],
         } for f in fees
     }
-
     return render(request, "fee_grid.html", {
         "year": year, "years": years, "groups": groups, 'current': school_year(),
         "fee_types": FeeType.objects.order_by("nom"),
-        "niveaux": sorted(niveaux), "series": sorted(series),
+        "niveaux": niveaux, "series": series,
         "fees_json": fees_json,
         "previous_year": _previous_year(year),
         'title': "Grille Tarifaire",

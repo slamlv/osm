@@ -18,7 +18,7 @@
 </style>
 <div class="container py-3" style="max-width:640px;">
   <div class="alert alert-info py-2 small mb-3 rounded-3">
-    <i class="bi bi-info-circle me-2"></i>Exemples : <strong>Sixième, 5ème, 4ème All, 3ème A2, Tle…</strong>
+    <i class="bi bi-info-circle me-2"></i>Exemples : <strong>Sixième, 5ème, 4ème All, 3ème E2, Tle…</strong>
   </div>
   <div class="form-card">
     <div class="form-card-header d-flex align-items-center gap-2">
@@ -29,7 +29,6 @@
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="row g-3 mb-4" id="classroom_form">
-          <div class="col-sm-6"><label class="text-white control-label">Cycle</label>{{ classroom_form.cycle }}</div>
           <div class="col-sm-6"><label class="text-white control-label">Niveau</label>{{ classroom_form.niveau }}</div>
           {% if classroom_form.option %}<div class="col-sm-6"><label class="text-white control-label">Spécialité</label>{{ classroom_form.option }}</div>{% endif %}
           {% if classroom_form.lv2 %}<div class="col-sm-6"><label class="text-white control-label">Langue vivante 2 (LVII)</label>{{ classroom_form.lv2 }}</div>{% endif %}
@@ -39,7 +38,7 @@
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
           <button class="btn btn-success fw-semibold" type="submit" data-with-spinner><i class="bi bi-save me-2"></i>Sauvegarder</button>
-          {% if key %}<button class="btn btn-outline-danger" hx-post="{% url 'form-reload' key=pk %}" hx-target="#classroom_form"><i class="bi bi-arrow-counterclockwise me-2"></i>Annuler les changements</button>{% endif %}
+          {% if pk %}<button class="btn btn-outline-danger fw-bold" hx-post="{% url 'form-reload' key=pk %}" hx-target="#classroom_form"><i class="bi bi-arrow-counterclockwise me-2"></i>Annuler les changements</button>{% endif %}
           <a class="btn btn-outline-secondary btn-back" href="{% url 'index' %}"><i class="bi bi-x-circle me-2"></i>Annuler</a>
         </div>
       </form>

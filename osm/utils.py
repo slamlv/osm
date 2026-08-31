@@ -1967,7 +1967,7 @@ def finance_defaults(school):
         ("Frais Exigibles", False),
         ("Frais d'Examen", False),
     ]
-    if school.type_ets == School.Type.COL:
+    if school.type_ets in (School.Type.COL, School.Type.COLB, School.Type.COLP, School.Type.COLEN):
         fee_types.insert(0, ("Frais de Scolarité", True))
     else:
         fee_types.insert(0, ("Frais d'APEE", True))

@@ -17,7 +17,7 @@
 
   {% if classrooms %}
     {% if plages %}
-    <div class="form-card mb-4" style="max-width:480px;margin-left:auto;margin-right:auto;">
+    <div class="form-card mb-2" style="max-width:480px;margin-left:auto;margin-right:auto;">
       <div class="form-card-header d-flex align-items-center gap-2">
         <i class="bi bi-calendar-week text-danger fs-5"></i>
         <h6 class="text-white fw-bold mb-0">Emploi du temps</h6>
@@ -47,20 +47,21 @@
   </div>
   {% endif %}
 
-  <div id="time_table" class="mt-3"></div>
+</div>
 
-  <div class="modal" id="programmation_modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Programmation</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-3" id="modal-body"></div>
+{# Le tableau est volontairement hors du conteneur 960px pour occuper toute la largeur sur grand écran #}
+<div id="time_table" class="px-3 px-md-4 pb-3"></div>
+
+<div class="modal" id="programmation_modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Programmation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+      <div class="modal-body p-3" id="modal-body"></div>
     </div>
   </div>
-
 </div>
 
 <script>

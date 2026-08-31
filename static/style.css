@@ -201,6 +201,18 @@ body, .navbar, .navbar-collapse, .dropdown-menu, .dropdown-item, .choices__list,
     color: white;
 }
 
+.woption optgroup
+{
+    background-color: #6c757d;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.woption optgroup option
+{
+    background-color: #214868;
+    color: white;
+}
+
 .dropdown-submenu {
   position: relative;
 }

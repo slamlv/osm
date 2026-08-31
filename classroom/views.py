@@ -788,6 +788,19 @@ def classroom_form_reload(request, key):
     return render(request, "classroom_form.html", {"classroom_form": classroom_form})
 
 
+"""
+# La vue ci-dessous permet d'afficher dynamiquement le formulaire de création d'une salle de classe
+@logged_admin_view
+def classroom_form_reload(request, key):
+    if not key:
+        classroom_form = ClassroomForm(context={"request": request, 'reload': True})
+    else:
+        classrooms = ClassRoom.objects.all()
+        classroom = get_object_or_404(classrooms, pk=key)
+        classroom_form = ClassroomForm(context={"request": request, 'instance': classroom})
+    return render(request, "classroom_form.html", {"classroom_form": classroom_form})"""
+
+
 # Suppression d'une salle de classe
 class ClassroomDelete(DeleteView):
     success_url = "classrooms"

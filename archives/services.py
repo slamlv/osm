@@ -493,6 +493,13 @@ def cleanup_year(school, closure, keys=None):
         deleted["Programmations des cours nettoyées"] = "OK"
     except Exception:
         pass
+    # Mise à jour de l'ancienneté du personnel
+    try:
+        from staff.models import Personnel
+        from django.db.models import F
+        Personnel.objects.filter(since__isnull=False).update(since=F('since') + 1)
+    except Exception:
+        pass
     return deleted
 
 

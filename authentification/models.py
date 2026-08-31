@@ -1,3 +1,5 @@
+from random import choices
+
 from django.utils import timezone
 from django_tenants.models import TenantMixin, DomainMixin
 from django.db import models
@@ -113,13 +115,20 @@ class School(TenantMixin):
     Cette classe définit la table qui va contenir les informations de nos différents établissements
     """
     class Type(models.TextChoices):
-        GHS = "Lycée", "Lycée"
-        GSS = "CES", "CES"
-        GBSS = "CES Bilingue", "CES Bilingue"
-        GBHS = "Lycée Bilingue", "Lycée Bilingue"
-        GTSS = "CETIC", "CETIC"
-        GTHS = "Lycée Technique", "Lycée Technique"
-        COL = "Collège", "Collège"
+        GHS   = "Lycée", "Lycée"
+        GHSEN = "GHS", "GHS"
+        GSS   = "CES", "CES"
+        GSSEN = "GSS", "GSS"
+        GBSS  = "CES Bilingue", "CES Bilingue"
+        GBHS  = "Lycée Bilingue", "Lycée Bilingue"
+        GTSS  = "CETIC", "CETIC"
+        GBTSS = "CETIC Bilingue", "CETIC Bilingue"
+        GTHS  = "Lycée Technique", "Lycée Technique"
+        GBTHS = "Lycée Technique Bilingue", "Lycée Technique Bilingue"
+        COL   = "Collège", "Collège"
+        COLEN = "College", "College"
+        COLB  = "Collège Bilingue", "Collège Bilingue"
+        COLP  = "Collège Polyvalent", "Collège Polyvalent"
 
     nom = models.CharField(verbose_name="Nom", max_length=50)
     name = models.CharField(verbose_name="Name", max_length=50)
@@ -214,6 +223,96 @@ class School(TenantMixin):
 
     def __str__(self):
         return self.nom
+
+    def levels(self, cle=None, level=None):
+        from classroom.models import Class
+        from collections import defaultdict
+        from django.db.models import When, Case, Value
+
+        def group(rows, key='niveau'):
+            grouped = defaultdict(list)
+            if key == 'serie':
+                rows = rows.order_by(key)
+            for row in rows:
+                value = row[key]
+                if value is None and level is not None and (None, "---------") not in grouped[row['sub_system']]:
+                    grouped[row['sub_system']].insert(0, (None, "---------"))
+                if value is not None and (value, value) not in grouped[row['sub_system']]:
+                    grouped[row['sub_system']].append((value, value))
+            if len(grouped) > 1:
+                return list(grouped.items())
+            else:
+                return grouped[list(grouped.keys())[0]]
+
+        niveaux_premier_cycle_esg_fr = ["Sixième", "Cinquième", "Quatrième", "Troisième"]
+        niveaux_premier_cycle_est_fr = ["1ère Année", "2ème Année", "3ème Année", "4ème Année"]
+        niveaux_premier_cycle_esg_en = ["From 1", "From 2", "From 3", "From 4", "From 5"]
+        niveaux_second_cycle_esg_fr  = ["Seconde", "Première", "Terminale"]
+        niveaux_second_cycle_esg_en  = ["Lower Sixth", "Upper Sixth"]
+        series_premier_cycle_esg_fr  = ["Bilingue", ]
+        series_premier_cycle_esg_en  = ["Arts", "Sciences"]
+        series_second_cycle_esg_en   = ["Arts", "Sciences"]
+        series_second_cycle_esg_fr   = ["A1", "A2", "A3", "A4", "A5", "ABI", "AC", "B", "C", "D", "E", "SH", "TI"]
+        series_premier_cycle_est_fr  = ["MACO", "ESF", "ESCOM"]
+        series_second_cycle_est_fr   = ["F4", "IH", "ESF"]
+        series_premier_cycle_est_en  = ["ACCOUNTING", ]
+        series_second_cycle_est_en   = ["ACCOUNTING", ]
+        if self.type_ets == "CES":
+            s_niveaux, s_series = niveaux_premier_cycle_esg_fr, series_premier_cycle_esg_fr
+        elif self.type_ets == "GSS":
+            s_niveaux, s_series = niveaux_premier_cycle_esg_en, series_premier_cycle_esg_en
+        elif self.type_ets in ["Collège", "Lycée"]:
+            s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr,
+                                   series_premier_cycle_esg_fr + series_second_cycle_esg_fr)
+        elif self.type_ets in ("GHS", "College"):
+            s_niveaux, s_series = (niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
+                                   series_premier_cycle_esg_en + series_second_cycle_esg_en)
+        elif self.type_ets == "CES Bilingue":
+            s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_premier_cycle_esg_en,
+                                   series_premier_cycle_esg_fr + series_premier_cycle_esg_en)
+        elif self.type_ets == "Lycée Technique Bilingue":
+            s_niveaux, s_series = (
+                niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr + niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
+                series_premier_cycle_est_fr + series_second_cycle_est_fr + series_premier_cycle_est_en + series_second_cycle_est_en)
+        elif self.type_ets in ["Lycée Bilingue", "Collège Bilingue"]:
+            s_niveaux, s_series = (
+                niveaux_premier_cycle_esg_fr + niveaux_second_cycle_esg_fr + niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
+                series_premier_cycle_esg_fr + series_second_cycle_esg_fr + series_premier_cycle_esg_en + series_second_cycle_esg_en)
+        elif self.type_ets == "CETIC":
+            s_niveaux, s_series = niveaux_premier_cycle_est_fr, series_premier_cycle_est_fr
+        elif self.type_ets == "CETIC Bilingue":
+            s_niveaux, s_series = niveaux_premier_cycle_est_fr + niveaux_premier_cycle_esg_en, series_premier_cycle_est_fr + series_premier_cycle_est_en
+        elif self.type_ets == "Lycée Technique":
+            s_niveaux, s_series = (niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr,
+                                   series_premier_cycle_est_fr + series_second_cycle_est_fr)
+        elif self.type_ets == "Collège Polyvalent":
+            s_niveaux, s_series = (niveaux_premier_cycle_esg_fr + niveaux_premier_cycle_est_fr + niveaux_second_cycle_esg_fr + niveaux_premier_cycle_esg_en + niveaux_second_cycle_esg_en,
+                                   series_premier_cycle_esg_fr + series_second_cycle_esg_fr + series_premier_cycle_est_fr + series_second_cycle_est_fr + series_premier_cycle_esg_en + series_second_cycle_esg_en + series_premier_cycle_est_en + series_second_cycle_est_en)
+
+        fields = ('sub_system', 'niveau', 'serie') if not cle else (
+            ('sub_system', 'niveau') if cle == 'niveau' else ('sub_system', 'serie'))
+        if level:
+            qs = (
+                Class.objects.order_by_niveau().filter(niveau=level).annotate(sub_system=Case(
+                    When(subsystem="ESG-FR", then=Value("Enseignement Général Francophone")),
+                    When(subsystem="ESG-EN", then=Value("Enseignement Général Anglophone")),
+                    When(subsystem="EST-FR", then=Value("Enseignement Technique Francophone")),
+                    When(subsystem="EST-EN", then=Value("Enseignement Technique Anglophone")),
+                )).values(*fields).distinct()
+            )
+        else:
+            qs = (
+                Class.objects.order_by_niveau().annotate(sub_system=Case(
+                    When(subsystem="ESG-FR", then=Value("Enseignement Général Francophone")),
+                    When(subsystem="ESG-EN", then=Value("Enseignement Général Anglophone")),
+                    When(subsystem="EST-FR", then=Value("Enseignement Technique Francophone")),
+                    When(subsystem="EST-EN", then=Value("Enseignement Technique Anglophone")),
+                )).values(*fields).distinct()
+            )
+        if not cle:
+            return group(qs), group(qs, key='serie')
+        else:
+            return group(qs, key=cle)
 
     @property
     def chef(self):

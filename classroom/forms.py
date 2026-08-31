@@ -1,9 +1,11 @@
 from django import forms
+from requests import options
+
 from osm.utils import message, icon, one_escape, get_value, is_alphanumeric
 from django.db.models import Q
 from dynamic_forms import DynamicField, DynamicFormMixin
 from authentification.models import User
-from .models import ClassRoom, Class, Enseignements, Programmation, Matieres
+from .models import ClassRoom, Class, Enseignements, Programmation, Matieres, LVII, LVIII
 from staff.models import Personnel, Discipline
 from django.core import signing
 
@@ -128,6 +130,151 @@ class MatiereAddForm(DynamicFormMixin, forms.Form):
         return ((d.pk, d.label) for d in disciplines)
 
 
+class ClassroomForm(DynamicFormMixin, forms.Form):
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs["context"]["request"]
+        self.levels = self.request.user.school.levels(cle='niveau')
+        self.classes = Class.objects.prefetch_related('disciplines')
+        try:
+            self.instance = kwargs["context"]["instance"]
+        except:
+            self.instance = None
+        super().__init__(*args, **kwargs)
+
+    niveau = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
+        'hx-post': "form-reload-0", 'hx-target': "#classroom_form", 'hx-include': "#classroom_form", 'id': "niveau",
+        'class': "form-select fw-bold woption"}), choices=lambda form: form.school_levels(),
+                          initial=lambda form: form.school_levels(initial=True))
+    lv2 = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
+        'class': "form-select fw-bold woption", 'id': "lv2"}), choices=LVII.choices,
+                       include=lambda form: form.include_lv(), initial=lambda form: form.initial_lv())
+    lv3 = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
+        'class': "form-select fw-bold woption", 'id': "lv3"}), choices=LVIII.choices,
+                       include=lambda form: form.include_lv(key='lv3'), initial=lambda form: form.initial_lv(key='lv3'))
+    titulaire = DynamicField(forms.ModelChoiceField, widget=forms.Select(attrs={
+        'class': "form-select fw-bold woption", 'id': "titulaire"}), initial=lambda form: form.initial_titulaire(),
+                             queryset=Personnel.objects.filter(poste='Enseignant').order_by('nom', 'prenom'),
+                             required=False)
+    option = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
+        'hx-post': "form-reload-0", 'hx-target': "#classroom_form", 'hx-include': "#classroom_form", 'id': "option",
+        'class': "form-select fw-bold woption"}), choices=lambda form: form.options(),
+                          initial=lambda form: form.options(initial=True), required=False)
+    code = DynamicField(forms.CharField, max_length=15, widget=forms.TextInput(attrs={
+        "placeholder": "Attribuez un nom à cette classe", 'class': "form-control fw-bold"}),
+                        initial=lambda form: form.initial_code())
+
+    def school_levels(self, initial=False):
+        if initial:
+            if 'reload' in self.context.keys():
+                return self.request.POST['niveau']
+            elif self.instance:
+                return self.instance.classe.niveau
+            if "Enseignement " in self.levels[0][0]:
+                return self.levels[0][1][0][0]
+            else:
+                return self.levels[0][0]
+        return self.levels
+
+    def options(self, initial=False):
+        if self.data:
+            niveau = self.data['niveau']
+        elif 'reload' in self.context:
+            niveau = self.request.POST['niveau']
+        elif self.instance:
+            niveau = self.instance.classe.niveau
+        else:
+            niveau = self.school_levels(initial=True)
+        if initial:
+            if 'reload' in self.context:
+                return self.request.POST['option']
+            elif self.instance:
+                return self.instance.classe.serie
+        return self.request.user.school.levels(cle='serie', level=niveau)
+
+    def initial_titulaire(self):
+        if 'reload' in self.context:
+            return self.request.POST['titulaire']
+        elif self.instance:
+            return self.instance.titulaire
+        return None
+
+    def include_lv(self, key='lv2'):
+        if 'reload' in self.context:
+            niveau, option = self.request.POST['niveau'], self.request.POST['option']
+            if (option, option) not in self.options():
+                option = self.options()[0][0]
+            classe = self.classes.filter(Q(serie=option) if option else Q(serie__isnull=True), niveau=niveau).first()
+            if classe and classe.disciplines.filter(label=("LVII" if key=='lv2' else "LVIII")).exists():
+                return True
+        elif key in self.data.keys():
+            return True
+        elif self.instance:
+            if getattr(self.instance, key):
+                return True
+        return False
+
+    def initial_lv(self, key='lv2'):
+        if 'reload' in self.context:
+            if key in self.request.POST:
+                return self.request.POST[key]
+        elif self.instance:
+            return getattr(self.instance, key)
+        return None
+
+    def initial_code(self):
+        if 'reload' in self.context:
+            return self.request.POST['code']
+        elif self.instance:
+            return self.instance.code
+        return None
+
+    def clean(self):
+        code = one_escape(self.cleaned_data.get("code"))
+        if not is_alphanumeric(code):
+            message(self.request, "L'intitulé (le nom) de la salle de classe doit être une chaîne "
+                                  "alphanumérique.", msg_type="warning")
+            raise forms.ValidationError("")
+        code_value = code.split()
+        n = len(code_value)
+        code = (code_value[0].title(), code_value[0])[code_value[0][0].isnumeric()]
+        if n != 1:
+            for i in range(1, n):
+                code += f" {code_value[i].upper()}"
+        classrooms = ClassRoom.objects
+        if self.instance:
+            classrooms = classrooms.exclude(pk=self.instance.id)
+        if classrooms.filter(code=code).exists():
+            message(self.request, "Une autre salle de classe a déjà le même intitulé.", msg_type="warning")
+            raise forms.ValidationError("")
+        self.cleaned_data["code"] = code
+
+    def save_classroom(self):
+        classroom_data = {
+            "code": self.cleaned_data["code"], 'serie': self.cleaned_data['option'] or None,
+            'lv2': self.cleaned_data['lv2'] if 'lv2' in self.cleaned_data else None,
+            'lv3': self.cleaned_data['lv3'] if 'lv3' in self.cleaned_data else None,
+            "niveau": self.cleaned_data["niveau"], "titulaire": self.cleaned_data["titulaire"]
+        }
+        classe = Class.objects.get(niveau=classroom_data["niveau"], serie=classroom_data["serie"])
+        if self.instance:
+            if classe == self.instance.classe:
+                self.instance.code = classroom_data["code"]
+                self.instance.lv2 = classroom_data["lv2"]
+                self.instance.lv3 = classroom_data["lv3"]
+                self.instance.titulaire = classroom_data["titulaire"]
+                self.instance.save()
+                return self.instance
+        classroom = ClassRoom(classe=classe, code=classroom_data["code"], lv2=classroom_data["lv2"],
+                              lv3=classroom_data["lv3"], titulaire=classroom_data["titulaire"])
+
+        ClassRoom.save_classroom(classroom)
+        if self.instance:
+            self.instance.delete()
+        return classroom
+
+
+"""
 class ClassroomForm(DynamicFormMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
@@ -379,7 +526,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         ClassRoom.save_classroom(classroom)
         if self.instance:
             self.instance.delete()
-        return classroom
+        return classroom"""
 
 
 class SubjectForm(DynamicFormMixin, forms.Form):

@@ -3,14 +3,14 @@
 from django.db import models
 from django.db.models import Q
 from authentification.models import User, TrancheHoraire
-from staff.models import Personnel, Discipline
+from staff.models import Personnel, Discipline, SubSystem
 from django.db.models import When, Case, Value, IntegerField, F
 
 
 class LVII(models.TextChoices):
     ALL = "Allemand", "Allemand"
     ESP = "Espagnol", "Espagnol"
-    CHI = "Chinois", "Russe"
+    CHI = "Chinois", "Chinois"
     ARA = "Arabe", "Arabe"
 
 
@@ -19,12 +19,47 @@ class LVIII(models.TextChoices):
     ITA = "Italien", "Italien"
 
 
+class ClassQuerySet(models.QuerySet):
+    def order_by_niveau(self):
+        order = {
+            'Sixième'    : 1,
+            'Cinquième'  : 2,
+            'Quatrième'  : 3,
+            'Troisième'  : 4,
+            '1ère Année' : 5,
+            '2ème Année' : 6,
+            '3ème Année' : 7,
+            '4ème Année' : 8,
+            'Seconde'    : 9,
+            'Première'   : 10,
+            'Terminale'  : 11,
+            'From One'   : 12,
+            'From Two'   : 13,
+            'From Three' : 14,
+            'From Four'  : 15,
+            'From Five'  : 16,
+            'Lower Sixth': 17,
+            'Upper Sixth': 18,
+        }
+
+        return self.order_by(
+            Case(
+                *[When(niveau=key, then=Value(value)) for key, value in order.items()],
+                default=Value(999),
+                output_field=IntegerField()
+            )
+        )
+
+
 class Class(models.Model):
     id = models.IntegerField(primary_key=True)
     niveau = models.CharField(max_length=15)
     serie = models.CharField(max_length=10, blank=True, null=True)
     dfn = models.CharField(max_length=50, blank=True, null=True)
     disciplines = models.ManyToManyField(Discipline, blank=True, through="Matieres")
+    subsystem = models.CharField(choices=SubSystem.choices, default=SubSystem.ESGFR, max_length=10)
+
+    objects = ClassQuerySet.as_manager()
 
     class Meta:
         db_table = '"Class"'
@@ -157,13 +192,24 @@ class ClassRoomQuerySet(models.QuerySet):
 
     def order_by_niveau(self):
         order = {
-            'Sixième': 1,
-            'Cinquième': 2,
-            'Quatrième': 3,
-            'Troisième': 4,
-            'Seconde': 5,
-            'Première': 6,
-            'Terminale': 7,
+            'Sixième'    : 1,
+            'Cinquième'  : 2,
+            'Quatrième'  : 3,
+            'Troisième'  : 4,
+            '1ère Année' : 5,
+            '2ème Année' : 6,
+            '3ème Année' : 7,
+            '4ème Année' : 8,
+            'Seconde'    : 9,
+            'Première'   : 10,
+            'Terminale'  : 11,
+            'From One'   : 12,
+            'From Two'   : 13,
+            'From Three' : 14,
+            'From Four'  : 15,
+            'From Five'  : 16,
+            'Lower Sixth': 17,
+            'Upper Sixth': 18,
         }
 
         return self.order_by(

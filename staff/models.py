@@ -35,11 +35,19 @@ class Activities(models.Model):
         return f'{date} : {self.label}'
 
 
+class SubSystem(models.TextChoices):
+    ESGFR = "ESG-FR", "ESG-FR"
+    ESGEN = "ESG-EN", "ESG-EN"
+    ESTFR = "EST-FR", "EST-FR"
+    ESTEN = "EST-EN", "EST-EN"
+
+
 class Discipline(models.Model):
     id = models.IntegerField(primary_key=True)
     label = models.CharField(max_length=100)
     matiere = models.CharField(max_length=50, blank=True, null=True)
     groupe = models.CharField(max_length=100)
+    subsystem = models.CharField(choices=SubSystem.choices, default=SubSystem.ESGFR, max_length=10)
 
     class Meta:
         db_table = '"Discipline"'
