@@ -1,14 +1,11 @@
 # Create your views here.
-import os
-
-import openpyxl
-from django.db.models import Q, Sum
-from django.http import Http404, HttpResponse, JsonResponse
+import os, json, openpyxl
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
 from django.utils import timezone
 from django.forms.models import model_to_dict
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.conf import settings
 from fpdf import FPDF
 from fpdf.enums import VAlign, TableCellFillMode, TableHeadingsDisplay
@@ -16,28 +13,24 @@ from fpdf.table import Table
 from openpyxl.utils.datetime import to_excel
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter
-
+from openpyxl.styles import PatternFill, Border, Side
 from authentification.models import SchoolYear, User
-from note.models import Note, Enseignements
+from classroom.forms import ClassroomForm
+from note.models import Note
 from classroom.models import ClassRoom
-from note.views import ReportCard
 from .forms import StudentForm, ParentForm, DForm, BulkDecisionForm
 from osm.forms import SearchForm
-from osm.forms import SearchForm
-from note.forms import CheckForm, MarksForm, SelectForm
+from note.forms import SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
-from osm.utils import formated_float, message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, \
+from osm.utils import message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, format_date, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts, format_date
+    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
 from openpyxl import load_workbook
 from io import BytesIO
 from datetime import datetime, date
-from os import path
 
 
 """
@@ -979,6 +972,59 @@ class Parents(ListView):
     title = "Liste des Parents d'Élèves"
     model = Parent
     objects = "parents d'élève(s)"
+
+
+# ---------------------------------------------------------------------------
+# Création rapide d'un parent depuis le formulaire d'élève
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def student_add_parent(request):
+    if request.method == "POST":
+        form = ParentForm(request.POST, context={'request': request})
+        if form.is_valid():
+            parent = form.save()
+            message(request, f"Parent {parent.nom} ajoutée avec succès.")
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                'AJAXMessages': {},
+                "parentCreated": {
+                    "id": str(parent.pk),
+                    "label": str(parent),
+                    "target": "pere" if parent.civilite == "Monsieur" else "mere",
+                }
+            })
+            return response
+        response = render(request, "student_parent_modal.html", {"form": form,})
+        response["HX-Trigger"] = 'AJAXMessages'
+        return response
+    form = ParentForm(context={'request': request})
+    return render(request, "student_parent_modal.html", {"form": form,})
+
+
+# ---------------------------------------------------------------------------
+# Création rapide d'une classe depuis le formulaire d'élève
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def student_add_classroom(request):
+    if request.method == "POST":
+        form = ClassroomForm(request.POST, context={'request': request})
+        if form.is_valid():
+            classroom = form.save_classroom()
+            message(request, f"Classe {classroom.code} ajoutée avec succès.")
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                'AJAXMessages': {},
+                "classroomCreated": {
+                    "id": str(classroom.pk),
+                    "label": str(classroom.code),
+                }
+            })
+            return response
+        response = render(request, "student_classroom_modal.html", {"form": form, })
+        response["HX-Trigger"] = 'AJAXMessages'
+        return response
+    form = ClassroomForm(context={'request': request})
+    return render(request, "student_classroom_modal.html", {"form": form})
 
 
 class StudentAdd(LoggedAdminView):

@@ -12,7 +12,7 @@ from collections import defaultdict
 class Parent(models.Model):
     nom = models.CharField(max_length=30)
     prenom = models.CharField(max_length=30, null=True)
-    email = models.EmailField(max_length=30, null=True)
+    courriel = models.EmailField(max_length=30, null=True, blank=True)
     contact = models.CharField(max_length=9, unique=True)
     profession = models.CharField(max_length=50, null=True)
     civilite = models.CharField(choices=Civilite.choices, max_length=10)
@@ -21,15 +21,15 @@ class Parent(models.Model):
         db_table = '"Parent"'
         constraints = [
             models.UniqueConstraint(
-                fields=['email'],
-                condition=~Q(email=None),
+                fields=['courriel'],
+                condition=Q(courriel__isnull=False, courriel__gt=""),
                 name='unique_courriel_si_non_null'
             )
         ]
 
     @property
-    def courriel(self):
-        return self.email if self.email else "/"
+    def email(self):
+        return self.courriel if self.courriel else "/"
 
     @property
     def name(self):

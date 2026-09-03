@@ -11,9 +11,13 @@
   .info-value { color:rgba(255,255,255,0.85); font-weight:600; font-size:0.95rem; word-break:break-word; }
   .info-value.accent { color:#ffc107; }
   .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45)!important; border:1px solid rgba(255,255,255,0.1)!important; border-radius:16px!important; }
+  .student-container {width: 100%; max-width: 720px;}
+  @media (min-width: 1200px) {
+    .student-container {max-width: 70%;}
+  }
 </style>
 
-<div class="container py-3" style="max-width:680px;">
+<div class="container py-3 student-container">
   <div class="detail-card">
 
     <div class="detail-card-header">
@@ -31,10 +35,10 @@
 
     <div class="px-3 px-sm-4 py-3">
       <div class="row g-0">
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row"><span class="info-label">Sexe</span><span class="info-value">{{ object.sexe }}</span></div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Classe</span>
             <span class="info-value accent">
@@ -42,16 +46,16 @@
             </span>
           </div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row"><span class="info-label">Statut</span><span class="info-value">{{ object.statut }}</span></div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row"><span class="info-label">Date de naissance</span><span class="info-value">{{ object.date_naissance }}</span></div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row"><span class="info-label">Lieu de naissance</span><span class="info-value">{{ object.lieu_naissance }}</span></div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Père</span>
             <span class="info-value">
@@ -59,7 +63,7 @@
             </span>
           </div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Mère</span>
             <span class="info-value">
@@ -67,15 +71,15 @@
             </span>
           </div>
         </div>
-        <div class="col-sm-6 ps-sm-3 {% if not object.pere %}d-none d-sm-block invisible{% endif %}">
+        <div class="col-sm-6 col-xl-4 {% if not object.pere %}d-none d-sm-block invisible{% endif %}">
           <div class="info-row"><span class="info-label">Contact père</span><span class="info-value">{% if object.pere %}{{ object.pere.contact }}{% endif %}</span></div>
         </div>
-        <div class="col-sm-6 pe-sm-3 {% if not object.mere %}d-none d-sm-block invisible{% endif %}">
+        <div class="col-sm-6 col-xl-4 {% if not object.mere %}d-none d-sm-block invisible{% endif %}">
           <div class="info-row"><span class="info-label">Contact mère</span><span class="info-value">{% if object.mere %}{{ object.mere.contact }}{% endif %}</span></div>
         </div>
       </div>
 
-      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3 mt-2">
+      <div class="d-flex flex-column flex-sm-row flex-sm-wrap gap-2 justify-content-center pt-3 mt-2">
         <form method="post" action="{% url 'student_toggle_active' id=object.id %}" class="d-grid d-sm-inline">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -87,8 +91,6 @@
         </form>
         <a class="btn btn-warning fw-semibold" href="{% url 'student-edit' id=object.id %}"><i class="bi bi-pencil-square me-1"></i>Modifier</a>
         <a class="btn btn-outline-danger" href="{% url 'student-delete' id=object.id %}"><i class="bi bi-trash me-2"></i>Supprimer</a>
-      </div>
-      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center pt-3">
         <a class="btn btn-info fw-semibold" href="{% url 'student_journey' id=object.id %}"><i class="bi bi-signpost-2 me-1"></i>Parcours</a>
         <a class="btn btn-primary" href="{% url 'enrollment_certificate' id=object.id %}" title="Certificat de scolarité" data-bs-toggle="tooltip">
             <i class="bi bi-file-earmark-pdf me-1"></i>Certificat</a>

@@ -8,9 +8,13 @@
   .form-card input,.form-card select { background-color:rgba(255,255,255,0.07)!important; border:1px solid rgba(255,255,255,0.15)!important; color:#fff!important; border-radius:10px!important; }
   .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
   .form-card label { font-size:0.82rem; margin-bottom:4px; }
+  .student-form-container {width: 100%; max-width: 720px;}
+  @media (min-width: 1200px) {
+    .student-form-container {max-width: 75%;}
+  }
 </style>
 
-<div class="container py-3" style="max-width:720px;">
+<div class="container py-3 student-form-container">
   {% if nb %}
   <div class="alert alert-danger py-2 small rounded-3 mb-3"><i class="bi bi-exclamation-triangle me-2"></i>{{ nb }}</div>
   {% endif %}
@@ -25,17 +29,28 @@
 
         <p class="form-section-title">Identité</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6"><label class="text-white control-label">Nom(s)</label>{{ form.nom }}</div>
-          <div class="col-sm-6"><label class="text-white">Prénom(s)</label>{{ form.prenom }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Date de naissance</label>{{ form.date_naissance }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Lieu de naissance</label>{{ form.lieu_naissance }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Sexe</label>{{ form.sexe }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Statut</label>{{ form.statut }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Identifiant unique</label>{{ form.unique_id }}</div>
-          <div class="col-sm-6"><label class="text-white">Classe</label>{{ form.classe }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Nom(s)</label>{{ form.nom }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Prénom(s)</label>{{ form.prenom }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Date de naissance</label>{{ form.date_naissance }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Lieu de naissance</label>{{ form.lieu_naissance }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Sexe</label>{{ form.sexe }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Statut</label>{{ form.statut }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Identifiant unique</label>{{ form.unique_id }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Classe</label>
+            <div class="input-group gap-1">{{ form.classe }}
+            <button type="button" class="btn btn-outline-warning" hx-get="{% url 'student-add-classroom' %}" hx-target="#studentRelatedModalContent"
+              hx-swap="innerHTML" data-bs-toggle="modal" data-bs-target="#studentRelatedModal" title="Ajouter une classe">
+              <i class="bi bi-plus-lg"></i></button>
+            </div>
+          </div>
         </div>
 
-        <p class="form-section-title">Parents</p>
+        <p class="form-section-title d-flex align-items-center justify-content-between"><span>Parents</span>
+          <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2" hx-get="{% url 'student-add-parent' %}"
+            hx-target="#studentRelatedModalContent" hx-swap="innerHTML" data-bs-toggle="modal" data-bs-target="#studentRelatedModal"
+            data-parent-action="add" title="Ajouter un parent"><i class="bi bi-person-plus me-1"></i>Ajouter un parent
+          </button>
+        </p>
         <div class="row g-3 mb-4">
           <div class="col-sm-6"><label class="text-white">Père</label>{{ form.pere }}</div>
           <div class="col-sm-6"><label class="text-white">Mère</label>{{ form.mere }}</div>
@@ -46,15 +61,95 @@
 
         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-3">
           <button class="btn btn-success fw-semibold" type="submit" data-with-spinner><i class="bi bi-save me-2"></i>Sauvegarder</button>
-          <button class="btn btn-outline-danger" type="reset"><i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser</button>
+          <button class="btn btn-outline-danger fw-bold" type="reset"><i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser</button>
           <a class="btn btn-outline-secondary btn-back" href="{% url 'index' %}"><i class="bi bi-x-circle me-2"></i>Annuler</a>
-        </div>
-        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-          <a class="btn btn-outline-warning btn-sm" href="{% url 'parent-add' %}"><i class="bi bi-person-plus me-2"></i>Ajouter un Parent</a>
-          <a class="btn btn-outline-info btn-sm" href="{% url 'classroom-add' %}"><i class="bi bi-people me-2"></i>Ajouter une Classe</a>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="studentRelatedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content form-card" id="studentRelatedModalContent">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    /**
+     * Ajoute une option à un <select> si elle n'existe pas,
+     * puis la sélectionne.
+     */
+    function addAndSelectOption(select, id, label) {
+        if (!select || !id) return;
+        const value = String(id);
+        let option = Array.from(select.options).find(
+            option => option.value === value
+        );
+        if (!option) {
+            option = new Option(label, value);
+            select.add(option);
+        }
+        select.value = value;
+        // Permet aux éventuels autres scripts de réagir
+        // au changement de valeur.
+        select.dispatchEvent(
+            new Event('change', { bubbles: true })
+        );
+    }
+    /**
+     * Ferme proprement la modale Bootstrap contenant le formulaire HTMX.
+     * On recherche la modale depuis le formulaire qui vient d'être soumis,
+     * ce qui évite de dépendre d'un ID particulier.
+     */
+    function closeStudentRelatedModal() {
+        const modalElement = document.querySelector(
+            '.modal.show'
+        );
+        if (!modalElement) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(
+            modalElement
+        );
+        modal.hide();
+    }
+    /**
+     * Parent créé avec succès.
+     */
+    document.body.addEventListener('parentCreated', function (event) {
+        const data = event.detail || {};
+        const select = document.getElementById(
+            data.target
+        );
+        addAndSelectOption(
+            select,
+            data.id,
+            data.label
+        );
+        closeStudentRelatedModal();
+    });
+    /**
+     * Classe créée avec succès.
+     */
+    document.body.addEventListener('classroomCreated', function (event) {
+        const data = event.detail || {};
+        const select = document.getElementById(
+            'classe'
+        );
+        addAndSelectOption(
+            select,
+            data.id,
+            data.label
+        );
+        closeStudentRelatedModal();
+    });
+})();
+</script>
 {% endblock %}

@@ -12,6 +12,7 @@ from urllib.parse import quote
 
 import numpy as np
 from django.conf import settings
+from django.contrib.messages import success
 from django.db.models import Q, Model
 from PIL import Image, ImageFile
 from django.contrib import messages
@@ -257,6 +258,8 @@ class BaseListView(View):
             datas = datas.select_related('classe', 'pere', 'mere').order_by_classroom_level()
             if self.id:
                 datas = datas.filter(classe_id=self.kwargs['id'])
+        elif self.model == Parent:
+            datas = datas.order_by('nom', 'prenom')
         else:
             datas = datas.all()
         if search:
@@ -322,7 +325,8 @@ class DeleteView(LoggedAdminView):
             message(self.request, instance.delete_message)
             return redirect("class-subjects", id=self.kwargs['cid'])
         message(self.request, self.message)
-        return redirect(self.request.POST.get("back"))
+        back = self.request.POST.get("back")
+        return redirect(back if "details" not in back else self.success_url)
 
     def get_object(self):
         if self.model == Personnel:
@@ -336,7 +340,7 @@ class DeleteView(LoggedAdminView):
             if instance.user:
                 if instance.user == self.request.user:
                     return None
-                return instance
+                return instance.user
         elif self.model == User:
             if instance == self.request.user:
                 return None

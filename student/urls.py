@@ -4,12 +4,14 @@ from student.views import StudentAdd, ParentAdd, ParentEdit, ParentDelete, Stude
     StudentsIdCards, EndYearAssignment, EndYearAssignmentForm, StudentJourney, StudentsTrash, StudentsWithoutClass,\
     StudentToggleActive, DeleteDeactivatedStudents, DeleteStudentsWithoutClass, AssignClassToWithoutClass,\
     ImportTemplateDownload, age_sex_stats, age_sex_stats_pdf, age_sex_stats_xlsx, enrollment_certificate, certificates,\
-    enrollment_certificates, enrollment_certificate_blank
+    enrollment_certificates, enrollment_certificate_blank, student_add_parent, student_add_classroom
 
 urlpatterns = [
     path("students", Students.as_view(), name="students"),
     path("student-add", StudentAdd.as_view(), name="student-add"),
     path("student-edit-<int:id>", StudentEdit.as_view(), name="student-edit"),
+    path("student/add/parent/", student_add_parent, name="student-add-parent"),
+    path("student/add/classroom/", student_add_classroom, name="student-add-classroom"),
     path("student-details-<int:id>", StudentDetails.as_view(), name="student-details"),
     path("student-delete-<int:id>", StudentDelete.as_view(), name="student-delete"),
     path("students_import", StudentsImport.as_view(), name="students_import"),

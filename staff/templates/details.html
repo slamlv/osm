@@ -19,9 +19,13 @@
   .osm-table-outer tbody tr:hover { background-color:#1f4266!important; }
   .osm-table-outer tbody td { color:rgba(255,255,255,0.85)!important; background:transparent!important; font-size:0.85rem; border-color:rgba(255,255,255,0.06)!important; padding:8px 12px; vertical-align:middle; }
   .modal-content { background:linear-gradient(145deg,#1b3a57,#172e45)!important; border:1px solid rgba(255,255,255,0.1)!important; border-radius:16px!important; }
+  .user-container {width: 100%; max-width: 720px;}
+  @media (min-width: 1200px) {
+    .user-container {max-width: 70%;}
+  }
 </style>
 
-<div class="container py-3" style="max-width:680px;" id="info_card">
+<div class="container py-3 user-container" id="info_card">
   <div class="detail-card">
 
     <div class="detail-card-header">
@@ -36,14 +40,14 @@
 
     <div class="px-3 px-sm-4 py-3">
       <div class="row g-0">
-        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Civilité</span><span class="info-value">{{ object.civilite }}</span></div></div>
-        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Poste</span><span class="info-value">{% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span></div></div>
-        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Nom(s)</span><span class="info-value">{{ object.nom }}</span></div></div>
-        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Prénom(s)</span><span class="info-value">{% if object.prenom %}{{ object.prenom }}{% else %}—{% endif %}</span></div></div>
-        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Grade</span><span class="info-value">{% if object.grade %}{{ object.grade }}{% else %}—{% endif %}</span></div></div>
-        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ object.email }}</span></div></div>
-        <div class="col-sm-6 pe-sm-3"><div class="info-row"><span class="info-label">Contact</span><span class="info-value">{{ object.contact }}</span></div></div>
-        <div class="col-sm-6 ps-sm-3"><div class="info-row"><span class="info-label">Ancienneté</span><span class="info-value">{% if object.since %}{{ object.since }} an(s){% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Civilité</span><span class="info-value">{{ object.civilite }}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Poste</span><span class="info-value">{% if object.poste != "Autre" %}{{ object.post }}{% else %}Non défini{% endif %}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Nom(s)</span><span class="info-value">{{ object.nom }}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Prénom(s)</span><span class="info-value">{% if object.prenom %}{{ object.prenom }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Grade</span><span class="info-value">{% if object.grade %}{{ object.grade }}{% else %}—{% endif %}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Email</span><span class="info-value">{{ object.email }}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Contact</span><span class="info-value">{{ object.contact }}</span></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="info-row"><span class="info-label">Ancienneté</span><span class="info-value">{% if object.since %}{{ object.since }} an(s){% else %}—{% endif %}</span></div></div>
       </div>
 
       <!-- Zone rechargeable HTMX -->

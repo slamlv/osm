@@ -46,7 +46,7 @@ class DForm(DynamicFormMixin, forms.ModelForm):
 class ParentForm(DynamicFormMixin, forms.ModelForm):
     class Meta:
         model = Parent
-        fields = ["nom", "prenom", "email", "contact", "profession", "civilite"]
+        fields = ["nom", "prenom", "courriel", "contact", "profession", "civilite"]
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs['context']['request']
@@ -62,7 +62,7 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
     prenom = forms.CharField(max_length=30, required=False, widget=forms.TextInput(attrs={
         "placeholder": "Entrez le prénom", 'class': "form-control fw-bold", 'id': "prenom"
     }))
-    email = forms.CharField(required=False, widget=forms.TextInput(attrs={
+    courriel = forms.CharField(required=False, widget=forms.TextInput(attrs={
         "placeholder": "Entrez l'adresse électronique", 'class': "form-control fw-bold", 'id': "email"
     }))
     contact = forms.CharField(max_length=9, widget=forms.TextInput(attrs={
@@ -77,7 +77,7 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
 
     def clean(self):
         nom = self.cleaned_data.get("nom")
-        prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data.keys() else ""
+        prenom = self.cleaned_data.get("prenom")
         contact = self.cleaned_data.get("contact")
         parents = Parent.objects
         if self.parent_id:
@@ -90,12 +90,12 @@ class ParentForm(DynamicFormMixin, forms.ModelForm):
         if parents.filter(contact=contact).exists():
             message(self.request, "Ce contact a déjà été enregistré.", msg_type="warning")
             raise forms.ValidationError("")
-        if 'email' in self.cleaned_data['email']:
-            email = valid_email(self.cleaned_data.get("email"), check=True, request=self.request)
-            if parents.filter(email=email).exists():
+        if self.cleaned_data['courriel']:
+            email = valid_email(self.cleaned_data.get("courriel"), check=True, request=self.request)
+            if parents.filter(courriel=email).exists():
                 message(self.request, "Cet email a déjà été enregistré.", msg_type="warning")
                 raise forms.ValidationError("")
-        if 'profession' in self.cleaned_data.keys():
+        if self.cleaned_data['profession']:
             self.cleaned_data["profession"] = self.cleaned_data.get("profession").title()
         self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
         self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
@@ -139,9 +139,9 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
     mere = DynamicField(forms.ModelChoiceField, required=False, widget=forms.Select(attrs={
         'class': "form-select woption fw-bold", 'id': "mere"
     }), queryset=Parent.objects.filter(civilite="Madame").order_by("-id"),)
-    classe = DynamicField(forms.ModelChoiceField, widget=forms.Select(attrs={
+    classe = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
         'class': "form-select woption fw-bold", 'id': "classe"
-    }), required=False, queryset=ClassRoom.objects.order_by_niveau())
+    }), required=False, choices=lambda form: form.classrooms)
     unique_id = forms.CharField(max_length=9, widget=forms.TextInput(attrs={
         'placeholder': "Entrez l'identifiant unique", 'class': "form-control fw-bold", 'id': "unique_id"
     }))
@@ -150,9 +150,14 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         'accept': "image/*"
     }))
 
+    def classrooms(self):
+        return [(None, "---------")] + [(c.pk, c.code) for c in ClassRoom.objects.order_by_niveau()]
+
     def clean(self):
+        classe_id = self.cleaned_data.get("classe")
+        self.cleaned_data['classe'] = (ClassRoom.objects.filter(pk=classe_id).first() or None) if classe_id else None
         nom = self.cleaned_data.get("nom")
-        prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data.keys() else ""
+        prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data else ""
         date = self.cleaned_data.get("date_naissance")
         unique_id = self.cleaned_data.get('unique_id')
         now = datetime.now().year

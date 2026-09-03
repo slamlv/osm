@@ -8,8 +8,12 @@
   .form-card input:focus,.form-card select:focus { background-color:rgba(255,255,255,0.11)!important; border-color:#0d6efd!important; box-shadow:0 0 0 3px rgba(13,110,253,0.2)!important; color:#fff!important; }
   .form-card label { font-size:0.82rem; margin-bottom:4px; }
   .form-section-title { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.35); font-weight:700; margin-bottom:0.75rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .member-form-container {width: 100%; max-width: 720px;}
+  @media (min-width: 1200px) {
+    .member-form-container {max-width: 75%;}
+  }
 </style>
-<div class="container py-3" style="max-width:720px;">
+<div class="container py-3 member-form-container">
   <div class="form-card">
     <div class="form-card-header d-flex align-items-center gap-2">
       <i class="bi bi-person-badge text-success fs-5"></i>
@@ -20,24 +24,24 @@
         {% csrf_token %}
         <p class="form-section-title">Identité</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6"><label class="text-white control-label">Nom(s)</label>{{ form.nom }}</div>
-          <div class="col-sm-6"><label class="text-white">Prénom(s)</label>{{ form.prenom }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Civilité</label>{{ form.civilite }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Poste</label>{{ form.poste }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Grade</label>{{ form.grade }}</div>
-          <div class="col-sm-6"><label class="text-white">Disciplines enseignées</label>{{ form.discipline }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Nom(s)</label>{{ form.nom }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Prénom(s)</label>{{ form.prenom }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Civilité</label>{{ form.civilite }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Poste</label>{{ form.poste }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Grade</label>{{ form.grade }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Disciplines enseignées</label>{{ form.discipline }}</div>
         </div>
         <p class="form-section-title">Contact</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6"><label class="text-white control-label">Contact</label>{{ form.contact }}</div>
-          {% if form.contact1 %}<div class="col-sm-6"><label class="text-white">Contact optionnel</label>{{ form.contact1 }}</div>{% endif %}
-          <div class="col-sm-6"><label class="text-white">Email</label>{{ form.email }}</div>
-          <div class="col-sm-6"><label class="text-white">Ancienneté</label>{{ form.since }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Contact</label>{{ form.contact }}</div>
+          {% if form.contact1 %}<div class="col-sm-6 col-xl-4"><label class="text-white">Contact optionnel</label>{{ form.contact1 }}</div>{% endif %}
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Email</label>{{ form.email }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Ancienneté</label>{{ form.since }}</div>
         </div>
         {% if title == "Modifier mes informations" or "utilisateur" in title %}
         <p class="form-section-title">Compte</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6"><label class="text-white control-label">Nom d'utilisateur</label>{{ form.username }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Nom d'utilisateur</label>{{ form.username }}</div>
           {% if form.photo %}<div class="col-12"><label class="text-white">Photo de profil</label>{{ form.photo }}</div>{% endif %}
         </div>
         {% endif %}

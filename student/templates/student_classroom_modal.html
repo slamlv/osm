@@ -1,0 +1,28 @@
+<form method="post" hx-post="{% url 'student-add-classroom' %}" hx-target="#studentRelatedModalContent" hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="modal-header">
+        <div class="d-flex align-items-center gap-2"><i class="bi bi-door-open text-info fs-5"></i>
+            <h6 class="modal-title text-white fw-bold mb-0">Ajouter une classe</h6>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+    </div>
+    <div class="modal-body">
+        <div class="row g-3" id="classroom_form">
+            <div class="col-12 col-lg-6"><label class="text-white control-label">Niveau</label>{{ form.niveau }}</div>
+            <div class="col-12 col-lg-6"><label class="text-white">Spécialité</label>{{ form.option }}</div>
+            {% if form.lv2 %}
+            <div class="col-12 col-lg-6"><label class="text-white">Langue vivante 2 (LVII)</label>{{ form.lv2 }}</div>
+            {% endif %}
+            {% if form.lv3 %}
+            <div class="col-12 col-lg-6"><label class="text-white">Langue vivante 3 (LVIII)</label>{{ form.lv3 }}</div>
+            {% endif %}
+            <div class="col-12 col-lg-6"><label class="text-white">Intitulé de la classe</label>{{ form.code }}</div>
+            <div class="col-12 col-lg-6"><label class="text-white">Professeur Titulaire</label>{{ form.titulaire }}</div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" class="btn btn-success fw-semibold" data-with-spinner>
+            <i class="bi bi-save me-2"></i>Enregistrer</button>
+    </div>
+</form>
