@@ -166,7 +166,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
 
     def school_levels(self, initial=False):
         if initial:
-            if 'reload' in self.context.keys():
+            if 'reload' in self.context.keys() or 'niveau' in self.request.POST:
                 return self.request.POST['niveau']
             elif self.instance:
                 return self.instance.classe.niveau
@@ -179,7 +179,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
     def options(self, initial=False):
         if self.data:
             niveau = self.data['niveau']
-        elif 'reload' in self.context:
+        elif 'reload' in self.context or 'niveau' in self.request.POST:
             niveau = self.request.POST['niveau']
         elif self.instance:
             niveau = self.instance.classe.niveau
@@ -193,14 +193,14 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         return self.request.user.school.levels(cle='serie', level=niveau)
 
     def initial_titulaire(self):
-        if 'reload' in self.context:
+        if 'reload' in self.context or 'titulaire' in self.request.POST:
             return self.request.POST['titulaire']
         elif self.instance:
             return self.instance.titulaire
         return None
 
     def include_lv(self, key='lv2'):
-        if 'reload' in self.context:
+        if 'reload' in self.context or ('niveau' in self.request.POST and 'option' in self.request.POST):
             niveau, option = self.request.POST['niveau'], self.request.POST['option']
             if (option, option) not in self.options():
                 option = self.options()[0][0]
@@ -215,7 +215,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         return False
 
     def initial_lv(self, key='lv2'):
-        if 'reload' in self.context:
+        if 'reload' in self.context or key in self.request.POST:
             if key in self.request.POST:
                 return self.request.POST[key]
         elif self.instance:
@@ -223,7 +223,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         return None
 
     def initial_code(self):
-        if 'reload' in self.context:
+        if 'reload' in self.context or 'code' in self.request.POST:
             return self.request.POST['code']
         elif self.instance:
             return self.instance.code
