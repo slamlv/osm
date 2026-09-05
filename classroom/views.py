@@ -477,7 +477,7 @@ class TimeTable(LoggedAdminView):
         return render(self.request, self.template_name, context=context)
 
     def build_pdf_or_reason(self, classroom, annee):
-        if not classroom.programmations.exists():
+        if not classroom.programmations.exists() and not classroom.mergedprogrammations.exists():
             return "Aucune programmation disponible pour cette classe"  # -> sautée (ZIP) ou message d'erreur (une classe)
         result = self.get_time_table(classroom.pk, download=True)
         data = {
