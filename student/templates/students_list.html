@@ -62,13 +62,19 @@
                     type="submit" data-bs-toggle="tooltip"
                     title="Télécharger toutes les listes en PDF">
               <span class="btn-text" id="btn-text">
-                <i class="bi bi-file-earmark-pdf me-2"></i>Listes
+                <i class="bi bi-file-earmark-pdf me-1"></i>Listes
               </span>
               <span class="spinner-border spinner-border-sm d-none ms-2" role="status"
                     aria-hidden="true" id="spinner"></span>
             </button>
             <div id="error-zone" class="alert alert-warning d-none mt-0 ms-2 py-1 px-2 small rounded-3 mb-0"></div>
           </form>
+          {% endif %}
+          {% if transferts %}
+          <a class="btn btn-primary btn-sm fw-semibold" href="{% url 'transfer_list' %}"
+             title="Télécharger la liste des transferts en pdf" data-bs-toggle="tooltip">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Transferts ({{ transferts }})
+          </a>
           {% endif %}
         {% endif %}
         {% if secondary %}

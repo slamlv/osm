@@ -26,7 +26,7 @@ def offline_index(request):
             'nom': school.nom,
             'logo': school.logo,
             'localite': school.localite
-        } for school in School.objects.exclude(name__in=["GBHS Demo", "Public"])
+        } for school in School.objects.exclude(schema_name__in=["demo", "public"])
     ]
     return render(request, "offline_index.html", context={'schools_infos': schools_infos})
 
