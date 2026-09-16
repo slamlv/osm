@@ -103,12 +103,13 @@ class StaffArchive(LoggedAdminView):
 class StaffToggleEnPoste(LoggedAdminView):
     def post(self, *args, **kwargs):
         staff = get_object_or_404(Personnel.objects_all, pk=self.kwargs["id"])
-        if staff.en_poste:
-            staff.leave_school()
-            message(self.request, f"{staff} n'apparaitra pls dans les listes. Son compte d'accès a été désactivé.")
-        else:
-            staff.reinstate()
-            message(self.request, f"{staff} a été réintégré(e).")
+        if staff != self.request.user.staff_member:
+            if staff.en_poste:
+                staff.leave_school()
+                message(self.request, f"{staff} n'apparaitra pls dans les listes. Son compte d'accès a été désactivé.")
+            else:
+                staff.reinstate()
+                message(self.request, f"{staff} a été réintégré(e).")
         nxt = self.request.POST.get("next")
         return redirect(nxt) if nxt else redirect("staff_archive")
 
@@ -538,11 +539,12 @@ class AddUser(LoggedAdminView):
 def admin(request, pk: int):
     user = User.objects.prefetch_related('staff_member__enseignant__matiere__sujet').get(pk=pk)
     member = user.staff_member
-    if user.is_admin:
-        user.is_admin = False
-    else:
-        user.is_admin = True
-    user.save()
+    if user != request.user:
+        if user.is_admin:
+            user.is_admin = False
+        else:
+            user.is_admin = True
+        user.save()
     return render(request, "reload_details.html", {"object": member, 'm_user': user})
 
 
@@ -550,11 +552,12 @@ def admin(request, pk: int):
 def active(request, pk: int):
     user = User.objects.prefetch_related('staff_member__enseignant__matiere__sujet').get(pk=pk)
     member = user.staff_member
-    if user.is_active:
-        user.is_active = False
-    else:
-        user.is_active = True
-    user.save()
+    if user != request.user:
+        if user.is_active:
+            user.is_active = False
+        else:
+            user.is_active = True
+        user.save()
     return render(request, "reload_details.html", {"object": member, 'm_user': user})
 
 

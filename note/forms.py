@@ -123,6 +123,10 @@ class SelectForm(DynamicFormMixin, forms.Form):
             return [(classroom.pk, classroom.code) for classroom in classrooms]
         if self.marks_sheet:
             if self.context['request'].user.is_min_admin:
+                if 'csi' in self.context or 'album' in self.context:
+                    from student.models import Student
+                    if Student.objects.filter(photo__isnull=False).count() > 200:
+                        return [(classroom.pk, classroom.code) for classroom in ClassRoom.objects.order_by_niveau()]
                 return [("__all__", "Toutes")] + [(classroom.pk, classroom.code) for classroom in ClassRoom.objects.order_by_niveau()]
         matiere = matiere()
         enseignements = self.context['enseignements']
@@ -489,6 +493,7 @@ class CheckForm(DynamicFormMixin, forms.Form):
         return (self.eval_choices, self.transcript_choices)[self.context["transcript"]]
 
     def include(self):
-        if 'transcript' in self.context.keys():
-            return True
+        if 'transcript' in self.context:
+            if 'request' in self.context and self.context['request'].user.school.with_competences:
+                return True
         return False

@@ -37,6 +37,7 @@
         <th>Intitulé</th>
         <th class="d-none d-lg-table-cell">Discipline principale</th>
         <th>Domaine d'apprentissage</th>
+        <th>Système</th>
         <th>Actions</th>
       </tr></thead>
       <tbody>
@@ -46,6 +47,7 @@
           <td class="fw-semibold">{{ subject.label }}</td>
           <td class="d-none d-lg-table-cell" style="color:rgba(255,255,255,0.5)!important;">{% if not subject.matiere %}—{% else %}{{ subject.matiere }}{% endif %}</td>
           <td>{{ subject.groupe }}</td>
+          <td>{{ subject.subsystem }}</td>
           <td>
             <div class="d-flex gap-2">
               <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'subject-edit' id=subject.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>

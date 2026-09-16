@@ -1,42 +1,29 @@
 """
     Ce fichier contient des classes et des fonctions de base utilisées par les applications
 """
-import os
-import re
-import threading
-import uuid
-import zipfile
+import os, re, zipfile, numpy as np
 from datetime import datetime, time
 from io import BytesIO
 from urllib.parse import quote
-
-import numpy as np
 from django.conf import settings
-from django.contrib.messages import success
 from django.db.models import Q, Model
 from PIL import Image, ImageFile
 from django.contrib import messages
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.template.defaultfilters import title
 from django.urls import reverse
 from functools import wraps
-
-from django.utils.termcolors import background
 from django.utils.http import url_has_allowed_host_and_scheme
 from django_tenants.utils import schema_context
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.views import View
-from fpdf.table import Table
-
 from osm.forms import SearchForm
 from staff.models import Personnel, Discipline, Activities
 from student.models import Parent
-from dynamic_forms import DynamicFormMixin
-from classroom.models import ClassRoom, Matieres
+from classroom.models import ClassRoom
 from authentification.models import User, School, SchoolYear
-from student.models import Student
+from student.models import Student, StudentEnrollment, EnrollmentStatus
 
 
 def delete_image(image):
@@ -208,6 +195,11 @@ class BaseListView(View):
             else:
                 if 'total' in info:
                     context['info'] += f" {self.request.user.school.kind_numbers}"
+            context['transferts'] = (
+                StudentEnrollment.objects.filter(
+                    school_year__libelle=self.request.user.school.establishment_year, decision=EnrollmentStatus.TRANSFERE)
+                .count()
+            )
             context['pk'] = pk
             context['nb_trash'] = Student.objects_all.filter(is_active=False).count()
             context['nb_without'] = Student.objects.filter(classe__isnull=True).count()
@@ -253,7 +245,7 @@ class BaseListView(View):
         elif self.model == ClassRoom:
             datas = datas.select_related('classe').order_by_niveau()
         elif self.model == Discipline:
-            datas = datas.order_by('groupe', 'matiere', 'label')
+            datas = datas.order_by('subsystem' ,'groupe', 'matiere', 'label')
         elif self.model == Student:
             datas = datas.select_related('classe', 'pere', 'mere').order_by_classroom_level()
             if self.id:
@@ -411,7 +403,7 @@ class BaseStaffMemberTimetable(View):
             return zip_pdfs_response(
                 build_pdf_for_classroom=build,
                 classrooms=staff_members,
-                zip_filename=f"Emplois du temps - Toutes le personnel.zip",
+                zip_filename=f"Emplois du temps - Tout le personnel.zip",
                 per_file_namer=namer,
             )
         staffmember, title, mp = self.get_object()
@@ -1870,7 +1862,7 @@ def base_header(pdf, mode='P', y_img=0):
     table.render()
 
 
-def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode='P', year=school_year()):
+def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode='P', year=school_year(), total=None):
     pdf.set_font("inter", 'B', 12)
     pdf.cell(0, 7, nom, align='C')
     pdf.ln()
@@ -1879,8 +1871,9 @@ def base_infos(pdf, nom, effectif, filles, garcons, redoublants, classroom, mode
     pdf.ln()
     pdf.set_font("inter", '', 7)
     w = 99 if mode == 'P' else 142.5
-    pdf.cell(w, 5, f"**Classe : {classroom}**", align='L', markdown=True)
-    info = f"Effectif : {effectif}, Filles : {filles}, Garçons : {garcons}, Redoublants : {redoublants}"
+    pdf.cell(w, 5, f"{f'** Classe : {classroom}**' if classroom else ''}", align='L', markdown=True)
+    info = (f"Effectif : {effectif}, Filles : {filles}, Garçons : {garcons}, Redoublants : {redoublants}" if not total
+            else f"Total : {total}")
     pdf.cell(w, 5, f"__{info}__", align='R', markdown=True)
 ##############################################################################################
 

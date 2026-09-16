@@ -838,7 +838,7 @@ class Bulletin(LoggedAdminView):
     title = "Bulletin Scolaire"
 
     def get(self, *args, **kwargs):
-        context = {"title": self.title, "form": CheckForm(context={"transcript": True}),
+        context = {"title": self.title, "form": CheckForm(context={"transcript": True, 'request': self.request}),
                    "seuils": seuils_par_pk(ClassRoom.objects.all())}
         return render(self.request, self.template_name, context)
 
@@ -1175,8 +1175,8 @@ class TableaudHonneur(FPDF):
                 texte = (f"\n      L'élève **{student['nom']}** de la classe de **{self.data['classe']}** a obtenu(e) "
                          f"**{student['moyenne']}** comme moyenne {self.data['trimestre'].lower()} de l'année scolaire "
                          f"**{self.data['annee']}**, en étant classé **{student['rang']}**. Ce résultat témoigne d'un travail "
-                         f"remarquable et d'un engagement vers la quête de l'excellence scolaire. En foi de quoi le présent "
-                         f"**TABLEAU D'HONNEUR** lui est remis pour servir et valoir ce que de droit.")
+                         f"remarquable et d'un engagement vers la quête de l'excellence scolaire.\n      En foi de quoi le "
+                         f"présent **TABLEAU D'HONNEUR** lui est remis pour servir et valoir ce que de droit.")
                 self.multi_cell(w=198, h=5, align='L', center=True, text=texte, markdown=True)
                 self.ln()
                 self.ln()
@@ -1223,10 +1223,10 @@ class ExamRecord(FPDF):
         self.ln()
         self.set_font_size(8)
         col_widths = [10, 22, 88, 11, 11, 17, 14, 11, 14]
-        header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
+        header = ["N°", "Matricule", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moyenne", "Rang", "Côte", "Appr"]
         if self.data['annual']:
             col_widths = (9, 18, 75, 9, 9, 11, 11, 11, 11, 14, 30, 33, 34)
-            header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
+            header = ["N°", "Matricule", "Nom(s) et Prénom(s)", "Sexe", "Red?", "Moy1", "Moy2", "Moy3", "Moy", "Rang",
                       "Mérite", "Conduite", "Décision"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
@@ -1623,11 +1623,11 @@ class ReportCard(FPDF):
         row = table.row()
         row.cell(
             f"Date et lieu de naissance : {student_data['date_lieu_naissance']}", colspan=2)
-        row.cell(f"Genre : {student_data['sexe']}")
+        row.cell(f"Sexe : {student_data['sexe']}")
         row.cell(f"Effectif : {classroom_data['effectif']}")
 
         row = table.row()
-        row.cell(f"Identifiant Unique : **{student_data['matricule']}**")
+        row.cell(f"Matricule : **{student_data['matricule']}**")
         row.cell("Redoublant(e) : ",
                  align="RIGHT", border=CellBordersLayout.TOP | CellBordersLayout.BOTTOM | CellBordersLayout.LEFT)
         self.draw_tic_orx(row, student_data['statut'], align="L",

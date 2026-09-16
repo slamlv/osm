@@ -24,10 +24,13 @@
 <div class="px-3 px-md-4 py-3">
 
   {% if subjects %}
-  <div class="d-flex justify-content-end mb-3">
-    <a class="btn btn-warning fw-semibold btn-sm" href="{% url 'matiere-add' id=mateachs_form.id %}">
-      <i class="bi bi-plus-circle me-2"></i>Ajouter une Matière
-    </a>
+  <div class="alert alert-info py-2 small rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>{{ mateachs_form.nb_matieres }} matières, total coef : {{ mateachs_form.total_coef }}</span>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <a class="btn btn-warning fw-semibold btn-sm" href="{% url 'matiere-add' id=mateachs_form.id %}">
+        <i class="bi bi-plus-circle me-2"></i>Ajouter une Matière
+      </a>
+    </div>
   </div>
 
   {% if mateachs_form.mateachs_form %}

@@ -1,4 +1,5 @@
 from django import forms
+from django.shortcuts import get_object_or_404
 from requests import options
 
 from osm.utils import message, icon, one_escape, get_value, is_alphanumeric
@@ -6,7 +7,7 @@ from django.db.models import Q
 from dynamic_forms import DynamicField, DynamicFormMixin
 from authentification.models import User
 from .models import ClassRoom, Class, Enseignements, Programmation, Matieres, LVII, LVIII
-from staff.models import Personnel, Discipline
+from staff.models import Personnel, Discipline, SubSystem
 from django.core import signing
 
 
@@ -124,8 +125,9 @@ class MatiereAddForm(DynamicFormMixin, forms.Form):
         return classes
 
     def dchoices(self):
-        disciplines = Discipline.objects.all()
-        dclasses = Class.objects.get(pk=self.context['id']).disciplines.all()
+        classe = get_object_or_404(Class, pk=self.context['id'])
+        disciplines = Discipline.objects.filter(subsystem=classe.subsystem)
+        dclasses = classe.disciplines.all()
         disciplines = disciplines.exclude(id__in=[x.pk for x in dclasses]).order_by("label")
         return ((d.pk, d.label) for d in disciplines)
 
@@ -733,7 +735,12 @@ class MatTeachsForm:
         method = kwargs.pop("method")
         classroom = ClassRoom.objects.select_related('classe').prefetch_related('matieres__sujet').get(
             id=kwargs.pop('id'))
-        self.classe = classroom.classe if 'coeff' in kwargs.keys() else classroom.code
+        if 'coeff' in kwargs:
+            self.classe = classroom.classe
+            self.nb_matieres = classroom.nb_matieres
+            self.total_coef = classroom.total_coef
+        else:
+            self.classe = classroom.code
         matieres = classroom.matieres.order_by_domain_and_coef(classroom.classe.serie)
         french = False
         info = False
@@ -786,6 +793,22 @@ class DisciplineForm(DynamicFormMixin, forms.Form):
     groupe = DynamicField(forms.CharField, initial=lambda form: form.initgp(), widget=forms.TextInput(attrs={
         'list': "group_list", 'placeholder': "Entrez le domaine d'apprentissage", 'id': "domaine",
         'class': "form-control fw-bold"}))
+    subsystem = DynamicField(forms.ChoiceField, initial=lambda form: form.initial_subsystem(), widget=forms.Select(attrs={
+        'id': "subsystem", 'class': "form-select fw-bold woption"}), choices=lambda form: form.subsystems())
+
+    def subsystems(self):
+        return [
+        ('ESG-FR', "Enseignement Général Francophone"),
+        ('ESG-EN', "Enseignement Général Anglophone"),
+        ('EST-FR', "Enseignement Technique Francophone"),
+        ('EST-EN', "Enseignement Technique Anglophone"),
+        ]
+
+    def initial_subsystem(self):
+        if 'subsystem' in self.context:
+            return self.context['subsystem']
+        if 'instance' in self.context:
+            return self.context['instance'].subsystem
 
     def initmat(self):
         if 'instance' in self.context.keys():
@@ -811,12 +834,12 @@ class DisciplineForm(DynamicFormMixin, forms.Form):
         disciplines = Discipline.objects
         if 'instance' in self.context.keys():
             disciplines = disciplines.exclude(pk=self.context['instance'].id)
-        if disciplines.filter(label__iexact=self.cleaned_data["label"]).exists():
-            message(self.context['request'], "Une discipline du même nom existe déjà.", msg_type="warning")
+        self.cleaned_data["groupe"] = reform(self.cleaned_data["groupe"])
+        if disciplines.filter(label__iexact=self.cleaned_data["label"], subsystem=self.cleaned_data['subsystem'], groupe=self.cleaned_data['groupe']).exists():
+            message(self.context['request'], "Une discipline du même nom existe déjà dans ce sous système.", msg_type="warning")
             raise forms.ValidationError("")
         self.cleaned_data["label"] = reform(self.cleaned_data["label"])
         self.cleaned_data["matiere"] = reform(self.cleaned_data["matiere"])
-        self.cleaned_data["groupe"] = reform(self.cleaned_data["groupe"])
 
     def save(self, commit=True):
         if 'instance' not in self.context.keys():
@@ -825,6 +848,6 @@ class DisciplineForm(DynamicFormMixin, forms.Form):
         else:
             subject_id = self.context['instance'].id
         discipline = Discipline(id=subject_id, label=self.cleaned_data["label"], matiere=self.cleaned_data["matiere"],
-                                groupe=self.cleaned_data["groupe"])
+                                groupe=self.cleaned_data["groupe"], subsystem=self.cleaned_data["subsystem"],)
         discipline.save()
         return discipline

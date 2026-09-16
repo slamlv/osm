@@ -68,7 +68,7 @@ TENANT_APPS = (
     'archives',
 )
 
-INSTALLED_APPS = SHARED_APPS + TENANT_APPS
+INSTALLED_APPS = ('django.forms',) + SHARED_APPS + TENANT_APPS
 
 
 MIDDLEWARE = [
@@ -100,6 +100,8 @@ TEMPLATES = [
         },
     },
 ]
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 WSGI_APPLICATION = 'osm.wsgi.application'
 

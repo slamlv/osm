@@ -44,9 +44,13 @@
     font-size: 0.78rem;
     font-weight: 600;
   }
+  .school-container {width: 100%; max-width: 720px;}
+  @media (min-width: 1200px) {
+    .school-container {max-width: 70%;}
+  }
 </style>
 
-<div class="container py-3" style="max-width: 680px;">
+<div class="container py-3 school-container">
   <div class="detail-card">
 
     <!-- En-tête logo -->
@@ -65,49 +69,49 @@
     <!-- Corps -->
     <div class="px-3 px-sm-4 py-3">
       <div class="row g-0">
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Type d'établissement</span>
             <span class="info-value neutral">{{ object.type_ets }}</span>
           </div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">N° Immatriculation</span>
             <span class="info-value neutral">{{ object.immatriculation }}</span>
           </div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Contact principal</span>
             <span class="info-value">{{ object.contact }}</span>
           </div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Contact optionnel</span>
             <span class="info-value neutral">{% if object.contact1 %}{{ object.contact1 }}{% else %}—{% endif %}</span>
           </div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Localité</span>
             <span class="info-value neutral">{{ object.localite }}</span>
           </div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Boîte postale</span>
             <span class="info-value neutral">{% if object.pobox %}{{ object.pobox }}{% else %}—{% endif %}</span>
           </div>
         </div>
-        <div class="col-sm-6 pe-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Email</span>
             <span class="info-value neutral">{% if object.email %}{{ object.email }}{% else %}—{% endif %}</span>
           </div>
         </div>
-        <div class="col-sm-6 ps-sm-3">
+        <div class="col-sm-6 col-xl-4">
           <div class="info-row">
             <span class="info-label">Devise</span>
             <span class="info-value neutral">{% if object.motto %}{{ object.motto }}{% else %}—{% endif %}</span>
@@ -119,7 +123,7 @@
             <span class="info-value">{{ object.licence }}</span>
           </div>
         </div>
-        <div class="col-12">
+        <div class="col-12 col-xl-6 pe-xl-1">
           <div class="info-row">
             <span class="info-label" style="color:rgba(23,162,184,0.7);">Compétences évaluées lors du remplissage</span>
             {% if object.with_competences %}
@@ -129,7 +133,7 @@
             {% endif %}
           </div>
         </div>
-        <div class="col-12">
+        <div class="col-12 col-xl-6 ps-xl-1">
           <div class="info-row">
             <span class="info-label" style="color:rgba(23,162,184,0.7);">Programmation multi-classes à la même heure</span>
             {% if object.mergedprogrammations %}

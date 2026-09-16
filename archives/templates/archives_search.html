@@ -26,7 +26,7 @@
   {% for r in results %}
   <div class="fin-card p-3 p-sm-4 mb-3">
     <p class="text-white fw-bold mb-1">{{ r.student }}</p>
-    <p class="text-white-50 small mb-3">{{ r.student.unique_id|default:"—" }}</p>
+    <p class="text-white-50 small mb-3">Matricule : {{ r.student.unique_id|default:"—" }}</p>
     {% for d in r.docs %}
     <a class="doc-row" href="{% url 'student_bulletin' d.id r.student.id %}">
       <i class="bi bi-file-earmark-pdf text-info fs-5"></i>

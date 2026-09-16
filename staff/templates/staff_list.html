@@ -100,6 +100,7 @@
                 <a class="btn btn-outline-warning btn-sm" title="Modifier" href="{% url 'staff-edit' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-pencil-square"></i></a>
                 <a class="btn btn-outline-info btn-sm" title="Emploi du temps" href="{% url 'staff-timetable' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-clock"></i></a>
               {% endif %}
+              {% if member.user != user %}
               <form method="post" action="{% url 'staff_toggle_poste' id=member.id %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -109,7 +110,6 @@
                 <button type="submit" class="btn btn-outline-success btn-sm" title="Réintégrer" data-bs-toggle="tooltip"><i class="bi bi-box-arrow-in-left"></i></button>
                 {% endif %}
               </form>
-              {% if member.user != user %}
                 <a class="btn btn-outline-danger btn-sm" title="Supprimer définitivement" href="{% url 'staff-delete' id=member.id %}" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
               {% endif %}
             </div>

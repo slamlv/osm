@@ -26,6 +26,7 @@
     <div class="p-3 p-sm-4">
       <form method="post" enctype="multipart/form-data" class="client-image-form">
         {% csrf_token %}
+        {{ form.media }}
 
         <p class="form-section-title">Identité</p>
         <div class="row g-3 mb-4">
@@ -35,7 +36,7 @@
           <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Lieu de naissance</label>{{ form.lieu_naissance }}</div>
           <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Sexe</label>{{ form.sexe }}</div>
           <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Statut</label>{{ form.statut }}</div>
-          <div class="col-sm-6 col-xl-4"><label class="text-white control-label">Identifiant unique</label>{{ form.unique_id }}</div>
+          <div class="col-sm-6 col-xl-4"><label class="text-white">Matricule</label>{{ form.unique_id }}</div>
           <div class="col-sm-6 col-xl-4"><label class="text-white">Classe</label>
             <div class="input-group gap-1">{{ form.classe }}
             <button type="button" class="btn btn-outline-warning" hx-get="{% url 'student-add-classroom' %}" hx-target="#studentRelatedModalContent"

@@ -39,7 +39,7 @@ def closure_wizard(request):
         "coherence": S.year_coherence(request.user.school),
         "doc_types": [(t.value, t.label, t.value in MANDATORY_TYPES,
                        t.value in NOTE_DEPENDENT)
-                      for t in DocType if t not in [DocType.CLOSURE_REPORT, DocType.BULLETIN_WITH_COMPETENCES]],
+                      for t in DocType if t not in [DocType.CLOSURE_REPORT, DocType.BULLETIN_WITH_COMPETENCES, DocType.TRANSFER_LIST]],
     }
 
     if closure is None:

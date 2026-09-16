@@ -24,7 +24,7 @@ from note.forms import SelectForm
 from .models import Parent, Student, StudentDiscipline, EnrollmentStatus, StudentEnrollment
 from osm.utils import message, logged_admin_view, LoggedAdminView, ListView, DeleteView, ADetailView, format_date, \
     with_users_school_schema, school_year, pdf_response, resize_image, LoggedAdminOrTitulaireView, zip_pdfs_response, \
-    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts
+    check_notes, stamp_bytes, paste_stamp, base_header, safe_redirect_back, filigrane, add_fonts, base_infos
 from pandas import DataFrame, read_excel, ExcelWriter, isnull, Timestamp, to_datetime
 from openpyxl.utils import get_column_letter, quote_sheetname
 from openpyxl.styles import Alignment, Font
@@ -670,7 +670,7 @@ class StudentsIdCards(LoggedAdminView):
 
     def get(self, *args, **kwargs):
         select_form = SelectForm(context={
-            "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': None})
+            "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': None, 'csi': True})
         context = {'marks_sheet': True, 'csi': True, 'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
@@ -803,7 +803,7 @@ def students_export(request, cls_id):
 class StudentsImport(LoggedAdminView):
     title = "Importation d'une liste d'Élèves"
     template_name = "students_import.html"
-    required_fiels = ['matricule', 'noms', 'prénoms', 'date de naissance', 'lieu de naissance', 'sexe']
+    required_fiels = ['noms', 'date de naissance', 'lieu de naissance', 'sexe']
 
     def get(self, *args, **kwargs):
         return render(self.request, self.template_name, context={'title': self.title})
@@ -865,7 +865,7 @@ class StudentsImport(LoggedAdminView):
 
     def import_students(self, file):
         rapport = []
-        required_fields = ['matricule', 'noms', 'date de naissance', 'lieu de naissance', 'sexe']
+        required_fields = ['noms', 'date de naissance', 'lieu de naissance', 'sexe']
         try:
             df = read_excel(file, header=None, engine="openpyxl")
             header_row = self.detect_header_row(df)
@@ -889,16 +889,17 @@ class StudentsImport(LoggedAdminView):
                                     f"{empty_fields_list}"
                         rapport.append([False, f"Ligne {line_number} : {error}"])
                     else:
-                        matricule = line['matricule']
+                        matricule = line['matricule'] if not isnull(line.get('matricule')) else ''
                         matricule_str = str(matricule)
-                        if len(matricule_str) != 9 or not matricule_str.isnumeric():
-                            rapport.append([False, f"Ligne {line_number} : Le matricule doit être une suite de 9 "
-                                                   f"chiffres"])
-                            continue
-                        if Student.objects_all.filter(unique_id=matricule).exists():
-                            rapport.append([False, f"Ligne {line_number} : Ce matricule a déjà été enregistré pour un "
-                                                   f"autre élève"])
-                            continue
+                        if matricule:
+                            if len(matricule_str) != 9 or not matricule_str.isnumeric():
+                                rapport.append([False, f"Ligne {line_number} : Le matricule doit être une suite de 9 "
+                                                       f"chiffres"])
+                                continue
+                            if Student.objects_all.filter(unique_id=matricule).exists():
+                                rapport.append([False, f"Ligne {line_number} : Ce matricule a déjà été enregistré pour un "
+                                                       f"autre élève"])
+                                continue
                         nom = one_escape(str(line['noms'])).upper()
                         if not is_alphanumeric(nom):
                             rapport.append([False, f"Ligne {line_number} : Le nom doit être une chaîne alphanumérique"])
@@ -989,7 +990,7 @@ def student_add_parent(request):
                 'AJAXMessages': {},
                 "parentCreated": {
                     "id": str(parent.pk),
-                    "label": str(parent),
+                    "label": f"{str(parent)} - {parent.contact}",
                     "target": "pere" if parent.civilite == "Monsieur" else "mere",
                 }
             })
@@ -1568,6 +1569,20 @@ def enrollment_certificate(request, id):
     return pdf_response(pdf, f"Certificat de Scolarité {student.short_name}.pdf")
 
 
+# Transferts
+@logged_admin_view
+def transfer_list(request):
+    annee = request.user.school.establishment_year
+    enrollments = (
+        StudentEnrollment.objects.select_related('student').filter(
+            school_year__libelle=annee, decision=EnrollmentStatus.TRANSFERE
+        ).order_by('student__nom', 'student__prenom')
+    )
+    filename = f"Liste des transferts {annee}.pdf"
+    trf_list = TransferList(enrollments=enrollments, annee=annee, school=request.user.school)
+    return pdf_response(trf_list, filename)
+
+
 # Couleurs
 GREEN = (10, 125, 63)
 HEAD  = (27, 58, 87)
@@ -1579,6 +1594,66 @@ INK = (21, 35, 59)
 BLUE = (10, 61, 98)
 NAVY  = (10, 61, 98)
 DARK  = (30, 40, 55)
+
+
+# Liste des transferts
+class TransferList(FPDF):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        add_fonts(self)
+        self.alias_nb_pages()
+        self.set_margins(6, 6, 6)
+        self.set_auto_page_break(auto=True, margin=6)
+        self.set_font('inter', '', 8)
+        self.annee = kwargs['annee']
+        self.enrollments = kwargs['enrollments']
+        self.school = kwargs['school']
+        self.set_title(f"Liste des transferts")
+        self.add_page()
+        base_header(self)
+        total = self.enrollments.count()
+        base_infos(self, "LISTE DES TRANSFERTS", effectif=None, filles=None, garcons=None, redoublants=None,
+                   classroom=None, year=self.annee, total=total)
+        self.list()
+
+    def list(self):
+        self.ln()
+        col_widths = [8, 16, 75, 17, 40, 10, 26]
+        header = ["N°", "Matricule", "Nom(s) et Prénom(s)", "Né(e) le", "A", "Sexe", "Classe"]
+
+        table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
+                      repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
+        th = table.row()
+        self.set_fill_color(242, 240, 236)
+        for head in header:
+            th.cell(f"**{head}**")
+        self.set_fill_color(0)
+
+        i = 1
+        for enr in self.enrollments:
+            student = enr.student
+            row = table.row()
+            row.cell(f"{i}")
+            row.cell(f"{student.unique_id}")
+            row.cell(f"{student.__str__()}", align="L")
+            row.cell(f"{student.date_naissance.strftime('%d-%m-%Y')}")
+            row.cell(f"{student.lieu_naissance}", align="L")
+            sexe = "M" if student.sexe == "Garçon" else "F"
+            row.cell(sexe)
+            row.cell(student.classe.code if student.classe else '', align="L")
+            i += 1
+        table.render()
+
+    def footer(self):
+        self.set_y(-6)
+        self.set_draw_color(230, 235, 240)
+        self.set_text_color(*GREY)
+        self.set_line_width(0.2)
+        self.line(6, 291, 204, 291)
+        self.set_font('inter', 'I', 7)
+        self.cell(100, 6, "Document généré par Oméga School Manager", align='L')
+        self.cell(98, 6, f"LISTE DES TRANSFERTS • Page {self.page_no()}/{{nb}}", align='R')
 
 
 """
@@ -2117,7 +2192,7 @@ class StudentsIdentityCardsCNI(FPDF):
         self.cell(fw / 2, 1.8, "Classe  /  Class", align='L')
         self.set_xy(fx, fy + 1.9)
         self.set_font('inter', 'B', 6.5); self.set_text_color(*INK)
-        self.cell(fw / 2, 2.4, str(getattr(student, 'sexe', '') or "—"), align='L')
+        self.cell(fw / 2, 2.4, student.get_sexe_display(), align='L')
         self.cell(fw / 2, 2.4, (student.classe.code if student.classe else "—"), align='L')
         fy += 5.0
 
@@ -2290,7 +2365,10 @@ class StudentsIdentityCards(FPDF):
                 row = table.row()
                 row.cell("**Nom(s) :**")
                 self.set_font_size(9)
+                if student.nom:
+                    self.set_text_color(*NAVY)
                 row.cell(f"**{student.nom}**", rowspan=2)
+                self.set_text_color(0)
                 row = table.row()
                 self.set_font_size(7)
                 row.cell("__Name(s)__")
@@ -2299,7 +2377,10 @@ class StudentsIdentityCards(FPDF):
                 row = table.row()
                 row.cell("**Préom(s) :**")
                 self.set_font_size(9)
-                row.cell(f"**{student.prenom if student.prenom else '/'}**", rowspan=2)
+                if student.prenom:
+                    self.set_text_color(*NAVY)
+                row.cell(f"**{student.prenom}**" if student.prenom else '', rowspan=2)
+                self.set_text_color(0)
                 row = table.row()
                 self.set_font_size(7)
                 row.cell("__Surname(s)__")

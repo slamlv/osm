@@ -29,11 +29,12 @@ class DocType(models.TextChoices):
     CLASS_LIST                      = "CLASS_LIST", "Listes de classe"
     ALBUM                           = "ALBUM", "Albums photos de classe"
     STATS_AGE_SEXE                  = "STATS_AGE_SEXE", "Statistiques (âge / sexe)"
+    TRANSFER_LIST                   = "TRANSFER_LIST", "Liste des transferts"
     STATS_REUSSITE                  = "STATS_REUSSITE", "Statistiques de réussite"
     CLOSURE_REPORT                  = "CLOSURE_REPORT", "Rapport de clôture"
 
 
-#: Seul document imposé : jamais décochable, jamais supprimable.
+#: Seuls documents imposés : jamais décochables, jamais supprimables.
 MANDATORY_TYPES = {DocType.BULLETIN, DocType.BULLETIN_WITH_COMPETENCES}
 
 # ▸ Les stats de réussite existent aussi en version par classe

@@ -1,9 +1,6 @@
-import os
+import os, json
 from io import BytesIO
-
-from django.urls import reverse
 from fpdf.enums import TableHeadingsDisplay
-
 from authentification.models import TrancheHoraire, School, User
 from osm.utils import message, resized_image, formated_float, school_year, LoggedAdminView, LoggedUserView, \
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
@@ -583,6 +580,35 @@ def reload(request):
     return render(request, "reload.html", {'matiere_form': matiere_form})
 
 
+# ---------------------------------------------------------------------------
+# Ajout rapide d'une discipline depuis le formulaire de configuration des matieres
+# ---------------------------------------------------------------------------
+@logged_admin_view
+def matiere_add_discipline(request):
+    subsystem = request.META.get('HTTP_SUBSYSTEM')
+    matieres, groupes = SubjectAdd.matgp(subsystem=subsystem)
+    if request.method == "POST":
+        form = DisciplineForm(request.POST, context={'request': request, 'subsystem': subsystem})
+        if form.is_valid():
+            discipline = form.save()
+            message(request, "Discipline ajoutée avec succès !")
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                'AJAXMessages': {},
+                "disciplineCreated": {
+                    "id": str(discipline.pk) if discipline.subsystem == subsystem else None,
+                    "label": str(discipline.label),
+                }
+            })
+            return response
+        response = render(request, "matiere_discipline_modal.html", {"form": form, })
+        response["HX-Trigger"] = 'AJAXMessages'
+        return response
+    form = DisciplineForm(context={'request': request, 'subsystem': subsystem})
+    return render(request, "matiere_discipline_modal.html", {"form": form, 'subsystem': subsystem,
+                                                             'mat': matieres, 'gp': groupes})
+
+
 class MatiereAdd(LoggedAdminView):
     template_name = "add_matiere.html"
     title = "Ajout d'une Matière"
@@ -590,7 +616,7 @@ class MatiereAdd(LoggedAdminView):
     def get(self, *args, **kwargs):
         classe = ClassRoom.objects.get(id=self.kwargs['id']).classe
         matiere_form = MatiereAddForm(context={'request': self.request, 'id': classe.pk})
-        context = {"title": self.title, 'matiere_form': matiere_form, 'id': self.kwargs['id']}
+        context = {"title": self.title, 'matiere_form': matiere_form, 'id': self.kwargs['id'], 'subsystem': classe.subsystem}
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
@@ -604,7 +630,7 @@ class MatiereAdd(LoggedAdminView):
             message(self.request, f"{discipline.label}, coefficient : {coeff} ajouté avec succès pour les classes de "
                                   f"{classe}")
             return redirect("class-subjects", id=self.kwargs['id'])
-        context = {"title": self.title, 'matiere_form': matiere_form, 'id': self.kwargs['id']}
+        context = {"title": self.title, 'matiere_form': matiere_form, 'id': self.kwargs['id'], 'subsystem': classe.subsystem}
         return render(self.request, self.template_name, context)
 
 
@@ -651,8 +677,10 @@ class SubjectAdd(LoggedAdminView):
     matieres, groupes = tuple(), tuple()
 
     @classmethod
-    def matgp(cls):
+    def matgp(cls, subsystem=None):
         qs = Discipline.objects
+        if subsystem:
+            qs.filter(subsystem=subsystem)
         matiere = qs.distinct("matiere")
         groupe = qs.distinct("groupe")
         return tuple([mat.matiere for mat in matiere if mat.matiere]), tuple([mat.groupe for mat in groupe])
@@ -1132,7 +1160,7 @@ class ClassAlbum(LoggedAdminView):
 
     def get(self, *args, **kwargs):
         select_form = SelectForm(context={
-            "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': None})
+            "request": self.request, 'trim': False, 'marks_sheet': True, 'enseignements': None, 'album': True})
         context = {'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
@@ -1806,7 +1834,7 @@ class PDFMarksSheet(FPDF):
         self.ln()
         self.set_font_size(8)
         col_widths = [10, 22, 78, 10, 13, 13, 13, 13, 13, 13]
-        header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Sexe", "Eval1", "Eval2", "Eval3",
+        header = ["N°", "Matricule", "Nom(s) et Prénom(s)", "Sexe", "Eval1", "Eval2", "Eval3",
                   "Eval4", "Eval5", "Eval6"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
@@ -1937,7 +1965,7 @@ class ClassroomList(FPDF):
     def list(self):
         self.ln()
         col_widths = [10, 20, 78, 22, 45, 11.5, 11.5]
-        header = ["N°", "Identifiant", "Nom(s) et Prénom(s)", "Né(e) le", "A", "Sexe", "Red?"]
+        header = ["N°", "Matricule", "Nom(s) et Prénom(s)", "Né(e) le", "A", "Sexe", "Red?"]
 
         table = Table(self, line_height=5, col_widths=col_widths, text_align="CENTER", markdown=True,
                       repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)

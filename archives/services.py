@@ -165,6 +165,9 @@ def planned_units(school, selected_types):
     if school.with_competences and DocType.BULLETIN_WITH_COMPETENCES not in types:
         types.insert(1, DocType.BULLETIN_WITH_COMPETENCES)
     classrooms = list(ClassRoom.objects.all().order_by_niveau())
+    if StudentEnrollment.objects.select_related('student').filter(school_year__libelle=school.establishment_year, decision=EnrollmentStatus.TRANSFERE
+        ).order_by('student__nom', 'student__prenom').exists():
+        types.append(DocType.TRANSFER_LIST)
 
     for dtype in types:
         # --- déclinaison par classe ---
@@ -854,6 +857,20 @@ def _class_list(school, year, classroom, term_index=None):
 
 
 # ===========================================================================
+#  LISTE DES TRANSFERTS (document d'établissement)
+# ===========================================================================
+def _transfer_list(school, year, classroom, term_index):
+    from student.views import TransferList
+
+    enrollments = (
+        StudentEnrollment.objects.select_related('student').filter(
+            school_year__libelle=year, decision=EnrollmentStatus.TRANSFERE
+        ).order_by('student__nom', 'student__prenom')
+    )
+    return _emit(TransferList(enrollments=enrollments, annee=year, school=school))
+
+
+# ===========================================================================
 #  ALBUM PHOTO DE CLASSE
 # ===========================================================================
 def _album(school, year, classroom, term_index=None):
@@ -907,6 +924,7 @@ GENERATORS = {
     DocType.ALBUM:                           _album,
     DocType.STATS_AGE_SEXE:                  _stats_age_sexe,
     DocType.STATS_REUSSITE:                  _stats_reussite,
+    DocType.TRANSFER_LIST:                   _transfer_list,
     # types à déclarer dans DocType si tu veux les archiver aussi :
     # DocType.TABLEAU_HONNEUR:               _tableau_honneur,
     # DocType.MARKS_REPORT:                  _marks_report,

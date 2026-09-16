@@ -50,8 +50,8 @@ class Statut(models.TextChoices):
 
 
 class Sexe(models.TextChoices):
-    F = "Fille", "Fille"
-    G = "Garçon", "Garçon"
+    F = "Fille", "Féminin"
+    G = "Garçon", "Masculin"
 
 
 class StudentQuerySet(models.QuerySet):
@@ -89,13 +89,21 @@ class Student(models.Model):
     mere = models.ForeignKey(Parent, on_delete=models.SET_NULL, related_name="mother_children", null=True)
     classe = models.ForeignKey(ClassRoom, on_delete=models.SET_NULL, related_name="students", null=True)
     photo = models.ImageField(upload_to="image/student", blank=True, null=True)
-    unique_id = models.IntegerField(unique=True)
+    unique_id = models.CharField(blank=True, null=True, max_length=15)
     is_active = models.BooleanField(default=True)
 
     objects = StudentActiveManager()  # actifs only (usage courant)
     objects_all = StudentAllManager()  # tout (actifs + désactivés)
 
-    UniqueConstraint(name="unique_student", fields=['nom', 'prenom', 'date_naissance'])
+    UniqueConstraint(
+        name="unique_student",
+        fields=['nom', 'prenom', 'date_naissance']
+    )
+    UniqueConstraint(
+        fields=['unique_id'],
+        condition=Q(unique_id__isnull=False, unique_id__gt=""),
+        name='unique_matricule_si_non_null'
+    )
 
     class Meta:
         db_table = '"Student"'
@@ -157,7 +165,7 @@ class Student(models.Model):
 
     @property
     def dstd(self):
-        return {'id': self.pk, 'nom': f"{self.__str__()} ({self.sexe}), classe : {self.classe.code}, identifiant : "
+        return {'id': self.pk, 'nom': f"{self.__str__()} ({self.sexe}), classe : {self.classe.code}, Matricule : "
                                       f"{self.unique_id}"}
 
     def std(self, trim):

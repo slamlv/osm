@@ -4,6 +4,7 @@ from dynamic_forms import DynamicField, DynamicFormMixin
 from authentification.forms import valid_name, valid_contact, valid_email
 from authentification.models import Civilite
 from classroom.models import ClassRoom
+from osm.fields import ComboboxField
 from osm.utils import one_escape, message
 from .models import Student, Parent, Sexe, Statut, StudentDiscipline, EnrollmentStatus
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -122,7 +123,7 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         "placeholder": "Entrez le prénom", 'class': "form-control fw-bold", 'id': "prenom"
     }))
     date_naissance = forms.DateField(widget=forms.DateInput(attrs={
-        'type': 'date', 'class': "form-control fw-bold", 'id': "date"
+        'type': 'date', 'class': "form-control fw-bold", 'id': "date", 'min': f"{datetime.now().year - 29}-01-01", 'max': f"{datetime.now().year - 9}-12-31",
     }, format='%Y-%m-%d'))
     lieu_naissance = forms.CharField(max_length=30, widget=forms.TextInput(attrs={
         "placeholder": "Entrez le lieu de naissance", 'class': "form-control fw-bold", 'id': "lieu"
@@ -133,29 +134,36 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
     statut = forms.ChoiceField(choices=Statut.choices, widget=forms.Select(attrs={
         'class': "form-select woption fw-bold", 'id': "statut"
     }))
-    pere = DynamicField(forms.ModelChoiceField, required=False, widget=forms.Select(attrs={
-        'class': "form-select woption fw-bold", 'id': "pere"
-    }), queryset=Parent.objects.filter(civilite="Monsieur").order_by("-id"))
-    mere = DynamicField(forms.ModelChoiceField, required=False, widget=forms.Select(attrs={
-        'class': "form-select woption fw-bold", 'id': "mere"
-    }), queryset=Parent.objects.filter(civilite="Madame").order_by("-id"),)
-    classe = DynamicField(forms.ChoiceField, widget=forms.Select(attrs={
-        'class': "form-select woption fw-bold", 'id': "classe"
-    }), required=False, choices=lambda form: form.classrooms)
+    pere = DynamicField(ComboboxField, choices=lambda form: form.peres, required=False, attrs={
+        'class': "form-select woption fw-bold", 'id': "pere"})
+    mere = DynamicField(ComboboxField, choices=lambda form: form.meres, required=False, attrs={
+        'class': "form-select fw-bold", 'id': "mere"})
+    classe = DynamicField(ComboboxField, choices=lambda form: form.classrooms, required=False,
+                          attrs={'class': "form-select fw-bold", 'id': "classe"},)
     unique_id = forms.CharField(max_length=9, widget=forms.TextInput(attrs={
-        'placeholder': "Entrez l'identifiant unique", 'class': "form-control fw-bold", 'id': "unique_id"
-    }))
+        'placeholder': "Entrez le matricule", 'class': "form-control fw-bold", 'id': "unique_id"
+    }), required=False)
     photo = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={
         'placeholder': "Photo de l'élève", 'id': "photo", 'class': "form-control w-auto bg-dark text-white fw-bold client-image",
         'accept': "image/*"
     }))
+
+    def peres(self):
+        return [(None, "---------")] + [(p.pk, f"{p} - {p.contact}") for p in Parent.objects.filter(civilite="Monsieur").order_by("-id")]
+
+    def meres(self):
+        return [(None, "---------")] + [(m.pk, f"{m} - {m.contact}") for m in Parent.objects.filter(civilite="Madame").order_by("-id")]
 
     def classrooms(self):
         return [(None, "---------")] + [(c.pk, c.code) for c in ClassRoom.objects.order_by_niveau()]
 
     def clean(self):
         classe_id = self.cleaned_data.get("classe")
+        pere_id = self.cleaned_data.get("pere")
+        mere_id = self.cleaned_data.get("mere")
         self.cleaned_data['classe'] = (ClassRoom.objects.filter(pk=classe_id).first() or None) if classe_id else None
+        self.cleaned_data['pere'] = (Parent.objects.filter(pk=pere_id).first() or None) if pere_id else None
+        self.cleaned_data['mere'] = (Parent.objects.filter(pk=mere_id).first() or None) if mere_id else None
         nom = self.cleaned_data.get("nom")
         prenom = self.cleaned_data.get("prenom") if 'prenom' in self.cleaned_data else ""
         date = self.cleaned_data.get("date_naissance")
@@ -171,11 +179,12 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
         # Validation du nom et du prénom
         valid_name(nom, prenom, queryset=students, request=self.context['request'], date=date)
 
-        # Identifiant unique
-        valid_contact(unique_id, self.context['request'], objet="L'identifiant unique")
-        if students.filter(unique_id=unique_id).exists():
-            message(self.context['request'], "Cet identifiant unique a déjà été enregistré.", msg_type="warning")
-            raise forms.ValidationError("")
+        # Matricule
+        if unique_id:
+            valid_contact(unique_id, self.context['request'], objet="Le matricule")
+            if students.filter(unique_id=unique_id).exists():
+                message(self.context['request'], "Ce matricule unique a déjà été enregistré.", msg_type="warning")
+                raise forms.ValidationError("")
         self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
         self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
         self.cleaned_data["lieu_naissance"] = one_escape(self.cleaned_data.get("lieu_naissance")).title()

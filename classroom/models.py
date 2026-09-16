@@ -463,6 +463,10 @@ class ClassRoom(models.Model):
         return self.matieres.aggregate(Sum("coeff"))["coeff__sum"]
 
     @property
+    def nb_matieres(self):
+        return self.matieres.count()
+
+    @property
     def effectif(self):
         return self.students.count()
 
