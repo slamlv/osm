@@ -8,6 +8,10 @@
     border-radius: 20px;
     overflow: hidden;
     width: 100%;
+    max-width: 720px;
+  }
+  @media (min-width: 1200px) {
+    .auth-card {max-width: 75%;}
   }
   .auth-card-header {
     background: linear-gradient(135deg, #152f45, #1e4266);
@@ -80,7 +84,7 @@
 
   {% else %}
   <!-- Étape 2 : formulaire complet -->
-  <div class="auth-card" style="max-width:720px;">
+  <div class="auth-card">
     <div class="auth-card-header d-flex align-items-center gap-2">
       <i class="bi bi-person-plus text-success fs-5"></i>
       <div>
@@ -97,19 +101,19 @@
 
         <p class="form-section-title">Identité</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Nom(s)</label>
             {{ form.nom }}
           </div>
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label>Prénom(s)</label>
             {{ form.prenom }}
           </div>
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Civilité</label>
             {{ form.civilite }}
           </div>
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Poste</label>
             {{ form.poste }}
           </div>
@@ -117,17 +121,17 @@
 
         <p class="form-section-title">Contact & discipline</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Contact</label>
             {{ form.contact }}
           </div>
           {% if not admin %}
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Email</label>
             {{ form.mail }}
           </div>
           {% endif %}
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label>Discipline(s) enseignées</label>
             {{ form.discipline }}
           </div>
@@ -135,16 +139,16 @@
 
         <p class="form-section-title">Accès</p>
         <div class="row g-3 mb-4">
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Nom d'utilisateur</label>
             {{ form.username }}
           </div>
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Mot de passe</label>
             {{ form.mdp }}
           </div>
           {% if not admin %}
-          <div class="col-sm-6">
+          <div class="col-sm-6 col-xl-4">
             <label class="control-label">Confirmation du mot de passe</label>
             {{ form.mdp_confirm }}
           </div>

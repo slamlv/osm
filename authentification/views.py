@@ -1,6 +1,5 @@
 # Create your views here.
 from datetime import datetime
-
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
@@ -111,8 +110,8 @@ def signin(request):
 
 
 # Activation du compte
-@anonymous_required
 def activate(request, uidb64, token):
+    logout(request)
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
