@@ -146,9 +146,9 @@ class School(TenantMixin):
     logo = models.ImageField(upload_to="image/school/", verbose_name="Logo", blank=True, null=True)
     cachet = models.ImageField(upload_to="image/school/", verbose_name="Cachet", blank=True, null=True)
     visa = models.ImageField(upload_to="image/school/", verbose_name="Visa", blank=True, null=True)
-    code = models.CharField(max_length=10, verbose_name="Code")
+    code = models.CharField(max_length=10, verbose_name="Code", unique=True)
     motto = models.CharField(blank=True, null=True, verbose_name="Devise", max_length=40)
-    licence = models.DateField(verbose_name="Autorisé Jusqu'au", blank=True)
+    licence = models.DateField(verbose_name="Autorisé Jusqu'au", blank=False)
     with_competences = models.BooleanField(default=True, verbose_name="Inclure les compétences")
     day_start = models.TimeField(default=time(hour=7, minute=30))
     first_break_after = models.IntegerField(choices=((2, 2), (3, 3)), default=3)
@@ -174,6 +174,7 @@ class School(TenantMixin):
         self.__original_visa = self.visa
 
     auto_create_schema = True
+    auto_drop_schema = True
 
     class Meta:
         db_table = '"School"'
