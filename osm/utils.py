@@ -550,11 +550,43 @@ def icon(subject):
     return "fas fa-book"
 
 
+def normalize_person_name(value):
+    return (
+        value
+        .replace("’", "'")
+        .replace("‐", "-")
+        .replace("-", "-")
+        .replace("‒", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .strip()
+    )
+
+
 def is_alphanumeric(string):
+    import unicodedata
+    from django.core.exceptions import ValidationError
+
+    ALLOWED_PUNCTUATION = {
+        " ",  # espace
+        "'",  # apostrophe ASCII
+        "’",  # apostrophe typographique
+        "-",  # tiret ASCII
+        "‐",  # hyphen
+        "-",  # non-breaking hyphen
+        "‒",  # figure dash
+        "–",  # en dash
+        "—",  # em dash
+    }
     for char in string:
-        if char in [' ', '-']:
+        if char in ALLOWED_PUNCTUATION:
             continue
-        elif not char.isalnum():
+
+        category = unicodedata.category(char)
+
+        # L = Letter
+        # N = Number
+        if not category.startswith(("L", "N")):
             return False
     return True
 

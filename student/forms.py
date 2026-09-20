@@ -5,7 +5,7 @@ from authentification.forms import valid_name, valid_contact, valid_email
 from authentification.models import Civilite
 from classroom.models import ClassRoom
 from osm.fields import ComboboxField
-from osm.utils import one_escape, message
+from osm.utils import one_escape, message, normalize_person_name
 from .models import Student, Parent, Sexe, Statut, StudentDiscipline, EnrollmentStatus
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -185,8 +185,8 @@ class StudentForm(DynamicFormMixin, forms.ModelForm):
             if students.filter(unique_id=unique_id).exists():
                 message(self.context['request'], "Ce matricule unique a déjà été enregistré.", msg_type="warning")
                 raise forms.ValidationError("")
-        self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
-        self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
+        self.cleaned_data["nom"] = normalize_person_name(one_escape(self.cleaned_data.get("nom")).upper())
+        self.cleaned_data["prenom"] = normalize_person_name(one_escape(self.cleaned_data.get("prenom")).title())
         self.cleaned_data["lieu_naissance"] = one_escape(self.cleaned_data.get("lieu_naissance")).title()
 
 

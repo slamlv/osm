@@ -10,7 +10,7 @@
    CHAMP VISIBLE PRINCIPAL
    ============================================================ */
 
-.form-card .choices__inner {
+.choices__inner {
     width: 100%;
     min-width: 0;
     height: 38px;
@@ -39,7 +39,7 @@
         box-shadow 0.15s ease-in-out;
 }
 
-.form-card .choices__list--single {
+.choices__list--single {
     width: 100%;
     min-width: 0;
     padding: 0 !important;
@@ -60,7 +60,7 @@
  * rectangle de couleur apparaisse derrière le texte sélectionné.
  * Le fond visible reste donc celui de .choices__inner.
  */
-.form-card .choices__list--single .choices__item {
+.choices__list--single .choices__item {
     color: #fff !important;
     background-color: transparent !important;
     font-weight: inherit !important;
@@ -70,13 +70,13 @@
     text-overflow: ellipsis;
 }
 
-.form-card .choices__placeholder {
+.choices__placeholder {
     color: #fff !important;
     background-color: transparent !important;
     opacity: 0.65;
 }
 
-.form-card .choices__inner.fw-bold {
+.choices__inner.fw-bold {
     font-weight: 700 !important;
 }
 
@@ -84,8 +84,8 @@
    FOCUS / OUVERTURE
    ============================================================ */
 
-.form-card .choices.is-focused .choices__inner,
-.form-card .choices.is-open .choices__inner {
+.choices.is-focused .choices__inner,
+.choices.is-open .choices__inner {
     background-color: rgba(255, 255, 255, 0.11) !important;
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
@@ -95,7 +95,7 @@
    FLÈCHE
    ============================================================ */
 
-.form-card .choices[data-type*="select-one"]::after {
+.choices[data-type*="select-one"]::after {
     right: 0.9rem;
     margin-top: -2px;
 
@@ -103,7 +103,7 @@
     border-color: rgba(255, 255, 255, 0.75) transparent transparent;
 }
 
-.form-card .choices[data-type*="select-one"].is-open::after {
+.choices[data-type*="select-one"].is-open::after {
     margin-top: -0.15em;
 
     border-width: 0 0.3em 0.3em;
@@ -230,7 +230,7 @@
    VALIDATION BOOTSTRAP
    ============================================================ */
 
-.form-card .is-invalid + .choices .choices__inner {
+.is-invalid + .choices .choices__inner {
     border-color: var(--bs-form-invalid-border-color);
 }
 
@@ -242,4 +242,21 @@
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
+}
+
+/* ===== CORRECTION FINALE : fond du champ visible ===== */
+.form-card .choices[data-type*="select-one"] .choices__inner,
+.choices[data-type*="select-one"] .choices__inner {
+    background: rgba(255, 255, 255, 0.07) !important;
+    background-color: rgba(255, 255, 255, 0.07) !important;
+    color: #fff !important;
+}
+
+.form-card .choices[data-type*="select-one"] .choices__list--single,
+.choices[data-type*="select-one"] .choices__list--single,
+.form-card .choices[data-type*="select-one"] .choices__list--single .choices__item,
+.choices[data-type*="select-one"] .choices__list--single .choices__item {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fff !important;
 }

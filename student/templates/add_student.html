@@ -91,17 +91,49 @@
      */
     function addAndSelectOption(select, id, label) {
         if (!select || !id) return;
+
         const value = String(id);
+
+        // Si le select est géré par Choices.js, utiliser son API.
+        if (select._choices) {
+            const choices = select._choices;
+
+            const existingChoice = choices._store.choices.find(
+                choice => String(choice.value) === value
+            );
+
+            if (existingChoice) {
+                choices.setChoiceByValue(value);
+            } else {
+                choices.setChoices(
+                    [{
+                        value: value,
+                        label: label,
+                        selected: true
+                    }],
+                    'value',
+                    'label',
+                    false
+                );
+            }
+
+            select.dispatchEvent(
+                new Event('change', { bubbles: true })
+            );
+            return;
+        }
+
+        // Fallback : ancien comportement pour un select natif.
         let option = Array.from(select.options).find(
             option => option.value === value
         );
+
         if (!option) {
             option = new Option(label, value);
             select.add(option);
         }
+
         select.value = value;
-        // Permet aux éventuels autres scripts de réagir
-        // au changement de valeur.
         select.dispatchEvent(
             new Event('change', { bubbles: true })
         );

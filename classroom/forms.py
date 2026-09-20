@@ -2,7 +2,7 @@ from django import forms
 from django.shortcuts import get_object_or_404
 from requests import options
 
-from osm.utils import message, icon, one_escape, get_value, is_alphanumeric
+from osm.utils import message, icon, one_escape, get_value, is_alphanumeric, normalize_person_name
 from django.db.models import Q
 from dynamic_forms import DynamicField, DynamicFormMixin
 from authentification.models import User
@@ -129,7 +129,7 @@ class MatiereAddForm(DynamicFormMixin, forms.Form):
         disciplines = Discipline.objects.filter(subsystem=classe.subsystem)
         dclasses = classe.disciplines.all()
         disciplines = disciplines.exclude(id__in=[x.pk for x in dclasses]).order_by("label")
-        return ((d.pk, d.label) for d in disciplines)
+        return [(d.pk, d.label) for d in disciplines]
 
 
 class ClassroomForm(DynamicFormMixin, forms.Form):
@@ -249,7 +249,7 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         if classrooms.filter(code=code).exists():
             message(self.request, "Une autre salle de classe a déjà le même intitulé.", msg_type="warning")
             raise forms.ValidationError("")
-        self.cleaned_data["code"] = code
+        self.cleaned_data["code"] = normalize_person_name(code)
 
     def save_classroom(self):
         classroom_data = {

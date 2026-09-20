@@ -1,7 +1,7 @@
 from django import forms
 from django.forms.models import model_to_dict
 from authentification.models import School, Civilite, Poste
-from osm.utils import one_escape, message
+from osm.utils import one_escape, message, normalize_person_name
 from .models import Personnel, Discipline, Activities
 from classroom.models import Enseignements
 from authentification.models import User
@@ -261,6 +261,6 @@ class MemberForm(DynamicFormMixin, forms.ModelForm):
             if users.exists():
                 message(request, "Nom d'utilisateur indisponible, veuillez en choisir un autre.", msg_type="warning")
                 raise forms.ValidationError("")
-        self.cleaned_data["nom"] = one_escape(self.cleaned_data.get("nom")).upper()
-        self.cleaned_data["prenom"] = one_escape(self.cleaned_data.get("prenom")).title()
+        self.cleaned_data["nom"] = normalize_person_name(one_escape(self.cleaned_data.get("nom")).upper())
+        self.cleaned_data["prenom"] = normalize_person_name(one_escape(self.cleaned_data.get("prenom")).title())
         self.cleaned_data["discipline"] = Personnel.get_disciplines(self.cleaned_data.get("discipline"))

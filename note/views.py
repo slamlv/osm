@@ -276,6 +276,7 @@ class TLevelMarksEdit(LoggedUserView):
                         message(self.request, "Les données ont été enregistrées avec succès.")
                 else:
                     message(self.request, "Aucune modification effectuée.", msg_type="warning")
+                context['level_marks_form'] = None
             else:
                 message(self.request, "Les notes doivent être comprises entre 0 et 20", msg_type="warning")
         else:
@@ -361,6 +362,7 @@ class LevelMarksEdit(LoggedUserView):
                         message(self.request, "Les données ont été enregistrées avec succès.")
                 else:
                     message(self.request, "Aucune modification effectuée.", msg_type="warning")
+                context['level_marks_form'] = None
             else:
                 message(self.request, "Les notes doivent être comprises entre 0 et 20", msg_type="warning")
         else:
@@ -451,6 +453,7 @@ class TrimesterMarksEdit(LoggedUserView):
                         message(self.request, "Les données ont été enregistrées avec succès.")
                 else:
                     message(self.request, "Aucune modification effectuée.", msg_type="warning")
+                context['marks_form'] = None
             else:
                 message(self.request, "Les notes doivent être comprises entre 0 et 20", msg_type="warning")
         else:
@@ -473,7 +476,7 @@ class TrimesterMarks(LoggedUserView):
             context = {'title': self.title, 'msg': msg}
         else:
             select_form = SelectForm(context={"request": self.request, 'trim': True, 'enseignements': enseignements})
-            context = {'marks_sheet': False, 'title': self.title, 'select_form': select_form, 'trim': True}
+            context = {'notes': True, 'title': self.title, 'select_form': select_form, 'trim': True}
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
@@ -483,7 +486,7 @@ class TrimesterMarks(LoggedUserView):
         else:
             select_form = SelectForm(self.request.POST,
                                      context={"request": self.request, 'trim': True, 'enseignements': enseignements})
-            context = {'marks_sheet': False, 'title': self.title, 'select_form': select_form, 'trim': True}
+            context = {'notes': True, 'title': self.title, 'select_form': select_form, 'trim': True}
         return render(self.request, self.template_name, context)
 
 
@@ -552,7 +555,7 @@ class Marks(LoggedUserView):
             context = {'title': self.title, 'msg': msg}
         else:
             select_form = SelectForm(context={"request": self.request, 'trim': False, 'enseignements': enseignements})
-            context = {'marks_sheet': False, 'title': self.title, 'select_form': select_form}
+            context = {'notes': True, 'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
     def post(self, *args, **kwargs):
@@ -562,7 +565,7 @@ class Marks(LoggedUserView):
         else:
             select_form = SelectForm(self.request.POST,
                                      context={"request": self.request, 'trim': False, 'enseignements': enseignements})
-            context = {'marks_sheet': False, 'title': self.title, 'select_form': select_form}
+            context = {'notes': True, 'title': self.title, 'select_form': select_form}
         return render(self.request, self.template_name, context)
 
 
@@ -671,6 +674,7 @@ class MarksEdit(LoggedUserView):
                         message(self.request, "Les données ont été enregistrées avec succès.")
                 else:
                     message(self.request, "Aucune modification effectuée.", msg_type="warning")
+                context['marks_form'] = None
             else:
                 message(self.request, "Les notes doivent être comprises entre 0 et 20", msg_type="warning")
         else:
