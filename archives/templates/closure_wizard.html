@@ -75,7 +75,11 @@
   <div class="fin-card p-3 p-sm-4 mb-3" style="--ac:{% if holes %}#ef4444{% else %}#199548{% endif %};">
     <p class="fin-title mb-2"><i class="bi bi-clipboard-check me-1"></i>Vérification des notes</p>
     {% if holes %}
-      <p class="text-danger fw-bold small mb-2"><i class="bi bi-x-octagon me-1"></i>
+      {% if holes == "Error" %}
+      <p class="fw-bold small mb-2 text-danger"><i class="bi bi-x-octagon me-1"></i>
+        Données (notes, classes et/ou d'élèves) absentes — clôture impossible.</p>
+      {% else %}
+      <p class="fw-bold small mb-2 text-danger"><i class="bi bi-x-octagon me-1"></i>
         <strong>{{ holes_total }} saisie(s) manquante(s)</strong> — la clôture est impossible
         tant que toutes les évaluations ne sont pas renseignées.</p>
       <div class="osm-table-outer mb-2">
@@ -90,6 +94,7 @@
         </table>
       </div>
       {% if holes_total > 60 %}<p class="text-white-50 small mb-0">… et {{ holes_total|add:"-60" }} autre(s).</p>{% endif %}
+      {% endif %}
     {% else %}
       <p class="text-success small mb-3"><i class="bi bi-check-circle me-1"></i>Toutes les évaluations sont saisies.</p>
       {% if not decisions.ok %}

@@ -201,6 +201,11 @@ body, .navbar, .navbar-collapse, .dropdown-menu, .dropdown-item, .choices__list,
     color: white;
 }
 
+.text-danger
+{
+    color: #ef4444 !important;
+}
+
 .woption optgroup
 {
     background-color: #6c757d;

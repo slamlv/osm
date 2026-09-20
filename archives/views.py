@@ -44,8 +44,9 @@ def closure_wizard(request):
 
     if closure is None:
         holes = S.missing_marks()
-        ctx["holes"] = holes[:60]
-        ctx["holes_total"] = len(holes)
+        ctx["holes"] = holes[:60] if not isinstance(holes, bool) else "Error"
+        if ctx['holes'] != "Error":
+            ctx["holes_total"] = len(holes)
         ctx["decisions"] = S.missing_decisions(request.user.school, year)
         return render(request, "closure_wizard.html", ctx)
 
