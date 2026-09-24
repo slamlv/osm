@@ -8,7 +8,7 @@ from .forms import TranchesHorairesForm, SchoolForm
 from .utils import with_users_school_schema, ADetailView, LoggedAdminView, add_minutes, greet, logged_user_view
 from authentification.models import School, TrancheHoraire
 from staff.models import Personnel
-from student.models import Student, StudentEnrollment
+from student.models import Student
 from classroom.models import ClassRoom
 from datetime import time, datetime
 from staff.models import Activities
@@ -35,10 +35,6 @@ def offline_index(request):
 @login_required(login_url="signin")
 @with_users_school_schema
 def index(request):
-    from osm.utils import school_year
-    decisions = StudentEnrollment.objects.filter(school_year__libelle=school_year()).order_by(
-        'student__classe', 'student__nom', 'student__prenom'
-    )
     from archives.services import missing_marks
     from archives.models import YearClosure
     activities = []
@@ -62,7 +58,6 @@ def index(request):
                'nb_classes': ClassRoom.objects.count(),
                'nb_staff': Personnel.objects.count(),
                'nb_students': Student.objects.count(),
-               'decisions': decisions
     }
     return render(request, "index.html", context)
 

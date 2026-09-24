@@ -143,9 +143,6 @@
       <p class="text-info small mb-0">Un outil de gestion au service de l'éducation</p>
     </div>
   </div>
-  {% for d in decisions %}
-    <p class="text-white">{{d.student}} - {{d.decision}} {% if d.next_classroom %}- {{d.next_classroom}}{% endif %}</p>
-  {% endfor %}
   {% if remind and user.is_min_admin %}
   <div class="alert alert-warning py-2 small rounded-3">
     <i class="bi bi-exclamation-triangle me-1"></i>

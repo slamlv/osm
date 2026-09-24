@@ -530,21 +530,25 @@ def promote_year(school, closure):
             student.classe = enr.next_classroom
             student.save(update_fields=["classe"])
             StudentEnrollment.objects.update_or_create(
-                student=student, school_year=new_year, defaults={"classroom": enr.next_classroom})
+                student=student, school_year=new_year, defaults={'classroom': enr.next_classroom, 'decision': "En cours"})
             moved += 1
-        elif enr.decision in ("Transféré", "Sorti", "Exclu"):
-            student.classe = None
-            student.is_active = False
-            student.save(update_fields=["classe", "is_active"])
-            left += 1
         else:
-            enr.decision = EnrollmentStatus.NON_STATUE
-            enr.save(update_fields=["decision"])
-            student.classe = None
-            StudentEnrollment.objects.get_or_create(
-                student=student, school_year=new_year, defaults={"classroom": None})
-            student.save(update_fields=["classe"])
-            pending += 1
+            next_enr = StudentEnrollment.objects.filter(student=student, school_year=new_year).first()
+            if next_enr:
+                next_enr.delete()
+            if enr.decision in ("Transféré", "Sorti", "Exclu"):
+                student.classe = None
+                student.is_active = False
+                student.save(update_fields=["classe", "is_active"])
+                left += 1
+            else:
+                enr.decision = EnrollmentStatus.NON_STATUE
+                enr.save(update_fields=["decision"])
+                student.classe = None
+                StudentEnrollment.objects.get_or_create(
+                    student=student, school_year=new_year, defaults={"classroom": None})
+                student.save(update_fields=["classe"])
+                pending += 1
 
     school.school_year = school.last_schoolyear_closed = SchoolYear.objects.get(libelle=old)
     school.save(update_fields=["school_year", "last_schoolyear_closed"])
