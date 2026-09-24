@@ -1263,10 +1263,10 @@ class ExamRecord(FPDF):
                 row.cell(student['conduite'], align="L")
                 self.set_font("inter", 'B', 8)
                 decision = student['decision']
-                next_cls = (" → " if decision == "Promu" else " • ") + student['next'].code if student['next'] and decision in ("Promu", "Redouble") else ""
+                next_cls = (" → " if decision in ["Promu", "Promue"] else " • ") + student['next'].code if student['next'] and decision in ("Promu", "Promue", "Redouble") else ""
                 if student['divergente']:
                     divergents += 1
-                    plus = 1 if decision == "Promu" else -1
+                    plus = 1 if decision in ["Promu", "Promue"] else -1
                     self.data['nbr'] += plus
                     if sexe == 'F':
                         self.data['nbfr'] += plus
