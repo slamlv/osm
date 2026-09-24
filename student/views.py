@@ -538,7 +538,7 @@ class EndYearAssignmentForm(LoggedAdminOrTitulaireView):
     def post(self, *args, **kwargs):
         update_decisions = False
         classroom = self.get_classroom(method="POST")
-        current_year = SchoolYear.current()
+        current_year = SchoolYear.objects.get(libelle=self.request.user.school.establishment_year)
 
         if current_year is None:
             message(self.request,
