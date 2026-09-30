@@ -1596,7 +1596,7 @@ class ReportCard(FPDF):
         row = table.row()
         row.cell(f"**{school_data['nom']}**", v_align=VAlign.T)
         pdf.set_font_size(7)
-        row.cell(f"**{school_data['immatriculation']}**\n__Tél : {school_data['contact']}__")
+        row.cell(f"**{school_data['immatriculation'] or f'B.P. {school_data['pobox']}'}**\n__Tél : {school_data['contact']}__")
         pdf.set_font_size(8)
         row.cell(f"**{school_data['name']}**", v_align=VAlign.T)
 
@@ -1631,7 +1631,7 @@ class ReportCard(FPDF):
         row.cell(f"Effectif : {classroom_data['effectif']}")
 
         row = table.row()
-        row.cell(f"Matricule : **{student_data['matricule']}**")
+        row.cell(f"Matricule : " + (f"**{student_data['matricule']}**" if student_data['matricule'] else ''))
         row.cell("Redoublant(e) : ",
                  align="RIGHT", border=CellBordersLayout.TOP | CellBordersLayout.BOTTOM | CellBordersLayout.LEFT)
         self.draw_tic_orx(row, student_data['statut'], align="L",

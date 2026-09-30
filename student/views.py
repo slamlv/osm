@@ -2128,9 +2128,9 @@ class StudentsIdentityCardsCNI(FPDF):
         self.set_font('inter', 'B', 5.5)
         self.set_text_color(*INK)
         self.set_xy(x + 2, y + 7.4)
-        self.cell(31, 2.4, self._fit_shrink(sd.get('nom', ''), 31, 5.7, bold=True, min_size=4.8)[0], align='C')
+        self.multi_cell(31, 2.4, self._fit_shrink(sd.get('nom', ''), 31, 5.7, bold=True, min_size=4.8, unkut=True)[0], align='C')
         self.set_xy(x + CARD_W - 33, y + 7.4)
-        self.cell(31, 2.4, self._fit_shrink(sd.get('name', ''), 31, 5.7, bold=True, min_size=4.8)[0], align='C')
+        self.multi_cell(31, 2.4, self._fit_shrink(sd.get('name', ''), 31, 5.7, bold=True, min_size=4.8, unkut=True)[0], align='C')
 
         # logo central (si dispo)
         if self._logo:
@@ -2276,7 +2276,7 @@ class StudentsIdentityCardsCNI(FPDF):
     # Ce n'est qu'au plancher, si ça déborde encore (très rare), qu'on tronque.
     # Renvoie (texte, taille_de_police_à_utiliser).
     # ------------------------------------------------------------------
-    def _fit_shrink(self, text, max_w, size, bold=False, min_size=5.0):
+    def _fit_shrink(self, text, max_w, size, bold=False, min_size=5.0, unkut=False):
         if not text:
             return "", size
         family_style = 'B' if bold else ''
@@ -2290,10 +2290,12 @@ class StudentsIdentityCardsCNI(FPDF):
         self.set_font('inter', family_style, min_size)
         if self.get_string_width(text) <= max_w:
             return text, min_size
+        if unkut:
+            base_text = text
         ell = "…"
         while text and self.get_string_width(text + ell) > max_w:
             text = text[:-1]
-        return text + ell, min_size
+        return base_text if unkut else text + ell, min_size
 
     # ------------------------------------------------------------------
     # Réduit une chaîne pour qu'elle tienne dans une largeur donnée

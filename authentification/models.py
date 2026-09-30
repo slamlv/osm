@@ -332,6 +332,7 @@ class School(TenantMixin):
             'visa': self.visa,
             'motto': self.motto if self.motto else "",
             'immatriculation': self.immatriculation,
+            'pobox': self.pobox,
             'region': self.region,
             'rgn': self.rgn,
             'departement': self.departement,

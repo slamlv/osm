@@ -1858,7 +1858,7 @@ def base_header(pdf, mode='P', y_img=0):
     row = table.row()
     row.cell(f"**{pdf.school.nom}**", v_align=VAlign.T)
     pdf.set_font_size(7)
-    row.cell(f"**{pdf.school.immatriculation}**\n__Tél : {pdf.school.contact}__")
+    row.cell(f"**{pdf.school.immatriculation or f'B.P. {pdf.school.pobox}'}**\n__Tél : {pdf.school.contact}__")
     pdf.set_font_size(8)
     row.cell(f"**{pdf.school.name}**", v_align=VAlign.T)
 

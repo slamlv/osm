@@ -472,7 +472,7 @@ class Personnel(models.Model):
     @property
     def is_admin(self):
         if self.user:
-            return self.user.is_admin
+            return self.user.is_min_admin
         return False
 
     class Meta:

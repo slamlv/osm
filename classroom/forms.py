@@ -260,19 +260,21 @@ class ClassroomForm(DynamicFormMixin, forms.Form):
         }
         classe = Class.objects.get(niveau=classroom_data["niveau"], serie=classroom_data["serie"])
         if self.instance:
+            self.instance.code = classroom_data["code"]
+            self.instance.lv2 = classroom_data["lv2"]
+            self.instance.lv3 = classroom_data["lv3"]
+            self.instance.titulaire = classroom_data["titulaire"]
             if classe == self.instance.classe:
-                self.instance.code = classroom_data["code"]
-                self.instance.lv2 = classroom_data["lv2"]
-                self.instance.lv3 = classroom_data["lv3"]
-                self.instance.titulaire = classroom_data["titulaire"]
                 self.instance.save()
-                return self.instance
+            else:
+                self.instance.enseignement.all().delete()
+                self.instance.classe = classe
+                ClassRoom.save_classroom(self.instance)
+            return self.instance
         classroom = ClassRoom(classe=classe, code=classroom_data["code"], lv2=classroom_data["lv2"],
                               lv3=classroom_data["lv3"], titulaire=classroom_data["titulaire"])
 
         ClassRoom.save_classroom(classroom)
-        if self.instance:
-            self.instance.delete()
         return classroom
 
 
