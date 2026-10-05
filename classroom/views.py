@@ -6,6 +6,7 @@ from osm.utils import message, resized_image, formated_float, school_year, Logge
     logged_admin_view, logged_user_view, ListView, DeleteView, resize_image, pdf_response, truncate_str, \
     base_header, base_infos, delete_image, zip_pdfs_response, check_notes, add_fonts, seuils_par_pk
 from django.db.models import Q, Prefetch
+from django.db import transaction
 from django.forms import model_to_dict
 from django.http import Http404, HttpResponse, JsonResponse
 from django.conf import settings
@@ -124,7 +125,17 @@ class StudentPhotoUpload(LoggedAdminView):
         #    (Cloudinary en prod, fichier en dev) sans risque d'orphelin.
         #    On ne supprime que si c'était bien une autre image.
         if old_photo and old_photo.name != student.photo.name:
-            delete_image(old_photo)
+            from .tasks import delete_student_old_photo
+
+            old_photo_name = old_photo.name
+            schema_name = self.request.user.school.schema_name
+
+            transaction.on_commit(
+                lambda: delete_student_old_photo.delay(
+                    schema_name,
+                    old_photo_name,
+                )
+            )
 
         return JsonResponse({
             "success": True,

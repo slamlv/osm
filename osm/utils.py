@@ -27,20 +27,40 @@ from student.models import Student, StudentEnrollment, EnrollmentStatus
 
 
 def delete_image(image):
-    """Supprime une image selon le backend : Cloudinary en prod, fichier local en dev."""
+    """Supprime une image du stockage courant."""
     if not image:
-        return
+        return False
+
+    return delete_image_name(getattr(image, "name", "") or "")
+
+
+def delete_image_name(image_name):
+    """Supprime une image à partir de son nom de stockage."""
+    if not image_name:
+        return False
+
     try:
-        import os as _os
-        public_id = _os.path.splitext(image.name)[0]
-        import cloudinary.uploader
-        cloudinary.uploader.destroy(public_id)
+        backend = settings.STORAGES["default"]["BACKEND"]
+
+        if backend == "cloudinary_storage.storage.MediaCloudinaryStorage":
+            import cloudinary.uploader
+
+            public_id = os.path.splitext(image_name)[0]
+            result = cloudinary.uploader.destroy(public_id)
+
+            return result.get("result") in {"ok", "not found"}
+
+        from django.core.files.storage import default_storage
+
+        if default_storage.exists(image_name):
+            default_storage.delete(image_name)
+
+        return True
+
     except Exception:
-        try:
-            if os.path.exists(image.path):
-                os.remove(image.path)
-        except Exception:
-            pass
+        # Une erreur de nettoyage ne doit pas annuler l'opération principale.
+        # La tâche Celery pourra retenter.
+        return False
 
 
 def with_users_school_schema(view_func):

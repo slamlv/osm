@@ -114,114 +114,291 @@
 
 <script>
 (function () {
+  'use strict';
+
   const root = document.querySelector('.cp');
   if (!root) return;
+
   const urlTpl = root.dataset.urlTpl;
   const csrf = root.dataset.csrf;
 
-  function setState(cell, html) { cell.innerHTML = html; }
+  function setState(cell, html) {
+    cell.innerHTML = html;
+  }
 
-  // Compresse via la fonction partagée du site si dispo, sinon renvoie le
-  // fichier brut (fallback) -> dans ce cas le serveur reçoit l'original.
   function compress(file) {
-    if (typeof window.OSMCompressImage === 'function') {
-      return window.OSMCompressImage(file).then(function (blob) {
-        return blob || file;   // si la compression échoue, on tente le brut
-      }).catch(function () { return file; });
+    if (typeof window.OSMCompressImage !== 'function') {
+      return Promise.resolve(file);
     }
-    return Promise.resolve(file);
+
+    return Promise.resolve()
+      .then(function () {
+        return window.OSMCompressImage(file);
+      })
+      .then(function (blob) {
+        return blob || file;
+      })
+      .catch(function () {
+        return file;
+      });
   }
 
   function filenameFor(blob, original) {
-    const base = (original && original.includes('.'))
-      ? original.substring(0, original.lastIndexOf('.')) : (original || 'photo');
-    const ext = blob.type === 'image/webp' ? 'webp'
-              : blob.type === 'image/jpeg' ? 'jpg'
-              : 'img';
-    return base + '.' + ext;
+    const originalName = original || 'photo';
+    const lastDot = originalName.lastIndexOf('.');
+    const base = lastDot > 0
+      ? originalName.substring(0, lastDot)
+      : originalName;
+
+    const type = (blob && blob.type) || '';
+    let extension = 'img';
+
+    if (type === 'image/webp') {
+      extension = 'webp';
+    } else if (type === 'image/jpeg') {
+      extension = 'jpg';
+    } else if (type === 'image/png') {
+      extension = 'png';
+    } else if (type === 'image/gif') {
+      extension = 'gif';
+    }
+
+    return base + '.' + extension;
   }
 
-  function uploadRow(tr) {
-    const sid = tr.dataset.sid;
-    const stateCell = tr.querySelector('.state');
-    const current = tr.querySelector('.current-thumb');
+  function releasePreviewUrl(tr) {
+    if (!tr._previewUrl) return;
+
+    try {
+      URL.revokeObjectURL(tr._previewUrl);
+    } catch (error) {
+      // Rien à faire.
+    }
+
+    tr._previewUrl = null;
+  }
+
+  function setUploadState(tr, uploading) {
+    tr._uploading = uploading;
+
+    const input = tr.querySelector('.photo-input');
     const btn = tr.querySelector('.save-photo');
-    const file = tr._pendingFile;           // fichier mémorisé à la sélection
-    if (!file) return;
 
-    // Pendant l'envoi : bouton désactivé + spinner d'état.
-    btn.disabled = true;
-    setState(stateCell, '<span class="spinner-border spinner-border-sm text-info" role="status"></span>');
+    if (input) {
+      input.disabled = uploading;
+    }
 
-    compress(file).then(function (blob) {
-      const fd = new FormData();
-      fd.append('photo', blob, filenameFor(blob, file.name));
-      const url = urlTpl.replace(/0(\/?)$/, sid + '$1');
-      return fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrf },
-        body: fd,
-      });
-    })
-    .then(function (resp) { return resp.json().then(function (d) { return { ok: resp.ok, d: d }; }); })
-    .then(function (res) {
-      if (res.ok && res.d.success) {
-        setState(stateCell, '<i class="bi bi-check-circle-fill state-ok"></i> <span class="state-ok small">Enregistrée</span>');
-        if (res.d.url && current) current.src = res.d.url;
-        tr._pendingFile = null;             // consommé
-        // Bouton reste désactivé après succès (réactivé seulement à une nouvelle sélection).
-      } else {
-        setState(stateCell, '<i class="bi bi-x-circle-fill state-err"></i> <span class="state-err small">' + (res.d.message || 'Échec') + '</span>');
-        btn.disabled = false;               // échec -> on permet de réessayer
+    if (btn) {
+      btn.disabled = uploading || !tr._pendingFile;
+    }
+  }
+
+  function parseResponse(response) {
+    return response.text().then(function (text) {
+      let data = {};
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (error) {
+          data = {};
+        }
       }
-    })
-    .catch(function () {
-      setState(stateCell, '<i class="bi bi-x-circle-fill state-err"></i> <span class="state-err small">Erreur réseau</span>');
-      btn.disabled = false;                 // échec -> réessayable
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        data: data,
+        text: text
+      };
     });
   }
 
-  // Sélection d'un fichier : on PRÉPARE seulement (aperçu + activation bouton),
-  // l'envoi ne part qu'au clic sur "Enregistrer".
+  function getServerErrorMessage(result) {
+    if (result.data && result.data.message) {
+      return result.data.message;
+    }
+
+    if (result.status === 413) {
+      return 'La photo est trop volumineuse.';
+    }
+
+    if (result.status === 403) {
+      return 'Votre session ou votre autorisation a expiré.';
+    }
+
+    if (result.status === 400) {
+      return 'La photo envoyée est invalide.';
+    }
+
+    if (result.status >= 500) {
+      return 'Le serveur a rencontré une erreur. Vous pouvez réessayer.';
+    }
+
+    return 'Échec de l’enregistrement.';
+  }
+
+  function uploadRow(tr) {
+    if (!tr || tr._uploading) {
+      return;
+    }
+
+    const sid = tr.dataset.sid;
+    const stateCell = tr.querySelector('.state');
+    const current = tr.querySelector('.current-thumb');
+    const file = tr._pendingFile;
+
+    if (!file) {
+      return;
+    }
+
+    if (!sid || !urlTpl) {
+      setState(
+        stateCell,
+        '<i class="bi bi-x-circle-fill state-err"></i> ' +
+        '<span class="state-err small">URL d’enregistrement invalide.</span>'
+      );
+      return;
+    }
+
+    setUploadState(tr, true);
+
+    setState(
+      stateCell,
+      '<span class="spinner-border spinner-border-sm text-info" role="status" aria-hidden="true"></span> ' +
+      '<span class="text-info small ms-1">Enregistrement…</span>'
+    );
+
+    compress(file)
+      .then(function (blob) {
+        const formData = new FormData();
+
+        formData.append(
+          'photo',
+          blob,
+          filenameFor(blob, file.name)
+        );
+
+        const url = urlTpl.replace(/0(\/?)$/, sid + '$1');
+
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrf,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData,
+          credentials: 'same-origin'
+        });
+      })
+      .then(parseResponse)
+      .then(function (result) {
+        if (result.ok && result.data.success) {
+          if (result.data.url && current) {
+            current.src = result.data.url;
+          }
+
+          tr._pendingFile = null;
+          releasePreviewUrl(tr);
+
+          setState(
+            stateCell,
+            '<i class="bi bi-check-circle-fill state-ok"></i> ' +
+            '<span class="state-ok small ms-1">Enregistrée</span>'
+          );
+
+          setUploadState(tr, false);
+          return;
+        }
+
+        setState(
+          stateCell,
+          '<i class="bi bi-x-circle-fill state-err"></i> ' +
+          '<span class="state-err small ms-1">' +
+          getServerErrorMessage(result) +
+          '</span>'
+        );
+
+        setUploadState(tr, false);
+      })
+      .catch(function (error) {
+        console.error(
+          'Erreur lors de l’enregistrement de la photo :',
+          error
+        );
+
+        setState(
+          stateCell,
+          '<i class="bi bi-x-circle-fill state-err"></i> ' +
+          '<span class="state-err small ms-1">Impossible de joindre le serveur.</span>'
+        );
+
+        setUploadState(tr, false);
+      });
+  }
+
   root.querySelectorAll('.photo-input').forEach(function (input) {
     input.addEventListener('change', function () {
       const tr = input.closest('tr[data-sid]');
-      // Deux emplacements d'aperçu : colonne dédiée (desktop) + inline (mobile).
-      const previews = tr.querySelectorAll('.preview-thumb, .preview-thumb-mobile');
+
+      if (!tr || tr._uploading) {
+        return;
+      }
+
+      const previews = tr.querySelectorAll(
+        '.preview-thumb, .preview-thumb-mobile'
+      );
       const btn = tr.querySelector('.save-photo');
       const stateCell = tr.querySelector('.state');
       const file = input.files && input.files[0];
 
-      // Nettoie un éventuel aperçu précédent.
-      if (tr._previewUrl) { try { URL.revokeObjectURL(tr._previewUrl); } catch (e) {} tr._previewUrl = null; }
+      releasePreviewUrl(tr);
 
-      if (!file) {                          // sélection annulée
+      if (!file) {
         tr._pendingFile = null;
-        previews.forEach(function (p) { p.classList.add('d-none'); });
+
+        previews.forEach(function (preview) {
+          preview.classList.add('d-none');
+          preview.removeAttribute('src');
+        });
+
         btn.disabled = true;
-        setState(stateCell, '<span class="text-white-50 small">—</span>');
+
+        setState(
+          stateCell,
+          '<span class="text-white-50 small">—</span>'
+        );
+
         return;
       }
 
       tr._pendingFile = file;
       tr._previewUrl = URL.createObjectURL(file);
-      previews.forEach(function (p) {
-        p.src = tr._previewUrl;
-        // Sur desktop l'aperçu inline reste caché par d-md-none ; sur mobile
-        // c'est la colonne dédiée qui reste cachée par d-none d-md-table-cell.
-        if (p.classList.contains('preview-thumb-mobile')) p.classList.remove('d-none');
-        else p.classList.remove('d-none');
+
+      previews.forEach(function (preview) {
+        preview.src = tr._previewUrl;
+        preview.classList.remove('d-none');
       });
-      btn.disabled = false;                 // prêt à enregistrer
-      setState(stateCell, '<span class="text-warning small">Prête</span>');
+
+      btn.disabled = false;
+
+      setState(
+        stateCell,
+        '<span class="text-warning small">Prête</span>'
+      );
     });
   });
 
-  // Clic sur "Enregistrer" : lance l'upload de la ligne.
   root.querySelectorAll('.save-photo').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const tr = btn.closest('tr[data-sid]');
       uploadRow(tr);
+    });
+  });
+
+  window.addEventListener('pagehide', function () {
+    root.querySelectorAll('tr[data-sid]').forEach(function (tr) {
+      releasePreviewUrl(tr);
     });
   });
 })();
