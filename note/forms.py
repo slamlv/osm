@@ -153,7 +153,7 @@ class StudentMarkForm(DynamicFormMixin, forms.Form):
         self.student = context['student']
         self.enseignement = context["enseignement"]
         self.label = self.student.__str__()
-        self.unique_id = self.student.unique_id
+        self.student_pk = self.student.pk
         self.request = context['request']
         self.trim = context['trim']
         self.eval = context['eval']
@@ -168,7 +168,7 @@ class StudentMarkForm(DynamicFormMixin, forms.Form):
                          required=False)
 
     def add_prefix(self, field_name):
-        field_name += f"{self.unique_id}"
+        field_name += f"{self.student_pk}"
         super().add_prefix(field_name)
         return field_name
 
@@ -190,20 +190,20 @@ class StudentMarkForm(DynamicFormMixin, forms.Form):
         return None
 
     def clean(self):
-        n = self.request.POST[f'note{self.unique_id}']
+        n = self.request.POST[f'note{self.student_pk}']
         note = float(n) if n else 0
         note1 = 0
         if self.trim:
-            n1 = self.request.POST[f'note1{self.unique_id}']
+            n1 = self.request.POST[f'note1{self.student_pk}']
             note1 = float(n1) if n1 else 0
         if (note < 0) or (note > 20) or (note1 < 0) or (note1 > 20):
             raise forms.ValidationError("")
 
     def mark_save(self, compt):
-        n = self.request.POST[f'note{self.unique_id}']
+        n = self.request.POST[f'note{self.student_pk}']
         note = float(n) if n else -1
         if self.trim:
-            n1 = self.request.POST[f'note1{self.unique_id}']
+            n1 = self.request.POST[f'note1{self.student_pk}']
             note1 = float(n1) if n1 else -1
         exnote = self.note.note
         excompetences = self.note.competences
