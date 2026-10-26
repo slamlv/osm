@@ -917,9 +917,13 @@ class MarksReport(LoggedAdminView):
 
     @staticmethod
     def build_pdf_or_reason(classroom, evl_in, annee, school, trimestre):
+        """
         reason = check_notes(classroom, evl_in)
         if reason is not None:
             return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        """
+        if not classroom.students.exists():
+            return "Aucun élève dans cette salle de classe."
         data = classroom.marks_report_data(evl_in)
         data['school_data'], data['classe'] = school, classroom.code
         data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, annee,\
@@ -978,9 +982,13 @@ class SequentialMarksReport(LoggedAdminView):
 
     @staticmethod
     def build_pdf_or_reason(classroom, evl_in, annee, school, trimestre):
+        """
         reason = check_notes(classroom, evl_in)
         if reason is not None:
             return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        """
+        if not classroom.students.exists():
+            return "Aucun élève dans cette salle de classe."
         data = classroom.marks_report_data(evl_in, sequential=True)
         data['school_data'], data['classe'], data['sequential'] = school, classroom.code, True
         data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, annee,\
@@ -990,7 +998,7 @@ class SequentialMarksReport(LoggedAdminView):
     def post(self, *args, **kwargs):
         evl = int(self.request.POST["evl"])
         evl_in = (evl, )
-        trimestre = f"DE L'ÉVALUATION N° {evl}"
+        trimestre = f"DE L'ÉVALUATION {evl}"
 
         annee = self.request.user.school.establishment_year
         school = User.objects.select_related('school').get(id=self.request.user.id).school
@@ -1012,7 +1020,7 @@ class SequentialMarksReport(LoggedAdminView):
             return zip_pdfs_response(
                 build_pdf_for_classroom=build,
                 classrooms=classrooms,
-                zip_filename=f"Relevés de Notes {trimestre.title()} - Toutes les classes.zip",
+                zip_filename=f"Relevés de Notes Évaluation {evl} - Toutes les classes.zip",
                 per_file_namer=namer,
             )
 
@@ -1410,7 +1418,7 @@ class TMarksReport(FPDF):
         base_header(self, mode='Pa')
         base_infos(self, f"RELEVÉ DE NOTES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
                    self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa', year=self.data['annee'])
-        if self.data['sequential']:
+        if self.data.get('sequential'):
             self.sequential_marks_table()
         else:
             self.marks_table()
