@@ -28,7 +28,7 @@
         {% csrf_token %}
         <div class="row g-3 mb-4">
           <div class="col-sm-6"><label class="text-white control-label">Classe</label>{{ form.clsrm }}</div>
-          <div class="col-sm-6"><label class="text-white control-label">Trimestre</label>{{ form.evl }}</div>
+          <div class="col-sm-6"><label class="text-white control-label">{% if sequential %}Évaluation{% else %}Trimestre{% endif %}</label>{{ form.evl }}</div>
           {% if form.checkbox and not tableau %}
           <div class="col-sm-6 js-seuil-bloc"><label class="text-white">Moyenne minimale d'admission</label>
               <input type="number" class="form-control fw-bold js-seuil" value="10" step="0.01"

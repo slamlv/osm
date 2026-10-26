@@ -238,8 +238,8 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom}" if self.prenom else f"{self.nom}"
 
-    def student_marks_report_data(self, evals: tuple, notes, total_coef=0, for_stats=False, pv=False, annual=False,
-                                  mentions=True, year=None):
+    def student_marks_report_data(self, evals: tuple, notes, total_coef=0, for_stats=False,
+                                  pv=False, annual=False, mentions=True, year=None, sequential=False):
         from note.deliberation import student_decision, conduct_mention, merit_mention
         from osm.utils import formated_float, cote_and_appr
         from collections import defaultdict
@@ -300,7 +300,7 @@ class Student(models.Model):
 
             else:
                 note1 = notes_data.get(evals[0])
-                note2 = notes_data.get(evals[1])
+                note2 = notes_data.get(evals[1]) if not sequential else None
 
                 if not for_stats and not pv:
                     data['note1'] = formated_float(note1) if note1 is not None else "/"

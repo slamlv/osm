@@ -553,7 +553,7 @@ class ClassRoom(models.Model):
             pass
 
     def marks_report_data(self, evals, for_stats=False, pv=False, pv_ordered=False, for_global_stats=False, annual=False,
-                          mentions=True, year=None):
+                          mentions=True, year=None, sequential=False):
         from note.models import Note
         from osm.utils import formated_float
 
@@ -566,7 +566,7 @@ class ClassRoom(models.Model):
         students = list(self.students.all().order_by('nom', 'prenom'))
         students_data = [
             student.student_marks_report_data(evals=evals, notes=notes.filter(eleve_id=student.id),
-                                              total_coef=self.total_coef, for_stats=for_stats,
+                                              total_coef=self.total_coef, for_stats=for_stats, sequential=sequential,
                                               pv=pv, annual=annual, mentions=mentions, year=year) for student in students
         ]
         if not pv and not for_global_stats:

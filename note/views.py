@@ -967,6 +967,67 @@ class MarksReport(LoggedAdminView):
         return pdf_response(result, result.data['filename'])
 
 
+class SequentialMarksReport(LoggedAdminView):
+    template_name = "bulletin_form.html"
+    title = "Relevé de Notes Séquentiel"
+
+    def get(self, *args, **kwargs):
+        form = CheckForm(context={'marks-report': True, 'all': True, 'sequential': True})
+        context = {"title": self.title, "form": form, 'marks_report': True, 'sequential': True}
+        return render(self.request, self.template_name, context)
+
+    @staticmethod
+    def build_pdf_or_reason(classroom, evl_in, annee, school, trimestre):
+        reason = check_notes(classroom, evl_in)
+        if reason is not None:
+            return reason  # -> sautée (ZIP) ou message d'erreur (une classe)
+        data = classroom.marks_report_data(evl_in, sequential=True)
+        data['school_data'], data['classe'], data['sequential'] = school, classroom.code, True
+        data['trimestre'], data['annee'], data['filename'], data['evalx'] = trimestre, annee,\
+            f"Relevé de Notes {trimestre.title()} {classroom.code}.pdf", (f"E{evl_in[0]}", )
+        return TMarksReport(data=data)
+
+    def post(self, *args, **kwargs):
+        evl = int(self.request.POST["evl"])
+        evl_in = (evl, )
+        trimestre = f"DE L'ÉVALUATION N° {evl}"
+
+        annee = self.request.user.school.establishment_year
+        school = User.objects.select_related('school').get(id=self.request.user.id).school
+        selected = self.request.POST.get("clsrm")
+
+        # -------- Cas "Toutes les classes" -> ZIP --------
+        if selected == "__all__":
+            classrooms = (
+                ClassRoom.objects.select_related('classe').
+                prefetch_related('students', 'matieres__sujet')
+            )
+
+            def build(clsrm):
+                return self.build_pdf_or_reason(clsrm, evl_in, annee, school, trimestre)
+
+            def namer(clsrm):
+                return f"{clsrm.code} Relevé de Notes {trimestre.title()}.pdf"
+
+            return zip_pdfs_response(
+                build_pdf_for_classroom=build,
+                classrooms=classrooms,
+                zip_filename=f"Relevés de Notes {trimestre.title()} - Toutes les classes.zip",
+                per_file_namer=namer,
+            )
+
+        # -------- Cas "une seule classe" --------
+        classroom = (
+            ClassRoom.objects.select_related('classe').
+            prefetch_related('students', 'matieres__sujet').
+            get(pk=int(selected))
+        )
+        result = self.build_pdf_or_reason(classroom, evl_in, annee, school, trimestre)
+        if isinstance(result, str):
+            return JsonResponse({'success': False, 'message': result})
+        return pdf_response(result, result.data['filename'])
+
+
 class ExamReport(LoggedAdminView):
     template_name = "bulletin_form.html"
     title = "Procès Verbal"
@@ -1349,7 +1410,10 @@ class TMarksReport(FPDF):
         base_header(self, mode='Pa')
         base_infos(self, f"RELEVÉ DE NOTES {self.data['trimestre']}", self.data['effectif'], self.data['filles'],
                    self.data['garcons'], self.data['redoublants'], self.data['label'], mode='Pa', year=self.data['annee'])
-        self.marks_table()
+        if self.data['sequential']:
+            self.sequential_marks_table()
+        else:
+            self.marks_table()
 
     def truncate_matiere_label(self, label_matiere, max_lines: int, max_width: int):
         if int(self.get_string_width(label_matiere)) <= (max_width * max_lines) - 3:
@@ -1421,6 +1485,47 @@ class TMarksReport(FPDF):
                     else student_notes[matiere['id']].get('note2', '/')
                 row.cell(f"{note1}")
                 row.cell(f"{note2}")
+        table.render()
+
+    def sequential_marks_table(self):
+        self.ln()
+        n = len(self.data['matieres_data'])
+        w = 285 - 7 - (n * 14)
+        col_widths = [7, w]
+        header = list()
+        for matiere in self.data['matieres_data']:
+            header.append(self.truncate_matiere_label(
+                matiere['label'], max_lines=self.data['max_words'] if self.data['max_words'] < 3 else 2,
+                max_width=14-3)
+            )
+            col_widths.append(14)
+
+        table = Table(self, line_height=4, col_widths=col_widths, text_align="CENTER", markdown=True,
+                      repeat_headings=TableHeadingsDisplay.ON_TOP_OF_EVERY_PAGE)
+        th = table.row()
+        self.set_fill_color(*GREY)
+        th.cell("**N°**")
+        th.cell("**Nom(s) et Prénom(s)**")
+        for head in header:
+            th.cell(f"**{head}**")
+
+        self.set_fill_color(0)
+        students = self.data['students_data']
+        for i, student in enumerate(students):
+            row = table.row()
+            row.cell(f"{i + 1}")
+            nom = student['nom']
+            padding = 0
+            if int(self.get_string_width(nom)) <= w - 3:
+                padding = (2, 0)
+            elif int(self.get_string_width(nom + ".")) >= (w * 2) - 4:
+                nom = truncate_str(self, str_value=nom, max_with=(w * 2) - 5)
+            row.cell(nom, align='L', padding=padding)
+            student_notes = student['matieres_data']
+            for matiere in self.data['matieres_data']:
+                note = "/" if not student_notes.get(matiere['id']) \
+                    else student_notes[matiere['id']].get('note1', '/')
+                row.cell(f"{note}")
         table.render()
 
     def footer(self):

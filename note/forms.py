@@ -487,6 +487,8 @@ class CheckForm(DynamicFormMixin, forms.Form):
 
     def get_choices(self):
         if "marks-report" in self.context.keys():
+            if 'sequential' in self.context.keys():
+                return self.eval_choices
             return self.marks_choices
         if 'check' in self.context.keys():
             return ("12", "Premier Trimestre"), ("34", "Deuxième Trimestre"), ("56", "Troisième Trimestre")
